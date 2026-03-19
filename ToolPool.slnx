@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ToolPool/ToolPool.Client/ToolPool.Client.csproj" />
+  <Project Path="ToolPool/ToolPool/ToolPool.csproj" />
+</Solution>
