@@ -11,7 +11,6 @@ builder.Services.AddRazorComponents()
 // ADDITIONS
 builder.Services.AddControllers(); //api
 builder.Configuration.AddUserSecrets<Program>(); //user secrets
-builder.Services.AddHttpClient(); //calling api from client
 
 var app = builder.Build();
 

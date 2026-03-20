@@ -1,35 +1,36 @@
 ﻿@page "/map"
-@* @rendermode InteractiveWebAssembly *@
-@using BlazorBasics.Maps.Google
-@using BlazorBasics.Maps.Google.Models
-@using BlazorBasics.Maps.Entities.Models
-@inject HttpClient Http
+@rendermode InteractiveWebAssembly
+@using BootstrapBlazor.Components
+@using GoogleMapsComponents
+@using GoogleMapsComponents.Maps
 
-@if(mapKey == null)
+@if(!mapLoaded)
 {
-    <p><em>Loading...</em></p>
-} else
-{
-    <GoogleMapComponent @ref="mapComponent"
-                        ApiKey="@mapKey"
-                        MapId="39cf637b3be049e59ba4061a"
-                        OnMapReady="@OnMapReadyCallback"
-                        StartZoomLevel="15" />
-    // @mapKey
+    <i>loading map </i>
+    <Spinner/>
 }
 
+<GoogleMap @ref="map"
+           Options="mapOptions"
+           Height="80vh"
+           OnAfterInit="mapRenderDone">
+</GoogleMap>
+
 @code {
-    private GoogleMapComponent mapComponent = default!;
-    private string mapKey = null;
-
-    protected override async Task OnInitializedAsync()
+    private bool mapLoaded = false;
+    private GoogleMap map;
+    private MapOptions mapOptions = new MapOptions()
     {
-        mapKey = await Http.GetStringAsync("https://localhost:7040/api/getSecret/GoogleMapsApiKey");
-    }
+        Zoom = 15,
+        Center = new LatLngLiteral(42.3604, -71.0580), //city hall
+        MapId = "39cf637b3be049e5f469447c", //custom map and style
+        MapTypeId = MapTypeId.Roadmap,
+        MapTypeControl = false,
+        StreetViewControl = false
+    };
 
-    private async Task OnMapReadyCallback()
+    private void mapRenderDone()
     {
-        var point = new PositionPoint(42.3509f, -71.1089f);
-        await mapComponent.CenterMap(point);
+        mapLoaded = true;
     }
 }

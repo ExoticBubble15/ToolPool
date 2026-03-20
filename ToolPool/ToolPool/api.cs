@@ -11,6 +11,7 @@ namespace ToolPool
         [HttpGet]
         public string Test()
         {
+            Console.WriteLine("success: \"test\"");
             return "good";
         }
 
@@ -24,9 +25,14 @@ namespace ToolPool
         public string GetSecret(string key)
         {
             string val = _config[key];
-            Console.WriteLine($"GetSecret({key}): {val}");
+            if(val != null)
+            {
+                Console.WriteLine($"success: \"getSecret/{key}\"");
+            } else
+            {
+                Console.WriteLine($"failure: \"getSecret/{key}\"");
+            }
             return val;
         }
-
     }
 }
