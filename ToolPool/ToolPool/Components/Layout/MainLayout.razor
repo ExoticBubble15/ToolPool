@@ -1,23 +1,29 @@
 ﻿@inherits LayoutComponentBase
+@using ToolPool.Services
+@inject CartService Cart
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="shell">
+    <header class="topbar">
+        <a href="/" class="brand">tool<span>pool</span></a>
+        <a href="/cart" class="cart-btn">
+            @if (Cart.Count > 0)
+            {
+                <span class="cart-badge">@Cart.Count</span>
+            }
+        </a>
+    </header>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    <main>@Body</main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+@code {
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}
