@@ -1,0 +1,35 @@
+﻿@page "/map"
+@* @rendermode InteractiveWebAssembly *@
+@using BlazorBasics.Maps.Google
+@using BlazorBasics.Maps.Google.Models
+@using BlazorBasics.Maps.Entities.Models
+@inject HttpClient Http
+
+@if(mapKey == null)
+{
+    <p><em>Loading...</em></p>
+} else
+{
+    <GoogleMapComponent @ref="mapComponent"
+                        ApiKey="@mapKey"
+                        MapId="39cf637b3be049e59ba4061a"
+                        OnMapReady="@OnMapReadyCallback"
+                        StartZoomLevel="15" />
+    // @mapKey
+}
+
+@code {
+    private GoogleMapComponent mapComponent = default!;
+    private string mapKey = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        mapKey = await Http.GetStringAsync("https://localhost:7040/api/getSecret/GoogleMapsApiKey");
+    }
+
+    private async Task OnMapReadyCallback()
+    {
+        var point = new PositionPoint(42.3509f, -71.1089f);
+        await mapComponent.CenterMap(point);
+    }
+}

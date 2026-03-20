@@ -8,6 +8,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
+// ADDITIONS
+builder.Services.AddControllers(); //api
+builder.Configuration.AddUserSecrets<Program>(); //user secrets
+builder.Services.AddHttpClient(); //calling api from client
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -31,5 +36,8 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(ToolPool.Client._Imports).Assembly);
+
+// ADDITIONS
+app.MapControllers(); //api
 
 app.Run();
