@@ -1,2 +1,3 @@
 https://github.com/rungwiroon/BlazorGoogleMaps - google maps
 https://www.blazor.zone/ - ui
+https://github.com/stripe/stripe-dotnet - stripe

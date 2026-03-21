@@ -13,6 +13,11 @@
     <PackageReference Include="BlazorGoogleMaps" Version="4.15.1" />
     <PackageReference Include="BootstrapBlazor" Version="10.4.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
+    <PackageReference Include="Stripe.net" Version="50.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Pages\" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,67 @@
+﻿@page "/stripe"
+@using ToolPool.Models
+@using ToolPool.Services
+@inject DemoItemService ItemService
+@inject CartService Cart
+
+
+<div class="page-wrap">
+    <div class="page-hero">
+        <h1>Tool Pool</h1>
+        <p>Demo items — add to cart and pay with Stripe.</p>
+    </div>
+
+    <div class="item-grid">
+        @foreach (var item in Items)
+        {
+            var inCart = Cart.IsInCart(item.Id);
+            <div class="item-card @(inCart ? "in-cart" : "")">
+                <div class="item-info">
+                    <h3>@item.Name</h3>
+                    <p>@item.Description</p>
+                </div>
+                <div class="item-footer">
+                    <span class="item-price">$@item.Price.ToString("F2")</span>
+                    <button class="@(inCart ? "btn-remove" : "btn-add")"
+                            @onclick="() => Toggle(item)">
+                        @(inCart ? "Added" : "+ Add")
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Cart.Count > 0)
+    {
+        <div class="sticky-bar">
+            <span>@Cart.Count item(s) · $@Cart.Total.ToString("F2")</span>
+            <a href="/cart" class="btn-checkout-sticky">View Cart →</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<DemoItem> Items = new();
+
+    protected override void OnInitialized()
+    {
+        Items = ItemService.GetItems();
+        Cart.OnChange += StateHasChanged;
+    }
+
+    private void Toggle(DemoItem item)
+    {
+        if (Cart.IsInCart(item.Id))
+        {
+            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
+            Cart.Remove(cartItem.Id);
+        }
+        else
+        {
+            Cart.Add(item);
+        }
+        Cart.NotifyChanged();
+    }
+
+    public void Dispose() => Cart.OnChange -= StateHasChanged;
+}

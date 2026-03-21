@@ -1,0 +1,17 @@
+@page "/success"
+@using ToolPool.Services
+@inject CartService Cart
+@using ToolPool.Models
+
+
+<div class="page-wrap success-wrap">
+    <div class="success-icon">✓</div>
+    <h1>Payment Complete!</h1>
+    <p>Demo complete.</p>
+    <p class="muted">Stripe sent a webhook to your server confirming the payment.</p>
+    <a href="/" class="btn-back" @onclick="Cart.Clear">Start Over</a>
+</div>
+
+@code {
+    protected override void OnInitialized() => Cart.Clear();
+}

@@ -1,5 +1,7 @@
 using ToolPool.Client.Pages;
 using ToolPool.Components;
+using Stripe;
+using ToolPool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,13 @@ builder.Services.AddRazorComponents()
 // ADDITIONS
 builder.Services.AddControllers(); //api
 builder.Configuration.AddUserSecrets<Program>(); //user secrets
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CartService>();
+builder.Services.AddSingleton<DemoItemService>();
+builder.Services.AddScoped<StripePaymentService>();
+
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 var app = builder.Build();
 

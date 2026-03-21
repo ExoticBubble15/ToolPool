@@ -28,7 +28,8 @@ namespace ToolPool
             if(val != null)
             {
                 Console.WriteLine($"success: \"getSecret/{key}\"");
-            } else
+            }
+            else
             {
                 Console.WriteLine($"failure: \"getSecret/{key}\"");
             }

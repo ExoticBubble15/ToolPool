@@ -6,8 +6,10 @@
 
 @if(!mapLoaded)
 {
-    <i>loading map </i>
-    <Spinner/>
+    <div style="display: flex; flex-direction: column; align-items: center">
+        <Spinner />
+        <i>loading map </i>
+    </div>
 }
 
 <GoogleMap @ref="map"
