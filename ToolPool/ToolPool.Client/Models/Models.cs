@@ -15,3 +15,4 @@ public class CartItem
     public decimal Price { get; set; }
     public string Name { get; set; } = string.Empty;
 }
+

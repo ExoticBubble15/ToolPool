@@ -1,6 +1,8 @@
-﻿using Stripe.Checkout;
+﻿using BootstrapBlazor.Components;
+using Stripe.Checkout;
+using Stripe.Climate;
 using ToolPool.Client.Models;
-
+using Stripe;
 namespace ToolPool.Services;
 
 public class StripePaymentService
@@ -12,7 +14,7 @@ public class StripePaymentService
         _http = http;
     }
 
-    public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems)
+    public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems, decimal total)
     {
         var req = _http.HttpContext!.Request;
         var baseUrl = $"{req.Scheme}://{req.Host}";
@@ -38,9 +40,18 @@ public class StripePaymentService
             BillingAddressCollection = "auto",
             SuccessUrl = $"{baseUrl}/success",
             CancelUrl = $"{baseUrl}/stripe",
+            PaymentIntentData = new SessionPaymentIntentDataOptions
+            {
+                ApplicationFeeAmount = (long)(total * 0.10m * 100), // 10% to ToolPool
+                TransferData = new SessionPaymentIntentDataTransferDataOptions
+                {
+                    Destination = "acct_1TDv6d2OWxbeQ4IJ" // hardcoded test account
+                }
+            },
         };
 
         var session = await new SessionService().CreateAsync(options);
+
         return session.Url;
     }
 }

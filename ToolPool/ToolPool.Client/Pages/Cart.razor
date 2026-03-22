@@ -78,6 +78,7 @@
             var response = await Http.PostAsJsonAsync("/api/stripe/checkout", cart.Items);
             var url = await response.Content.ReadAsStringAsync();
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);
+
         }
         catch (Exception ex)
         {

@@ -18,7 +18,8 @@ public class StripeController : ControllerBase
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout([FromBody] List<CartItem> items)
     {
-        var url = await _stripe.CreateCheckoutSessionAsync(items);
+        var total = items.Sum(i => i.Price);
+        var url = await _stripe.CreateCheckoutSessionAsync(items, total);
         return Ok(url);
     }
 }

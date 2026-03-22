@@ -1,5 +1,7 @@
+using BootstrapBlazor.Components;
 using Microsoft.AspNetCore.Components;
 using Stripe;
+using Stripe.Climate;
 using ToolPool.Client.Pages;
 using ToolPool.Client.Services;
 using ToolPool.Components;
@@ -57,3 +59,4 @@ app.MapRazorComponents<App>()
 app.MapControllers(); //api
 
 app.Run();
+
