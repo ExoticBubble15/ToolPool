@@ -1,10 +1,10 @@
 ﻿@page "/cart"
-@using ToolPool.Services
+@rendermode InteractiveWebAssembly
+@using ToolPool.Client.Services
+@using ToolPool.Client.Models
 @inject CartService cart
-@inject StripePaymentService StripeService
+@inject HttpClient Http
 @inject NavigationManager Nav
-@using ToolPool.Models
-
 
 <div class="page-wrap">
     <h1 class="cart-title">Your Cart</h1>
@@ -50,9 +50,9 @@
                     @(Loading ? "Redirecting..." : "Pay with Stripe →")
                 </button>
 
-                <p class="stripe-note">Powered by Stripe - Test card: 4242 4242 4242 4242</p>
+                <p class="stripe-note">Powered by Stripe · Test card: 4242 4242 4242 4242</p>
 
-                <a href="/" class="btn-back-sm">← Keep browsing</a>
+                <a href="/stripe" class="btn-back-sm">← Keep browsing</a>
             </div>
         </div>
     }
@@ -75,8 +75,9 @@
 
         try
         {
-            var url = await StripeService.CreateCheckoutSessionAsync(cart.Items);
-            Nav.NavigateTo(url, forceLoad: true); // forceLoad sends browser to Stripe
+            var response = await Http.PostAsJsonAsync("/api/stripe/checkout", cart.Items);
+            var url = await response.Content.ReadAsStringAsync();
+            Nav.NavigateTo(url.Trim('"'), forceLoad: true);
         }
         catch (Exception ex)
         {

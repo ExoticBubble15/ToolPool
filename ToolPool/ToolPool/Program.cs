@@ -1,6 +1,8 @@
-using ToolPool.Client.Pages;
-using ToolPool.Components;
+using Microsoft.AspNetCore.Components;
 using Stripe;
+using ToolPool.Client.Pages;
+using ToolPool.Client.Services;
+using ToolPool.Components;
 using ToolPool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +20,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddSingleton<DemoItemService>();
 builder.Services.AddScoped<StripePaymentService>();
+
+builder.Services.AddScoped<HttpClient>(sp =>
+{
+    var nav = sp.GetRequiredService<NavigationManager>();
+    return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
+});
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 

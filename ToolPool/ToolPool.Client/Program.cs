@@ -1,10 +1,19 @@
 using GoogleMapsComponents;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using ToolPool.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
 string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMapsApiKey");
 builder.Services.AddBlazorGoogleMaps(googleMapsKey);
+
+builder.Services.AddSingleton<CartService>();
+builder.Services.AddSingleton<DemoItemService>();
+
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+});
 
 await builder.Build().RunAsync();
