@@ -478,3 +478,89 @@ body {
     text-align: center;
     z-index: 999;
 }
+.submit-card {
+  margin: 1rem 0 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.suggest-wrap {
+  margin-bottom: 1.5rem;
+}
+
+.submit-card h3 {
+  margin: 0 0 .25rem 0;
+  font-family: 'Syne', sans-serif;
+}
+
+.submit-hint {
+  margin: 0 0 .75rem 0;
+  color: var(--muted);
+  font-size: .95rem;
+}
+
+.submit-grid {
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: 1fr;
+}
+
+.submit-input {
+  padding: .6rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #121212;
+  color: var(--text);
+}
+
+.submit-actions {
+  margin-top: .75rem;
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-submit {
+  border: 0;
+  border-radius: 8px;
+  padding: .55rem .9rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-submit:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.btn-submissions {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .5rem .85rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: .83rem;
+  font-weight: 600;
+  background: #121212;
+}
+
+.btn-submissions:hover {
+  border-color: var(--accent);
+}
+
+.submit-msg {
+  font-size: .92rem;
+  display: block;
+  margin-top: .5rem;
+}
+
+.submit-msg.ok { color: var(--success); }
+.submit-msg.err { color: var(--error); }

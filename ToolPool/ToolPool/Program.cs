@@ -1,11 +1,8 @@
-using BootstrapBlazor.Components;
+using ToolPool.Services;
+using ToolPool.Models;
+using ToolPool.Components;
 using Microsoft.AspNetCore.Components;
 using Stripe;
-using Stripe.Climate;
-using ToolPool.Client.Pages;
-using ToolPool.Client.Services;
-using ToolPool.Components;
-using ToolPool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,9 +15,14 @@ builder.Services.AddRazorComponents()
 builder.Services.AddControllers(); //api
 builder.Configuration.AddUserSecrets<Program>(); //user secrets
 
+builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<SupabaseDemoService>();
+
+
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<CartService>();
-builder.Services.AddSingleton<DemoItemService>();
+builder.Services.AddScoped<ToolPool.Client.Services.CartService>();
+builder.Services.AddScoped<ToolPool.Client.Services.DemoItemService>();
 builder.Services.AddScoped<StripePaymentService>();
 
 builder.Services.AddScoped<HttpClient>(sp =>
@@ -28,6 +30,8 @@ builder.Services.AddScoped<HttpClient>(sp =>
     var nav = sp.GetRequiredService<NavigationManager>();
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
 });
+
+
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
@@ -59,4 +63,3 @@ app.MapRazorComponents<App>()
 app.MapControllers(); //api
 
 app.Run();
-

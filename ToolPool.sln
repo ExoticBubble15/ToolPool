@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ToolPool", "ToolPool", "{E320EE36-AD0C-3F6B-CE9A-6D82B5C37280}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolPool.Client", "ToolPool\ToolPool.Client\ToolPool.Client.csproj", "{19524CBC-F7B3-A48A-B841-96EFB31A8957}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolPool", "ToolPool\ToolPool\ToolPool.csproj", "{4A983ED6-776B-A323-15E9-7CE26C0ED7B3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19524CBC-F7B3-A48A-B841-96EFB31A8957}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19524CBC-F7B3-A48A-B841-96EFB31A8957}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19524CBC-F7B3-A48A-B841-96EFB31A8957}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19524CBC-F7B3-A48A-B841-96EFB31A8957}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A983ED6-776B-A323-15E9-7CE26C0ED7B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A983ED6-776B-A323-15E9-7CE26C0ED7B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A983ED6-776B-A323-15E9-7CE26C0ED7B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A983ED6-776B-A323-15E9-7CE26C0ED7B3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{19524CBC-F7B3-A48A-B841-96EFB31A8957} = {E320EE36-AD0C-3F6B-CE9A-6D82B5C37280}
+		{4A983ED6-776B-A323-15E9-7CE26C0ED7B3} = {E320EE36-AD0C-3F6B-CE9A-6D82B5C37280}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BBC33C58-7C52-4B1D-A16D-824B3D7A92BC}
+	EndGlobalSection
+EndGlobal

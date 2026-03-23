@@ -9,7 +9,7 @@ string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMap
 builder.Services.AddBlazorGoogleMaps(googleMapsKey);
 
 builder.Services.AddSingleton<CartService>();
-builder.Services.AddSingleton<DemoItemService>();
+builder.Services.AddScoped<DemoItemService>();
 
 builder.Services.AddScoped(sp => new HttpClient
 {
