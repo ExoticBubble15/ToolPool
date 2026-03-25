@@ -20,19 +20,20 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<SupabaseDemoService>();
 
 
+// services for stripe
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ToolPool.Client.Services.CartService>();
+builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
 builder.Services.AddScoped<ToolPool.Client.Services.DemoItemService>();
 builder.Services.AddScoped<StripePaymentService>();
 
+// start http client
 builder.Services.AddScoped<HttpClient>(sp =>
 {
     var nav = sp.GetRequiredService<NavigationManager>();
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
 });
 
-
-
+// config stripe
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 var app = builder.Build();

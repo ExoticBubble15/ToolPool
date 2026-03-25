@@ -1,5 +1,10 @@
-﻿namespace ToolPool.Client.Models;
+﻿/**
+ * Models for demo stripe app
+ */
 
+namespace ToolPool.Client.Models;
+
+// item in catalog
 public class DemoItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -8,6 +13,7 @@ public class DemoItem
     public decimal Price { get; set; }
 }
 
+// item in cart
 public class CartItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
