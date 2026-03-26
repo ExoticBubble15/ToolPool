@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using GoogleMapsComponents
 @using ToolPool.Client.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
 @inject CartService Cart
 
 <div class="shell">
@@ -11,7 +13,14 @@
        
         <a class="page" href="/map">Map</a>
 
-        <a class="page" href="/login">Login</a>
+        @if (authenticated) 
+        {
+            <a class="page" href="/profile">Profile</a>
+        }
+        else
+        {
+            <a class="page" href="/login">Login</a>
+        }
 
         <a href="/cart" class="cart-btn">
             Cart <span class="cart-badge">@Cart.Count</span>
@@ -23,13 +32,29 @@
 </div>
 
 @code {
+    private bool authenticated;
+
     protected override void OnInitialized()
     {
         Cart.OnChange += StateHasChanged;
+        authenticated = false;
     }
 
     public void Dispose()
     {
         Cart.OnChange -= StateHasChanged;
+    }
+
+    // switch login to users page if authenticated
+    protected override async Task OnInitializedAsync()
+    {   
+        var authStatus = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authStatus.User;
+
+        // if user.Identity not null, check isAuthed, else coalesce to false
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            authenticated = true;
+        }
     }
 }

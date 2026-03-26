@@ -1,0 +1,152 @@
+﻿@page "/profile"
+@rendermode InteractiveWebAssembly
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IHttpClientFactory HttpClientFactory
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@using System.Text.Json
+
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #000000;
+        border-radius: 10px;
+        font-family: Arial, sans-serif;
+    }
+
+    .field-group {
+        margin-bottom: 15px;
+    }
+
+        .field-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .field-group input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+    .calendar-events {
+        margin-top: 30px;
+    }
+
+        .calendar-events h3 {
+            margin-bottom: 15px;
+        }
+
+    .calendar-event {
+        background: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+</style>
+
+<div class="profile-container">
+    <h2>Profile</h2>
+
+    <div class="field-group">
+        <label>Username</label>
+        <input readonly value="@userName" />
+    </div>
+
+    <div class="field-group">
+        <label>Email</label>
+        <input readonly value="@userEmail" />
+    </div>
+
+    <div class="calendar-events">
+        <h3>Google Calendar Events</h3>
+        @if (events is null)
+        {
+            <p>Loading...</p>
+        }
+        else if (!events.Any())
+        {
+            <p>No upcoming events found.</p>
+        }
+        else
+        {
+            @foreach (var e in events)
+            {
+                <div class="calendar-event">
+                    <strong>@e.Summary</strong><br />
+                    @e.Start.ToLocalTime(): @e.End.ToLocalTime()
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string? userName = "";
+    private string? userEmail = "";
+    private List<CalendarEvent> events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            userName = user.FindFirst(c => c.Type == "name")?.Value ?? user.Identity.Name;
+            userEmail = user.FindFirst(c => c.Type == "email")?.Value ?? "";
+
+            // Pull Google Calendar events
+            // var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync("access_token");
+            // if (!string.IsNullOrEmpty(accessToken))
+            // {
+            //     await LoadGoogleCalendarEvents(accessToken);
+            // }
+        }
+    }
+
+    // [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; }
+
+    // private async Task LoadGoogleCalendarEvents(string token)
+    // {
+    //     try
+    //     {
+    //         var client = HttpClientFactory.CreateClient();
+    //         client.DefaultRequestHeaders.Authorization =
+    //             new AuthenticationHeaderValue("Bearer", token);
+
+    //         Get upcoming 5 events
+    //         var url = "https:www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true";
+    //         var response = await client.GetStringAsync(url);
+
+    //         using var doc = JsonDocument.Parse(response);
+    //         events = new List<CalendarEvent>();
+
+    //         foreach (var item in doc.RootElement.GetProperty("items").EnumerateArray())
+    //         {
+    //             events.Add(new CalendarEvent
+    //             {
+    //                 Summary = item.GetProperty("summary").GetString(),
+    //                 Start = DateTime.Parse(item.GetProperty("start").GetProperty("dateTime").GetString()),
+    //                 End = DateTime.Parse(item.GetProperty("end").GetProperty("dateTime").GetString())
+    //             });
+    //         }
+    //     }
+    //     catch
+    //     {
+    //         events = new List<CalendarEvent>();
+    //     }
+    // }
+
+    private class CalendarEvent
+    {
+        public string Summary { get; set; }
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
+    }
+}
