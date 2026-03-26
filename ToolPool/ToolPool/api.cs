@@ -9,6 +9,7 @@ namespace ToolPool
     [ApiController]
     public class api : ControllerBase
     {
+        //simple test if api is working
         //".../api/test"
         [HttpGet]
         public string Test()
@@ -17,6 +18,7 @@ namespace ToolPool
             return "good";
         }
 
+        //fetches local user secret by key
         //".../api/getSecret/{key}"
         private readonly IConfiguration _config;
         private readonly SupabaseDemoService _supabase;

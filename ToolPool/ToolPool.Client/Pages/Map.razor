@@ -4,6 +4,7 @@
 @using GoogleMapsComponents
 @using GoogleMapsComponents.Maps
 
+@* loading icon before map renders *@
 @if(!mapLoaded)
 {
     <div style="display: flex; flex-direction: column; align-items: center">
@@ -31,6 +32,7 @@
         StreetViewControl = false
     };
 
+    //called once the map renders, disable loading
     private void mapRenderDone()
     {
         mapLoaded = true;
