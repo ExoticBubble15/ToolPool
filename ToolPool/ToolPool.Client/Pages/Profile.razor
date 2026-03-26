@@ -20,26 +20,26 @@
         margin-bottom: 15px;
     }
 
-        .field-group label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+    .field-group label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
 
-        .field-group input {
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
+    .field-group input {
+        width: 100%;
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
 
     .calendar-events {
         margin-top: 30px;
     }
 
-        .calendar-events h3 {
-            margin-bottom: 15px;
-        }
+    .calendar-events h3 {
+        margin-bottom: 15px;
+    }
 
     .calendar-event {
         background: #fff;
@@ -99,7 +99,11 @@
         if (user.Identity?.IsAuthenticated ?? false)
         {
             userName = user.FindFirst(c => c.Type == "name")?.Value ?? user.Identity.Name;
-            userEmail = user.FindFirst(c => c.Type == "email")?.Value ?? "";
+            userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+            if (userEmail.Equals(""))
+            {
+                userEmail = user.FindFirst(c => c.Type == "email")?.Value;
+            }
 
             // Pull Google Calendar events
             // var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync("access_token");
