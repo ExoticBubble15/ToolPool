@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@using GoogleMapsComponents
 @using ToolPool.Client.Services
 @inject CartService Cart
 
@@ -9,6 +10,8 @@
         <a class="page" href="/stripe">Stripe</a>
        
         <a class="page" href="/map">Map</a>
+
+        <a class="page" href="/login">Login</a>
 
         <a href="/cart" class="cart-btn">
             Cart <span class="cart-badge">@Cart.Count</span>

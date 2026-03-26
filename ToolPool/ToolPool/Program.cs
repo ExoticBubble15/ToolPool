@@ -1,8 +1,11 @@
-using ToolPool.Services;
-using ToolPool.Models;
-using ToolPool.Components;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using Stripe;
+using ToolPool.Components;
+using ToolPool.Models;
+using ToolPool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,20 @@ builder.Services.AddScoped<HttpClient>(sp =>
 {
     var nav = sp.GetRequiredService<NavigationManager>();
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
+});
+
+// Google OAuth
+builder.Services.AddAuthentication(o =>
+{
+    o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddGoogle(googleo =>
+{
+    googleo.ClientId = "placeholder - clientidhere";
+    googleo.ClientSecret = "placeholder - clientsecrethere";
+    googleo.CallbackPath = "/signin-goole";
 });
 
 // config stripe

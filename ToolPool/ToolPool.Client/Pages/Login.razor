@@ -1,0 +1,43 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@* server rendermode for security *@
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh; /* full viewport height */
+        background: linear-gradient(to right, #4facfe, #00f2fe);
+    }
+
+    .login-button {
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        background-color: #4285F4; /* Google blue */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+        .login-button:hover {
+            background-color: #357ae8;
+            transform: scale(1.05);
+        }
+</style>
+
+<div class="login-container">
+    <button class="login-button" @onclick="RedirectToGoogle">
+        Login with Google
+    </button>
+</div>
+
+@code {
+    void RedirectToGoogle()
+    {
+        Navigation.NavigateTo("signin-google", forceLoad: true);
+    }
+}
