@@ -12,6 +12,9 @@ window.sendbirdInterop = (function () {
          * Initialize the Sendbird SDK with the application ID.
          */
         init: function (appId) {
+            if (typeof Sendbird === "undefined") {
+                throw new Error("Sendbird CDN script not loaded. Check the <script> tag URL in App.razor.");
+            }
             const { SendbirdChat, GroupChannelModule } = Sendbird;
             sb = SendbirdChat.init({
                 appId: appId,

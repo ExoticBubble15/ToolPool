@@ -54,9 +54,12 @@
 @code {
     [Parameter] public string ChannelUrl { get; set; } = "";
 
+    [SupplyParameterFromQuery(Name = "userId")]
+    public string? UserIdParam { get; set; }
+
     private List<ChatMessage> Messages = new();
     private string MessageText = "";
-    private string CurrentUserId = "renter-1"; // demo user
+    private string CurrentUserId = "renter-1";
     private string ChannelName = "Chat";
     private bool IsLoading = true;
     private bool IsSending = false;
@@ -69,6 +72,9 @@
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(UserIdParam))
+                CurrentUserId = UserIdParam;
+
             var appId = await Http.GetStringAsync("/api/sendbird/app-id");
             appId = appId.Trim('"');
 

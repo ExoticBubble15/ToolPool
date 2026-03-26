@@ -1,5 +1,6 @@
 @page "/chat"
 @rendermode InteractiveWebAssembly
+@using System.Text.Json.Serialization
 @inject HttpClient Http
 @inject NavigationManager Nav
 
@@ -43,7 +44,7 @@
             <div class="chat-channel-list">
                 @foreach (var ch in Channels)
                 {
-                    <a href="/chat/@ch.ChannelUrl" class="chat-channel-card">
+                    <a href="/chat/@ch.ChannelUrl?userId=@Uri.EscapeDataString(RenterId)" class="chat-channel-card">
                         <span class="chat-channel-name">@ch.Name</span>
                         <span class="chat-channel-meta">@ch.MemberCount members</span>
                     </a>
@@ -67,21 +68,30 @@
     private string ErrorMsg = "";
     private List<ChannelInfo> Channels = new();
 
-    protected override async Task OnInitializedAsync()
+    private bool _loaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
         await LoadChannels();
+        StateHasChanged();
     }
 
     private async Task LoadChannels()
     {
         if (string.IsNullOrWhiteSpace(RenterId)) return;
         IsLoadingChannels = true;
+        ErrorMsg = "";
         try
         {
             Channels = await Http.GetFromJsonAsync<List<ChannelInfo>>(
                 $"/api/sendbird/channels/{RenterId}") ?? new();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            ErrorMsg = $"Failed to load channels: {ex.Message}";
+        }
         finally
         {
             IsLoadingChannels = false;
@@ -110,7 +120,7 @@
 
             var channel = await resp.Content.ReadFromJsonAsync<ChannelInfo>();
             if (channel is not null)
-                Nav.NavigateTo($"/chat/{channel.ChannelUrl}");
+                Nav.NavigateTo($"/chat/{channel.ChannelUrl}?userId={Uri.EscapeDataString(RenterId.Trim())}");
         }
         catch (Exception ex)
         {
@@ -124,8 +134,13 @@
 
     private class ChannelInfo
     {
+        [JsonPropertyName("channel_url")]
         public string ChannelUrl { get; set; } = "";
+
+        [JsonPropertyName("name")]
         public string Name { get; set; } = "";
+
+        [JsonPropertyName("member_count")]
         public int MemberCount { get; set; }
     }
 }
