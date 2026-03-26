@@ -45,9 +45,9 @@ builder.Services.AddAuthentication(o =>
 .AddCookie()
 .AddGoogle(googleo =>
 {
-    googleo.ClientId = "placeholder - clientidhere";
-    googleo.ClientSecret = "placeholder - clientsecrethere";
-    googleo.CallbackPath = "/signin-goole";
+    googleo.ClientId = "placeholder";
+    googleo.ClientSecret = "placeholder";
+    googleo.CallbackPath = "/signin-google";
 });
 
 // config stripe

@@ -8,14 +8,14 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh; /* full viewport height */
-        background: linear-gradient(to right, #4facfe, #00f2fe);
+        height: 100vh;
+        background: linear-gradient(to right, #d9d9d9, #000000);
     }
 
     .login-button {
         padding: 15px 30px;
         font-size: 1.2rem;
-        background-color: #4285F4; /* Google blue */
+        background-color: #000000;
         color: white;
         border: none;
         border-radius: 8px;
@@ -24,7 +24,7 @@
     }
 
         .login-button:hover {
-            background-color: #357ae8;
+            background-color: #d9d9d9;
             transform: scale(1.05);
         }
 </style>
@@ -38,6 +38,6 @@
 @code {
     void RedirectToGoogle()
     {
-        Navigation.NavigateTo("signin-google", forceLoad: true);
+        Navigation.NavigateTo("auth/google", forceLoad: true);
     }
 }
