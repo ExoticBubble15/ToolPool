@@ -1,5 +1,7 @@
 using ToolPool.Client.Pages;
 using ToolPool.Components;
+using ToolPool.Models;
+using ToolPool.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddControllers();
+builder.Configuration.AddUserSecrets<Program>();
+
+builder.Services.Configure<SendbirdOptions>(builder.Configuration.GetSection("Sendbird"));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<SendbirdService>();
 
 var app = builder.Build();
 
@@ -31,5 +40,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(ToolPool.Client._Imports).Assembly);
+
+app.MapControllers();
 
 app.Run();

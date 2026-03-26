@@ -1,0 +1,131 @@
+@page "/chat"
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<div class="chat-list-container">
+    <div class="chat-list-header">
+        <h1>Messages</h1>
+    </div>
+
+    <div class="chat-start-section">
+        <h3>Start a Conversation</h3>
+        <p>Enter user IDs to open a 1:1 chat about a tool.</p>
+
+        <div class="chat-start-form">
+            <input class="chat-form-input" placeholder="Your user ID (e.g. renter-1)" @bind="RenterId" />
+            <input class="chat-form-input" placeholder="Owner user ID (e.g. owner-1)" @bind="OwnerId" />
+            <input class="chat-form-input" placeholder="Tool name (e.g. Drill)" @bind="ItemName" />
+            <button class="chat-start-btn" @onclick="StartChat" disabled="@IsCreating">
+                @(IsCreating ? "Creating..." : "Start Chat")
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMsg))
+        {
+            <p class="chat-error-msg">@ErrorMsg</p>
+        }
+    </div>
+
+    <div class="chat-channels-section">
+        <h3>Your Conversations</h3>
+
+        @if (IsLoadingChannels)
+        {
+            <p class="chat-loading-text">Loading...</p>
+        }
+        else if (!Channels.Any())
+        {
+            <p class="chat-empty-text">No conversations yet. Start one above.</p>
+        }
+        else
+        {
+            <div class="chat-channel-list">
+                @foreach (var ch in Channels)
+                {
+                    <a href="/chat/@ch.ChannelUrl" class="chat-channel-card">
+                        <span class="chat-channel-name">@ch.Name</span>
+                        <span class="chat-channel-meta">@ch.MemberCount members</span>
+                    </a>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(RenterId))
+        {
+            <button class="chat-refresh-btn" @onclick="LoadChannels">Refresh</button>
+        }
+    </div>
+</div>
+
+@code {
+    private string RenterId = "renter-1";
+    private string OwnerId = "owner-1";
+    private string ItemName = "Drill";
+    private bool IsCreating = false;
+    private bool IsLoadingChannels = false;
+    private string ErrorMsg = "";
+    private List<ChannelInfo> Channels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChannels();
+    }
+
+    private async Task LoadChannels()
+    {
+        if (string.IsNullOrWhiteSpace(RenterId)) return;
+        IsLoadingChannels = true;
+        try
+        {
+            Channels = await Http.GetFromJsonAsync<List<ChannelInfo>>(
+                $"/api/sendbird/channels/{RenterId}") ?? new();
+        }
+        catch { }
+        finally
+        {
+            IsLoadingChannels = false;
+        }
+    }
+
+    private async Task StartChat()
+    {
+        ErrorMsg = "";
+        if (string.IsNullOrWhiteSpace(RenterId) || string.IsNullOrWhiteSpace(OwnerId))
+        {
+            ErrorMsg = "Both user IDs are required.";
+            return;
+        }
+
+        IsCreating = true;
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/sendbird/channel", new
+            {
+                renterId = RenterId.Trim(),
+                ownerId = OwnerId.Trim(),
+                itemName = string.IsNullOrWhiteSpace(ItemName) ? "Tool" : ItemName.Trim()
+            });
+            resp.EnsureSuccessStatusCode();
+
+            var channel = await resp.Content.ReadFromJsonAsync<ChannelInfo>();
+            if (channel is not null)
+                Nav.NavigateTo($"/chat/{channel.ChannelUrl}");
+        }
+        catch (Exception ex)
+        {
+            ErrorMsg = $"Failed: {ex.Message}";
+        }
+        finally
+        {
+            IsCreating = false;
+        }
+    }
+
+    private class ChannelInfo
+    {
+        public string ChannelUrl { get; set; } = "";
+        public string Name { get; set; } = "";
+        public int MemberCount { get; set; }
+    }
+}

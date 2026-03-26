@@ -1,0 +1,180 @@
+@page "/chat/{ChannelUrl}"
+@rendermode InteractiveWebAssembly
+@using Microsoft.JSInterop
+@using System.Text.Json
+@inject IJSRuntime JS
+@inject HttpClient Http
+@implements IAsyncDisposable
+
+<div class="chat-container">
+    <div class="chat-header">
+        <a href="/chat" class="chat-back">&larr;</a>
+        <h2>@ChannelName</h2>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="chat-loading">
+            <p>Connecting...</p>
+        </div>
+    }
+    else
+    {
+        <div class="chat-messages" id="chatMessages">
+            @foreach (var msg in Messages)
+            {
+                var isOwn = msg.SenderId == CurrentUserId;
+                <div class="chat-bubble @(isOwn ? "own" : "other")">
+                    @if (!isOwn)
+                    {
+                        <span class="chat-sender">@msg.SenderNickname</span>
+                    }
+                    <p class="chat-text">@msg.Message</p>
+                    <span class="chat-time">@FormatTime(msg.CreatedAt)</span>
+                </div>
+            }
+        </div>
+
+        <div class="chat-input-bar">
+            <input class="chat-input" placeholder="Type a message..."
+                   @bind="MessageText" @bind:event="oninput"
+                   @onkeydown="HandleKeyDown" />
+            <button class="chat-send" @onclick="SendMessage" disabled="@IsSending">
+                @(IsSending ? "..." : "Send")
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="chat-error">@Error</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string ChannelUrl { get; set; } = "";
+
+    private List<ChatMessage> Messages = new();
+    private string MessageText = "";
+    private string CurrentUserId = "renter-1"; // demo user
+    private string ChannelName = "Chat";
+    private bool IsLoading = true;
+    private bool IsSending = false;
+    private string Error = "";
+    private DotNetObjectReference<Chat>? _dotnetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            var appId = await Http.GetStringAsync("/api/sendbird/app-id");
+            appId = appId.Trim('"');
+
+            await JS.InvokeVoidAsync("sendbirdInterop.init", appId);
+            await JS.InvokeVoidAsync("sendbirdInterop.connect", CurrentUserId);
+
+            var channelInfo = await JS.InvokeAsync<JsonElement>("sendbirdInterop.getChannel", ChannelUrl);
+            ChannelName = channelInfo.GetProperty("name").GetString() ?? "Chat";
+
+            var rawMessages = await JS.InvokeAsync<JsonElement>("sendbirdInterop.loadMessages", ChannelUrl, 50);
+            Messages = JsonSerializer.Deserialize<List<ChatMessage>>(rawMessages.GetRawText(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("sendbirdInterop.registerHandler", ChannelUrl, _dotnetRef);
+
+            IsLoading = false;
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+        catch (Exception ex)
+        {
+            Error = $"Connection failed: {ex.Message}";
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnMessageReceived(string json)
+    {
+        var msg = JsonSerializer.Deserialize<ChatMessage>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (msg is not null)
+        {
+            Messages.Add(msg);
+            await InvokeAsync(StateHasChanged);
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(MessageText) || IsSending) return;
+
+        IsSending = true;
+        try
+        {
+            var result = await JS.InvokeAsync<JsonElement>("sendbirdInterop.sendMessage", ChannelUrl, MessageText.Trim());
+            var msg = JsonSerializer.Deserialize<ChatMessage>(result.GetRawText(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (msg is not null)
+                Messages.Add(msg);
+
+            MessageText = "";
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+        catch (Exception ex)
+        {
+            Error = $"Send failed: {ex.Message}";
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SendMessage();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "document.getElementById('chatMessages')?.scrollTo(0, document.getElementById('chatMessages').scrollHeight)");
+        }
+        catch { }
+    }
+
+    private string FormatTime(long timestamp)
+    {
+        var dt = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+        return dt.ToString("h:mm tt");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("sendbirdInterop.disconnect");
+        }
+        catch { }
+        _dotnetRef?.Dispose();
+    }
+
+    private class ChatMessage
+    {
+        public long MessageId { get; set; }
+        public string Message { get; set; } = "";
+        public string SenderId { get; set; } = "";
+        public string SenderNickname { get; set; } = "";
+        public long CreatedAt { get; set; }
+    }
+}
