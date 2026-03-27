@@ -24,19 +24,19 @@ Category
 </div>
 
 @* loading icon before map renders *@
-@* @if (!mapLoaded)
+@if (!mapLoaded)
 {
     <div style="display: flex; flex-direction: column; align-items: center">
         <Spinner />
         <i>loading map </i>
     </div>
-} *@
+}
 @* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
-@* <GoogleMapsComponents.GoogleMap @ref="map"
+<GoogleMapsComponents.GoogleMap @ref="map"
                                 Options="mapOptions"
-                                Height="80vh"
+                                Height="65vh"
                                 OnAfterInit="mapRenderDone">
-</GoogleMapsComponents.GoogleMap> *@
+</GoogleMapsComponents.GoogleMap>
 
 @code {
     private string category = "All Categories";
@@ -58,7 +58,7 @@ Category
         StreetViewControl = false
     };
 
-    //called once the map renders, disable loading
+    // called once the map renders, disable loading
     private void mapRenderDone()
     {
         mapLoaded = true;

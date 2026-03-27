@@ -1,9 +1,96 @@
 ﻿@using BlazorBootstrap
-@inject NavigationManager NavManager
+@inject NavigationManager NavigationManager
 
-<div style="width: 25vw; height: 100%">
-    <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/browse">Browse</Button>
+<div style="display: flex; flex-direction: row; align-items: flex-start; gap: 10px; border-right: 2px solid var(--divide); padding-right: 15px; margin-right: 15px">
+    <NavLink href="/browse" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <Image Src="/browse.png" Alt="placeholder" />
+            <div>Browse</div>
+    </NavLink>
+
+    <NavLink href="/express_interest" class="sidebarButton" ActiveClass="sidebarButtonActive">
+        <div class="wrap">
+            <Image Src="@expressInterestImg" Alt="placeholder" />
+        </div>
+        Express<br />Interest
+    </NavLink>
+
+    <NavLink href="/confirm_booking" class="sidebarButton" ActiveClass="sidebarButtonActive">
+        <div class="wrap">    
+            <Image Src="@confirmBookingImg" Alt="placeholder" />
+        </div>
+        Confirm<br/>Booking
+    </NavLink>
+
+    <NavLink href="/handoff" class="sidebarButton" ActiveClass="sidebarButtonActive">
+        <div class="wrap">
+            <Image Src="@handoffImg" Alt="placeholder" />
+        </div>
+        Handoff
+     </NavLink>
+
+    <NavLink href="/return" class="sidebarButton" ActiveClass="sidebarButtonActive">
+        <div class="wrap">    
+            <Image Src="@returnImg" Alt="placeholder" />
+        </div>
+        Return
+    </NavLink>
+    @* <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/browse">Browse</Button>
     <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/cart">Cart</Button>
     <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-    @* <Button Class="but" Type="ButtonType.Link" Color="ButtonColor.Primary" To="/stripe">Stripe</Button> *@
+    <Button Class="but" Type="ButtonType.Link" Color="ButtonColor.Primary" To="/stripe">Stripe</Button> *@
 </div>
+
+@code{
+    private static string[] unselectedIcons = {"/expressInterest_unselect.png", "/confirmBooking_unselect.png", "/handoff_unselect.png", "/return_unselect.png"};
+    private static string[] selectedIcons = { "/expressInterest_selected.png", "/confirmBooking_selected.png", "/handoff_selected.png", "/return_selected.png" };
+
+    private string expressInterestImg = unselectedIcons[0];
+    private string confirmBookingImg = unselectedIcons[1];
+    private string handoffImg = unselectedIcons[2];
+    private string returnImg = unselectedIcons[3];
+
+    protected override void OnInitialized()
+    {
+        string path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        switch(path)
+        {
+            case "express_interest":
+                selectExpressInterest();
+                break;
+            case "confirm_booking":
+                selectConfirmBooking();
+                break;
+            case "handoff":
+                selectHandoff();
+                break;
+            case "return":
+                selectReturn();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void selectExpressInterest()
+    {
+        expressInterestImg = selectedIcons[0];
+    }
+
+    private void selectConfirmBooking()
+    {
+        confirmBookingImg = selectedIcons[1];
+        selectExpressInterest();
+    }
+
+    private void selectHandoff()
+    {
+        handoffImg = selectedIcons[2];
+        selectConfirmBooking();
+    }
+
+    private void selectReturn()
+    {
+        returnImg = selectedIcons[3];
+        selectHandoff();
+    }
+}
