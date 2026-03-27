@@ -1,5 +1,22 @@
 ﻿@inherits LayoutComponentBase
-@using GoogleMapsComponents
+@using ToolPool.Client.Layout.Components
+
+@* HEADER *@
+<div style="padding: 15px; padding-top: 5px; padding-bottom: 5px; background: #ffffff; box-shadow: 0px 2px #f0ede8; display: flex; justify-content: space-between">
+    <Brand />
+    <User />
+</div>
+
+@* CONTENT *@
+<div style="display: flex; padding: 15px">
+    @* SIDEBAR *@
+    <Sidebar />
+
+    @* PAGE CONTENT *@
+    <main style="margin: 2px">@Body</main>
+</div>
+
+@* @using GoogleMapsComponents
 @using ToolPool.Client.Services
 @inject AuthenticationStateProvider AuthStateProvider
 @using Microsoft.AspNetCore.Components.Authorization
@@ -58,4 +75,4 @@
             authenticated = true;
         }
     }
-}
+} *@

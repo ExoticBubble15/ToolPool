@@ -1,0 +1,66 @@
+﻿@page "/browse"
+@rendermode InteractiveWebAssembly
+@using BlazorBootstrap
+@using GoogleMapsComponents
+@using GoogleMapsComponents.Maps
+
+<h2 class="pageTitle">Discover Tools Near You</h2>
+<span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
+
+<div class="content">
+Category
+    <Dropdown Color="DropdownColor.Secondary">
+        <DropdownToggleButton>ddd</DropdownToggleButton>
+        <DropdownMenu>
+            <DropdownItem Type="DropdownItemType.Link">Action</DropdownItem>
+            <DropdownItem Type="DropdownItemType.Link">Another action</DropdownItem>
+            <DropdownItem Type="DropdownItemType.Link">Something else here</DropdownItem>
+            @* <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("All Categories"))">All Categories</DropdownItem>
+            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Pottery"))">Pottery</DropdownItem>
+            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Power Tools"))">Power Tools</DropdownItem>
+            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Hand Tools"))">Hand Tools</DropdownItem> *@
+        </DropdownMenu>
+    </Dropdown>
+</div>
+
+@* loading icon before map renders *@
+@* @if (!mapLoaded)
+{
+    <div style="display: flex; flex-direction: column; align-items: center">
+        <Spinner />
+        <i>loading map </i>
+    </div>
+} *@
+@* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
+@* <GoogleMapsComponents.GoogleMap @ref="map"
+                                Options="mapOptions"
+                                Height="80vh"
+                                OnAfterInit="mapRenderDone">
+</GoogleMapsComponents.GoogleMap> *@
+
+@code {
+    private string category = "All Categories";
+
+    private void updateCategory(string cat)
+    {
+        category = cat;
+    }
+
+    private bool mapLoaded = false;
+    private GoogleMapsComponents.GoogleMap map;
+    private MapOptions mapOptions = new MapOptions()
+    {
+        Zoom = 15,
+        Center = new LatLngLiteral(42.3604, -71.0580), //city hall
+        MapId = "39cf637b3be049e5f469447c", //custom map and style
+        MapTypeId = MapTypeId.Roadmap,
+        MapTypeControl = false,
+        StreetViewControl = false
+    };
+
+    //called once the map renders, disable loading
+    private void mapRenderDone()
+    {
+        mapLoaded = true;
+    }
+}

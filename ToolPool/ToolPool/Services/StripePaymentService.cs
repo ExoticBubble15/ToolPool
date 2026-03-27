@@ -2,7 +2,6 @@
  * Backend Service for Stripe API
  */
 
-using BootstrapBlazor.Components;
 using Stripe.Checkout;
 using Stripe.Climate;
 using ToolPool.Client.Models;

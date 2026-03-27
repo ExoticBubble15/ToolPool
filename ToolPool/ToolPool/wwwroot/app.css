@@ -1,14 +1,19 @@
 ﻿:root {
-    --bg: #0f0f0f;
+    --bg: #f9f7f5;
     --surface: #1a1a1a;
     --border: #2a2a2a;
-    --text: #f0ede8;
+    /*    --text: #f0ede8;*/
+    --text: #000000;
     --muted: #888;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
     --success: #22c55e;
     --error: #f87171;
     --radius: 12px;
+    --primary: #6f8f7f;
+    --unselected: #e7e5e0;
+    --subtext: #6f6f6e;
+    --contentBackground: #f4f2ed;
 }
 
 *, *::before, *::after {
@@ -16,6 +21,57 @@
     margin: 0;
     padding: 0;
 }
+
+.headerButton {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.headerButton:hover {
+    background: #A2C2B2;
+    border-color: var(--primary);
+}
+
+.sidebarButton {
+    color: black;
+    background: var(--unselected);
+    border-color: var(--unselected);
+}
+
+.sidebarButton.selected {
+    color: black;
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.sidebarButton:hover {
+    background: #CECCC7;
+    border-color: var(--unselected);
+}
+
+.content {
+    background: #f4f2ed;
+    border: 2px solid #f0ede8;
+    border-radius: 5px;
+    padding: 10px;
+    color: #848484;
+}
+
+
+.pageTitle {
+    font-family: Times New Roman;
+    font-weight: bold;
+}
+
+.pageSubtitle {
+    color: var(--subtext);
+}
+
+
+
+
+
+
 
 .page {
     font-family: 'Instrument Sans', sans-serif;
