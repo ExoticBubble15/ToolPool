@@ -6,6 +6,7 @@
 @inject DemoItemService ItemService
 @inject CartService Cart
 
+
 <div class="page-wrap">
     <div class="page-hero">
         <h1>Tool Pool</h1>
@@ -76,6 +77,21 @@
     private string SubmitMessage = "";
     private bool SubmitOk = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        Items = await ItemService.GetDemoItemsAsync();
+        Cart.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Cart.LoadAsync();
+            StateHasChanged();
+        }
+    }
+
     private async Task SubmitDemoItem()
     {
         SubmitMessage = "";
@@ -119,22 +135,16 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        Items = await ItemService.GetDemoItemsAsync();
-        Cart.OnChange += StateHasChanged;
-    }
-
-    private void Toggle(DemoItem item)
+    private async void Toggle(DemoItem item)
     {
         if (Cart.IsInCart(item.Id))
         {
             var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
-            Cart.Remove(cartItem.Id);
+            await Cart.RemoveAsync(cartItem.Id);
         }
         else
         {
-            Cart.Add(item);
+            await Cart.AddAsync(item);
         }
         Cart.NotifyChanged();
     }

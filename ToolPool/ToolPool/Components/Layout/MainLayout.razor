@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using ToolPool.Client.Layout.Components
+@using ToolPool.Client.Services
+@inject CartService Cart
 
 @* HEADER *@
 <div style="padding: 15px; padding-top: 5px; padding-bottom: 5px; background: #ffffff; box-shadow: 0px 2px var(--divide); display: flex; justify-content: space-between">
@@ -15,6 +17,25 @@
     @* PAGE CONTENT *@
     <main style="margin: 2px">@Body</main>
 </div>
+
+
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Cart.OnChange += StateHasChanged;
+            await Cart.LoadAsync();
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Cart.OnChange -= StateHasChanged;
+        return ValueTask.CompletedTask;
+    }
+}
 
 @* @using GoogleMapsComponents
 @using ToolPool.Client.Services

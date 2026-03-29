@@ -42,8 +42,8 @@ builder.Services.AddAuthentication(o =>
 .AddCookie()
 .AddGoogle(googleo =>
 {
-    googleo.ClientId = "placeholder";
-    googleo.ClientSecret = "placeholder";
+    googleo.ClientId = "";
+    googleo.ClientSecret = "";
     googleo.CallbackPath = "/signin-google";
 });
 

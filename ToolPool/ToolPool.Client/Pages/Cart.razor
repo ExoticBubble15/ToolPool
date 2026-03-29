@@ -62,9 +62,24 @@
     private bool Loading = false;
     private string Error = "";
 
-    private void Remove(Guid id)
+    protected override void OnInitialized()
     {
-        cart.Remove(id);
+        cart.OnChange += StateHasChanged;
+    }
+
+    // load cart from loacl storage
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await cart.LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async void Remove(Guid id)
+    {
+        await cart.RemoveAsync(id);
         cart.NotifyChanged();
     }
 
@@ -78,7 +93,6 @@
             var response = await Http.PostAsJsonAsync("/api/stripe/checkout", cart.Items);
             var url = await response.Content.ReadAsStringAsync();
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);
-
         }
         catch (Exception ex)
         {
@@ -86,4 +100,6 @@
             Loading = false;
         }
     }
+
+    public void Dispose() => cart.OnChange -= StateHasChanged;
 }

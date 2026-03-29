@@ -13,7 +13,7 @@ var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.
 string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMapsApiKey");
 builder.Services.AddBlazorGoogleMaps(googleMapsKey);
 
-builder.Services.AddSingleton<CartService>();
+builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<DemoItemService>();
 
 await builder.Build().RunAsync();
