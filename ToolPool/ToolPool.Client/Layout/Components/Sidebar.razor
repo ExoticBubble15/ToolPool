@@ -1,43 +1,56 @@
 ﻿@using BlazorBootstrap
 @inject NavigationManager NavigationManager
 
-<div style="display: flex; flex-direction: row; align-items: flex-start; gap: 10px; border-right: 2px solid var(--divide); padding-right: 15px; margin-right: 15px">
-    <NavLink href="/browse" class="sidebarButton" ActiveClass="sidebarButtonActive">
-            <Image Src="/browse.png" Alt="placeholder" />
-            <div>Browse</div>
-    </NavLink>
+<div style="border-right: 2px solid var(--divide); padding-right: 15px; margin-right: 15px">
+    <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 10px">
+        <NavLink href="/browse" class="sidebarButton" ActiveClass="sidebarButtonActive">
+                <Image Src="/browse.png" Alt="placeholder" />
+                <div>Browse</div>
+        </NavLink>
 
-    <NavLink href="/express_interest" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">
-            <Image Src="@expressInterestImg" Alt="placeholder" />
-        </div>
-        Express<br />Interest
-    </NavLink>
+        <NavLink href="/express_interest" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">
+                <Image Src="@expressInterestImg" Alt="placeholder" />
+            </div>
+            Express<br />Interest
+        </NavLink>
 
-    <NavLink href="/confirm_booking" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">    
-            <Image Src="@confirmBookingImg" Alt="placeholder" />
-        </div>
-        Confirm<br/>Booking
-    </NavLink>
+        <NavLink href="/confirm_booking" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">    
+                <Image Src="@confirmBookingImg" Alt="placeholder" />
+            </div>
+            Confirm<br/>Booking
+        </NavLink>
 
-    <NavLink href="/handoff" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">
-            <Image Src="@handoffImg" Alt="placeholder" />
-        </div>
-        Handoff
-     </NavLink>
+        <NavLink href="/handoff" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">
+                <Image Src="@handoffImg" Alt="placeholder" />
+            </div>
+            Handoff
+         </NavLink>
 
-    <NavLink href="/return" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">    
-            <Image Src="@returnImg" Alt="placeholder" />
-        </div>
-        Return
-    </NavLink>
-    @* <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/browse">Browse</Button>
-    <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/cart">Cart</Button>
-    <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-    <Button Class="but" Type="ButtonType.Link" Color="ButtonColor.Primary" To="/stripe">Stripe</Button> *@
+        <NavLink href="/return" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">    
+                <Image Src="@returnImg" Alt="placeholder" />
+            </div>
+            Return
+        </NavLink>
+        @* <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/browse">Browse</Button>
+        <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/cart">Cart</Button>
+        <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
+        <Button Class="but" Type="ButtonType.Link" Color="ButtonColor.Primary" To="/stripe">Stripe</Button> *@
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 20px">
+        @if(showPrev)
+        {
+            <Button Class="sidebarPrevious" Type="ButtonType.Link" Color="ButtonColor.Light" To="@prevPage">Previous</Button>
+        }
+        @if (showNext)
+        {
+            <Button Class="@nextClass" Type="ButtonType.Link" Color="ButtonColor.Success" To="@nextPage">Next</Button>
+        }
+    </div>
 </div>
 
 @code{
@@ -49,21 +62,40 @@
     private string handoffImg = unselectedIcons[2];
     private string returnImg = unselectedIcons[3];
 
+    private string prevPage;
+    private string nextPage;
+    private bool showPrev = true;
+    private bool showNext = true;
+    private string nextClass = "headerButton";
+
     protected override void OnInitialized()
     {
         string path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        switch(path)
+        switch (path)
         {
+            case "browse":
+                showPrev = false;
+                nextPage = "/express_interest";
+                nextClass += " shoveRight";
+                break;
             case "express_interest":
+                prevPage = "/browse";
+                nextPage = "/confirm_booking";
                 selectExpressInterest();
                 break;
             case "confirm_booking":
+                prevPage = "/express_interest";
+                nextPage = "/handoff";
                 selectConfirmBooking();
                 break;
             case "handoff":
+                prevPage = "/confirm_booking";
+                nextPage = "/return";
                 selectHandoff();
                 break;
             case "return":
+                prevPage = "/handoff";
+                showNext = false;
                 selectReturn();
                 break;
             default:

@@ -33,6 +33,14 @@
     border-color: var(--primary);
 }
 
+.shoveRight {
+    margin-left: auto;
+}
+
+.sidebarPrevious {
+    color: #949392;
+    border-color: var(--unselected);
+}
 
 .sidebarButton {
     display: flex;
@@ -83,6 +91,7 @@
     border-radius: 5px;
     padding: 10px;
     color: #848484;
+    margin-bottom: 15px;
 }
 
 

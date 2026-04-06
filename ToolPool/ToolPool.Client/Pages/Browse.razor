@@ -3,24 +3,33 @@
 @using BlazorBootstrap
 @using GoogleMapsComponents
 @using GoogleMapsComponents.Maps
+@using System.Text
+@inject IJSRuntime JS
 
 <h2 class="pageTitle">Discover Tools Near You</h2>
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
 
-<div class="content">
-Category
-    <Dropdown Color="DropdownColor.Secondary">
-        <DropdownToggleButton>ddd</DropdownToggleButton>
-        <DropdownMenu>
-            <DropdownItem Type="DropdownItemType.Link">Action</DropdownItem>
-            <DropdownItem Type="DropdownItemType.Link">Another action</DropdownItem>
-            <DropdownItem Type="DropdownItemType.Link">Something else here</DropdownItem>
-            @* <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("All Categories"))">All Categories</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Pottery"))">Pottery</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Power Tools"))">Power Tools</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Hand Tools"))">Hand Tools</DropdownItem> *@
-        </DropdownMenu>
-    </Dropdown>
+<div class="content" style="display: flex; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 5px">
+        Category
+        @* <Dropdown Color="DropdownColor.Success" AutoClose="true" AutoCloseBehavior="DropdownAutoCloseBehavior.Outside"  >
+            <DropdownToggleButton>Filter (1)</DropdownToggleButton>
+            <DropdownMenu>
+                <DropdownItem>
+                    <CheckboxInput Label="All" @bind-Value="allActive"/>
+                </DropdownItem> 
+            </DropdownMenu>
+        </Dropdown> *@
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 5px">
+        Zoom
+        @* <NumberInput TValue="int" @bind-Value="@zoom" EnableMinMax="true" Min="10" Max="500" Placeholder="15" /> *@
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 5px">
+        Sort by
+    </div>
 </div>
 
 @* loading icon before map renders *@
@@ -31,6 +40,8 @@ Category
         <i>loading map </i>
     </div>
 }
+
+<i>@locationMessage</i>
 @* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
 <GoogleMapsComponents.GoogleMap @ref="map"
                                 Options="mapOptions"
@@ -39,18 +50,15 @@ Category
 </GoogleMapsComponents.GoogleMap>
 
 @code {
-    private string category = "All Categories";
+    // private bool allActive = true;
 
-    private void updateCategory(string cat)
-    {
-        category = cat;
-    }
-
+    private string locationMessage;
+    private static int zoom = 15;
     private bool mapLoaded = false;
     private GoogleMapsComponents.GoogleMap map;
     private MapOptions mapOptions = new MapOptions()
     {
-        Zoom = 15,
+        Zoom = zoom,
         Center = new LatLngLiteral(42.3604, -71.0580), //city hall
         MapId = "39cf637b3be049e5f469447c", //custom map and style
         MapTypeId = MapTypeId.Roadmap,
@@ -58,9 +66,32 @@ Category
         StreetViewControl = false
     };
 
-    // called once the map renders, disable loading
-    private void mapRenderDone()
+    // called once the map renders
+    private async Task mapRenderDone()
     {
+        //disable loading icon
         mapLoaded = true;
+
+        //request browser location and center map
+        locationMessage = "Please allow browser location to locate nearby tools";
+        try
+        {
+            var browserLocation = await JS.InvokeAsync<Location>("getBrowserLocation");
+            Console.WriteLine($"browser location successful: ({browserLocation.Latitude}, {browserLocation.Longitude})");
+            locationMessage = "Centering at your location...";
+            await map.InteropObject.SetCenter(new LatLngLiteral(browserLocation.Latitude, browserLocation.Longitude));
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"browser location ERROR: {ex.Message}");
+        } finally
+        {
+            locationMessage = "";
+        }
+    }
+
+    public class Location
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 }
