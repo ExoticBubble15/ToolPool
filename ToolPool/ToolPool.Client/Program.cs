@@ -10,8 +10,11 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
-string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMapsApiKey");
-builder.Services.AddBlazorGoogleMaps(googleMapsKey);
+
+// comment this out if don't have a google maps api key in secrets and hardcode key in AddBlazorGoogleMaps() method below
+//string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMapsApiKey");
+
+builder.Services.AddBlazorGoogleMaps("");
 
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<DemoItemService>();

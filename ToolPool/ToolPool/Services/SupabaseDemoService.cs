@@ -111,5 +111,16 @@ public class SupabaseDemoService
 
         return rows ?? new List<DemoItemSubmission>();
     }
+    public async Task DeleteDemoItemAsync(Guid id)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/demo_items?id=eq.{id}";
 
+        using var req = new HttpRequestMessage(HttpMethod.Delete, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+    }
 }

@@ -54,6 +54,9 @@
                     <button class="@(inCart ? "btn-remove" : "btn-add")" @onclick="() => Toggle(item)">
                         @(inCart ? "Added" : "+ Add")
                     </button>
+
+                    @*Change to only show for item owner after login fully working*@
+                    <button class="btn-delete" @onclick="() => DeleteItem(item)" title="Delete item">Delete Item</button>
                 </div>
             </div>
         }
@@ -150,4 +153,18 @@
     }
 
     public void Dispose() => Cart.OnChange -= StateHasChanged;
+
+    private async Task DeleteItem(DemoItem item)
+    {
+        // Remove from cart first if present
+        if (Cart.IsInCart(item.Id))
+        {
+            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
+            await Cart.RemoveAsync(cartItem.Id);
+            Cart.NotifyChanged();
+        }
+
+        await ItemService.DeleteDemoItemAsync(item.Id);
+        Items = await ItemService.GetDemoItemsAsync();
+    }
 }

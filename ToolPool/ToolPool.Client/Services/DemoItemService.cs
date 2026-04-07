@@ -53,4 +53,10 @@ public class DemoItemService
             Price = price
         };
     }
+
+    public async Task DeleteDemoItemAsync(Guid id)
+    {
+        var resp = await _http.DeleteAsync($"api/demo-items/{id}");
+        resp.EnsureSuccessStatusCode();
+    }
 }

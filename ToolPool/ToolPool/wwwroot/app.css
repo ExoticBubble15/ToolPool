@@ -934,6 +934,17 @@ body {
     color: var(--muted);
 }
 
+.btn-delete {
+    border: none;
+    border-radius: 8px;
+    padding: .4rem .85rem;
+    font-size: .83rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+}
+
 .chat-refresh-btn {
     margin-top: 12px;
     padding: 6px 16px;

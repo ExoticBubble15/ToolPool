@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using ToolPool.Models;
 using ToolPool.Services;
 
-namespace ToolPool
+namespace ToolPool.Controllers
 {
     [Route("api")]
     [ApiController]
-    public class api : ControllerBase
+    public class SupabaseController : ControllerBase
     {
         //simple test if api is working
         //".../api/test"
@@ -22,7 +22,7 @@ namespace ToolPool
         //".../api/getSecret/{key}"
         private readonly IConfiguration _config;
         private readonly SupabaseDemoService _supabase;
-        public api(IConfiguration config, SupabaseDemoService supabase)
+        public SupabaseController(IConfiguration config, SupabaseDemoService supabase)
         {
             _config = config;
             _supabase = supabase;
@@ -64,5 +64,12 @@ namespace ToolPool
         }
 
         public record CreateDemoItemRequest(string Name, string Description, decimal Price);
+
+        [HttpDelete("demo-items/{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _supabase.DeleteDemoItemAsync(id);
+            return NoContent();
+        }
     }
 }
