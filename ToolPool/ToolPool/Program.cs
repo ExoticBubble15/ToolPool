@@ -25,7 +25,7 @@ builder.Services.AddScoped<SendbirdService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
-builder.Services.AddScoped<ToolPool.Client.Services.DemoItemService>();
+builder.Services.AddScoped<ToolPool.Client.Services.ToolService>();
 builder.Services.AddScoped<StripePaymentService>();
 
 builder.Services.AddScoped<HttpClient>(sp =>

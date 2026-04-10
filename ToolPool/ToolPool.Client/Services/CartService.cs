@@ -41,7 +41,7 @@ public class CartService
 
     // Adds a DemoItem to the cart as a CartItem
     // Ignores the add if the item is already in the cart
-    public async Task AddAsync(DemoItem item)
+    public async Task AddAsync(Tool item)
     {
         if (IsInCart(item.Id))
             return;

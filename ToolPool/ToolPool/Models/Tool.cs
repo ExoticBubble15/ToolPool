@@ -1,6 +1,6 @@
 ﻿namespace ToolPool.Models
 {
-    public class DemoItem
+    public class Tool
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
@@ -15,7 +15,7 @@
         public decimal Price { get; set; }
         public string Name { get; set; } = string.Empty;
     }
-    public class DemoItemSubmission
+    public class ToolSubmission
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

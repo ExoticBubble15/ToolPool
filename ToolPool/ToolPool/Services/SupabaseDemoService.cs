@@ -16,10 +16,10 @@ public class SupabaseDemoService
         _opt = config.GetSection("Supabase").Get<SupabaseOptions>() ?? new SupabaseOptions();
     }
 
-    public async Task<List<DemoItem>> GetDemoItemsAsync()
+    public async Task<List<Tool>> GetToolsAsync()
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items?select=id,name,description,price&order=created_at.desc";
+        var url = $"{_opt.Url}/rest/v1/Tools?select=id,name,description,price&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
@@ -28,18 +28,18 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var items = await resp.Content.ReadFromJsonAsync<List<DemoItem>>(new JsonSerializerOptions
+        var items = await resp.Content.ReadFromJsonAsync<List<Tool>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return items ?? new List<DemoItem>();
+        return items ?? new List<Tool>();
     }
 
     public async Task InsertSubmissionAsync(string name, string description, decimal price)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_item_submissions";
+        var url = $"{_opt.Url}/rest/v1/Tool_Submissions";
 
         var payload = new
         {
@@ -58,10 +58,10 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task<DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
+    public async Task<Tool> InsertToolAsync(string name, string description, decimal price)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items";
+        var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
         {
@@ -79,12 +79,12 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var inserted = await resp.Content.ReadFromJsonAsync<List<DemoItem>>(new JsonSerializerOptions
+        var inserted = await resp.Content.ReadFromJsonAsync<List<Tool>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return inserted?.FirstOrDefault() ?? new DemoItem
+        return inserted?.FirstOrDefault() ?? new Tool
         {
             Name = name,
             Description = description,
@@ -92,10 +92,10 @@ public class SupabaseDemoService
         };
     }
 
-    public async Task<List<DemoItemSubmission>> GetLatestSubmissionsAsync(int limit = 5)
+    public async Task<List<ToolSubmission>> GetLatestSubmissionsAsync(int limit = 5)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_item_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
+        var url = $"{_opt.Url}/rest/v1/Tool_Submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
@@ -104,17 +104,17 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var rows = await resp.Content.ReadFromJsonAsync<List<DemoItemSubmission>>(new JsonSerializerOptions
+        var rows = await resp.Content.ReadFromJsonAsync<List<ToolSubmission>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return rows ?? new List<DemoItemSubmission>();
+        return rows ?? new List<ToolSubmission>();
     }
-    public async Task DeleteDemoItemAsync(Guid id)
+    public async Task DeleteToolAsync(Guid id)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items?id=eq.{id}";
+        var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
         req.Headers.Add("apikey", _opt.ServiceRoleKey);

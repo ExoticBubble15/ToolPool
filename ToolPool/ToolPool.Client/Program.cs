@@ -17,6 +17,6 @@ var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.
 builder.Services.AddBlazorGoogleMaps("");
 
 builder.Services.AddScoped<CartService>();
-builder.Services.AddScoped<DemoItemService>();
+builder.Services.AddScoped<ToolService>();
 
 await builder.Build().RunAsync();

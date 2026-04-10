@@ -42,33 +42,33 @@ namespace ToolPool.Controllers
             return val ?? string.Empty;
         }
 
-        [HttpGet("demo-items")]
-        public async Task<ActionResult<List<DemoItem>>> GetDemoItems()
+        [HttpGet("Tools")]
+        public async Task<ActionResult<List<Tool>>> GetTools()
         {
-            var items = await _supabase.GetDemoItemsAsync();
+            var items = await _supabase.GetToolsAsync();
             return Ok(items);
         }
 
         [HttpPost("submissions")]
-        public async Task<IActionResult> InsertSubmission([FromBody] CreateDemoItemRequest request)
+        public async Task<IActionResult> InsertSubmission([FromBody] CreateToolRequest request)
         {
             await _supabase.InsertSubmissionAsync(request.Name, request.Description, request.Price);
             return Ok();
         }
 
-        [HttpPost("demo-items")]
-        public async Task<ActionResult<DemoItem>> InsertDemoItem([FromBody] CreateDemoItemRequest request)
+        [HttpPost("Tools")]
+        public async Task<ActionResult<Tool>> InsertTool([FromBody] CreateToolRequest request)
         {
-            var item = await _supabase.InsertDemoItemAsync(request.Name, request.Description, request.Price);
+            var item = await _supabase.InsertToolAsync(request.Name, request.Description, request.Price);
             return Ok(item);
         }
 
-        public record CreateDemoItemRequest(string Name, string Description, decimal Price);
+        public record CreateToolRequest(string Name, string Description, decimal Price);
 
-        [HttpDelete("demo-items/{id}")]
+        [HttpDelete("Tools/{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _supabase.DeleteDemoItemAsync(id);
+            await _supabase.DeleteToolAsync(id);
             return NoContent();
         }
     }

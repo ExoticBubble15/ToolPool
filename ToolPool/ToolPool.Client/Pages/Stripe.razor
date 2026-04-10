@@ -3,7 +3,7 @@
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
 @using System.Globalization
-@inject DemoItemService ItemService
+@inject ToolService ItemService
 @inject CartService Cart
 
 
@@ -72,7 +72,7 @@
 </div>
 
 @code {
-    private List<DemoItem> Items = new();
+    private List<Tool> Items = new();
     private string FormName = "";
     private string FormDescription = "";
     private string FormPriceText = "";
@@ -82,7 +82,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Items = await ItemService.GetDemoItemsAsync();
+        Items = await ItemService.GetToolsAsync();
         Cart.OnChange += StateHasChanged;
     }
 
@@ -119,8 +119,8 @@
             var description = FormDescription.Trim();
 
             await ItemService.InsertSubmissionAsync(name, description, price);
-            await ItemService.InsertDemoItemAsync(name, description, price);
-            Items = await ItemService.GetDemoItemsAsync();
+            await ItemService.InsertToolAsync(name, description, price);
+            Items = await ItemService.GetToolsAsync();
 
             SubmitOk = true;
             SubmitMessage = "Submitted and added to item list.";
@@ -138,7 +138,7 @@
         }
     }
 
-    private async void Toggle(DemoItem item)
+    private async void Toggle(Tool item)
     {
         if (Cart.IsInCart(item.Id))
         {
@@ -154,7 +154,7 @@
 
     public void Dispose() => Cart.OnChange -= StateHasChanged;
 
-    private async Task DeleteItem(DemoItem item)
+    private async Task DeleteItem(Tool item)
     {
         // Remove from cart first if present
         if (Cart.IsInCart(item.Id))
@@ -164,7 +164,7 @@
             Cart.NotifyChanged();
         }
 
-        await ItemService.DeleteDemoItemAsync(item.Id);
-        Items = await ItemService.GetDemoItemsAsync();
+        await ItemService.DeleteToolAsync(item.Id);
+        Items = await ItemService.GetToolsAsync();
     }
 }
