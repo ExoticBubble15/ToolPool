@@ -1,43 +1,17 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
-@inject NavigationManager Navigation
+@using BlazorBootstrap
 @* server rendermode for security *@
 
-<style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background: linear-gradient(to right, #d9d9d9, #000000);
-    }
-
-    .login-button {
-        padding: 15px 30px;
-        font-size: 1.2rem;
-        background-color: #000000;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-        .login-button:hover {
-            background-color: #d9d9d9;
-            transform: scale(1.05);
-        }
-</style>
-
-<div class="login-container">
-    <button class="login-button" @onclick="RedirectToGoogle">
-        Login with Google
-    </button>
-</div>
+<div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
+    <input class="form-control" @bind="Username" placeholder="Enter Username" style="width: 300px;"/>
+    <input class="form-control" @bind="PasswordPlain" placeholder="Enter Password" style="width: 300px;"/>
+    <Button style="width: 200px;" Type="ButtonType.Submit" Color="ButtonColor.Success" To="/stripe">Login</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="auth/google">Login With Google</Button>
+</div> 
 
 @code {
-    void RedirectToGoogle()
-    {
-        Navigation.NavigateTo("auth/google", forceLoad: true);
-    }
+    private string Username { get; set; }
+    private string PasswordPlain { get; set; }
 }
