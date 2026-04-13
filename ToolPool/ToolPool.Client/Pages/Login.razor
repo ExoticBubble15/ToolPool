@@ -4,14 +4,45 @@
 @* server rendermode for security *@
 
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
-    <input class="form-control" @bind="Username" placeholder="Enter Username" style="width: 300px;"/>
-    <input class="form-control" @bind="PasswordPlain" placeholder="Enter Password" style="width: 300px;"/>
-    <Button style="width: 200px;" Type="ButtonType.Submit" Color="ButtonColor.Success" To="/stripe">Login</Button>
+    <div class="mb-3">
+        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
+        @if (usernameEmpty)
+        {
+            <div class="invalid-feedback">
+                Username cannot be empty.
+            </div>
+        }
+    </div>
+    <div class="mb-3">
+        <input type="password" class="form-control @(passwordEmpty ? "is-invalid" : "")" @bind="PasswordPlain" @bind:event="oninput" placeholder="Enter Password" style="width: 300px;" />
+        @if (passwordEmpty)
+        {
+            <div class="invalid-feedback">
+                Password cannot be empty.
+            </div>
+        }
+    </div>
+
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Login</Button>
     <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
     <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="auth/google">Login With Google</Button>
 </div> 
 
 @code {
-    private string Username { get; set; }
-    private string PasswordPlain { get; set; }
+    private string? Username { get; set; }
+    private string? PasswordPlain { get; set; }
+
+    private bool usernameEmpty;
+    private bool passwordEmpty; 
+
+    private void tryLogin()
+    {
+        usernameEmpty = string.IsNullOrEmpty(Username);
+        passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
+
+        if (!(usernameEmpty || passwordEmpty))
+        {
+            // TODO: login flow here
+        }
+    }
 }
