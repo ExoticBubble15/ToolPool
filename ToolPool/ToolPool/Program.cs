@@ -34,18 +34,18 @@ builder.Services.AddScoped<HttpClient>(sp =>
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
 });
 
-builder.Services.AddAuthentication(o =>
-{
-    o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-})
-.AddCookie()
-.AddGoogle(googleo =>
-{
-    googleo.ClientId = "";
-    googleo.ClientSecret = "";
-    googleo.CallbackPath = "/signin-google";
-});
+// builder.Services.AddAuthentication(o =>
+// {
+//     o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+//     o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+// })
+// .AddCookie()
+// .AddGoogle(googleo =>
+// {
+//     googleo.ClientId = "";
+//     googleo.ClientSecret = "";
+//     googleo.CallbackPath = "/signin-google";
+// });
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 

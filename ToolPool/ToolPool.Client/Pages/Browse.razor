@@ -1,67 +1,247 @@
 ﻿@page "/browse"
 @rendermode InteractiveWebAssembly
 @using BlazorBootstrap
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
 @using GoogleMapsComponents
 @using GoogleMapsComponents.Maps
+@inject ToolService ToolService
+@inject NavigationManager Nav
 
 <h2 class="pageTitle">Discover Tools Near You</h2>
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
-<Button Type="ButtonType.Link" Color="ButtonColor.Success" To="/stripe">All Tools</Button>
 
-<div class="content">
-Category
-    <Dropdown Color="DropdownColor.Secondary">
-        <DropdownToggleButton>ddd</DropdownToggleButton>
-        <DropdownMenu>
-            <DropdownItem Type="DropdownItemType.Link">Action</DropdownItem>
-            <DropdownItem Type="DropdownItemType.Link">Another action</DropdownItem>
-            <DropdownItem Type="DropdownItemType.Link">Something else here</DropdownItem>
-            @* <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("All Categories"))">All Categories</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Pottery"))">Pottery</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Power Tools"))">Power Tools</DropdownItem>
-            <DropdownItem To="#" Type="DropdownItemType.Link" @onclick="@(() => updateCategory("Hand Tools"))">Hand Tools</DropdownItem> *@
-        </DropdownMenu>
-    </Dropdown>
+<div class="browse-location-card">
+    <div class="browse-location-header">
+        <span class="browse-location-icon">📍</span>
+        <span class="browse-location-label">Location</span>
+    </div>
+    <div class="browse-location-field">
+        <span>Downtown</span>
+    </div>
+    <div class="browse-location-field">
+        <span>2–5 km away</span>
+    </div>
+    <div class="browse-location-hint">
+        <span>🔒 Exact address revealed after booking confirmation</span>
+    </div>
+    <div class="browse-location-note">
+        Your location is shared progressively to protect your privacy while building trust.
+    </div>
 </div>
 
-@* loading icon before map renders *@
-@if (!mapLoaded)
+<div class="browse-filters">
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Category</span>
+        <select class="browse-filter-select" @bind="selectedCategory">
+            @foreach (var cat in categories)
+            {
+                <option value="@cat">@cat</option>
+            }
+        </select>
+    </div>
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Distance</span>
+        <select class="browse-filter-select" @bind="selectedDistance">
+            <option value="All">Any Distance</option>
+            <option value="Downtown">Downtown</option>
+            <option value="Midtown">Midtown</option>
+            <option value="Uptown">Uptown</option>
+            <option value="Eastside">Eastside</option>
+            <option value="Westside">Westside</option>
+            <option value="Southend">Southend</option>
+        </select>
+    </div>
+    <div class="browse-search-group">
+        <input class="browse-search-input" type="text" placeholder="Search tools..." @bind="searchQuery" @bind:event="oninput" />
+    </div>
+</div>
+
+<div class="browse-map-placeholder">
+    <div class="browse-map-inner">
+        @if (!mapLoaded)
+        {
+            <Spinner />
+            <i>loading map</i>
+        }
+        <GoogleMapsComponents.GoogleMap @ref="map"
+                                        Options="mapOptions"
+                                        Height="30vh"
+                                        OnAfterInit="mapRenderDone">
+        </GoogleMapsComponents.GoogleMap>
+    </div>
+</div>
+
+<h3 class="browse-section-title">Available Tools</h3>
+
+@if (isLoading)
 {
-    <div style="display: flex; flex-direction: column; align-items: center">
+    <div class="browse-loading">
         <Spinner />
-        <i>loading map </i>
+        <p>Loading tools...</p>
     </div>
 }
-@* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
-<GoogleMapsComponents.GoogleMap @ref="map"
-                                Options="mapOptions"
-                                Height="65vh"
-                                OnAfterInit="mapRenderDone">
-</GoogleMapsComponents.GoogleMap>
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="browse-empty">
+        <p>@errorMessage</p>
+        <button class="browse-seed-btn" @onclick="SeedAndReload">Seed Sample Tools</button>
+    </div>
+}
+else if (!FilteredTools.Any())
+{
+    <div class="browse-empty">
+        <p>No tools found matching your filters.</p>
+    </div>
+}
+else
+{
+    <div class="browse-grid">
+        @foreach (var item in FilteredTools)
+        {
+            var bgColor = GetBgColor(item.Category);
+            <div class="browse-card">
+                <div class="browse-card-image" style="background: @bgColor">
+                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                    {
+                        <img src="@item.ImageUrl" alt="@item.Name" class="browse-card-img" />
+                    }
+                    <span class="browse-card-category-tag">@(string.IsNullOrEmpty(item.Category) ? "General" : item.Category)</span>
+                </div>
+                <div class="browse-card-body">
+                    <h4 class="browse-card-name">@item.Name</h4>
+                    <span class="browse-card-cat-label">@(string.IsNullOrEmpty(item.Category) ? "General" : item.Category)</span>
+                    <div class="browse-card-location">
+                        <span class="browse-card-loc-icon">📍</span>
+                        <span>@(string.IsNullOrEmpty(item.Neighborhood) ? "Nearby" : item.Neighborhood)</span>
+                    </div>
+                    <div class="browse-card-owner-row">
+                        <span class="browse-card-owner">@(string.IsNullOrEmpty(item.OwnerName) ? "Owner" : item.OwnerName)</span>
+                    </div>
+                    <div class="browse-card-footer">
+                        <span class="browse-card-price">$@item.Price.ToString("F2")/day</span>
+                        <button class="browse-card-details-btn" @onclick="() => NavigateToTool(item.Id)">View Details</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="browse-info-section">
+    <h4>How Progressive Location Works</h4>
+    <ul>
+        <li>✔ During browsing: You see neighborhood and distance band only</li>
+        <li>✔ After booking: Exact pickup address is revealed to both parties</li>
+        <li>✔ Your privacy: Your exact home address is never shared until you confirm</li>
+    </ul>
+</div>
 
 @code {
-    private string category = "All Categories";
+    private List<Tool> allTools = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string searchQuery = "";
+    private string selectedCategory = "All Categories";
+    private string selectedDistance = "All";
 
-    private void updateCategory(string cat)
-    {
-        category = cat;
-    }
+    private static readonly string[] categories = {
+        "All Categories", "Power Tools", "Hand Tools", "Equipment", "Garden", "Cleaning"
+    };
 
     private bool mapLoaded = false;
-    private GoogleMapsComponents.GoogleMap map;
+    private GoogleMapsComponents.GoogleMap? map;
     private MapOptions mapOptions = new MapOptions()
     {
-        Zoom = 15,
-        Center = new LatLngLiteral(42.3604, -71.0580), //city hall
-        MapId = "39cf637b3be049e5f469447c", //custom map and style
+        Zoom = 13,
+        Center = new LatLngLiteral(42.3604, -71.0580),
+        MapId = "39cf637b3be049e5f469447c",
         MapTypeId = MapTypeId.Roadmap,
         MapTypeControl = false,
         StreetViewControl = false
     };
 
-    // called once the map renders, disable loading
+    private void NavigateToTool(Guid id) => Nav.NavigateTo($"/express_interest/{id}");
+
     private void mapRenderDone()
     {
         mapLoaded = true;
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            allTools = await ToolService.GetToolsAsync();
+            if (!allTools.Any())
+            {
+                errorMessage = "No tools listed yet. Seed sample tools to get started.";
+            }
+        }
+        catch (Exception ex)
+        {
+            allTools = new List<Tool>();
+            errorMessage = $"Could not load tools: {ex.Message}";
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SeedAndReload()
+    {
+        errorMessage = null;
+        isLoading = true;
+        try
+        {
+            await ToolService.SeedToolsAsync();
+            allTools = await ToolService.GetToolsAsync();
+            if (!allTools.Any())
+                errorMessage = "Seeding completed but no tools returned. Check Supabase table schema.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Seed failed: {ex.Message}";
+        }
+        isLoading = false;
+    }
+
+    private IEnumerable<Tool> FilteredTools
+    {
+        get
+        {
+            var result = allTools.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var q = searchQuery.Trim();
+                result = result.Where(t =>
+                    t.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                    t.Description.Contains(q, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (selectedCategory != "All Categories")
+            {
+                result = result.Where(t =>
+                    t.Category.Equals(selectedCategory, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (selectedDistance != "All")
+            {
+                result = result.Where(t =>
+                    t.Neighborhood.Equals(selectedDistance, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return result;
+        }
+    }
+
+    private static string GetBgColor(string category) => category switch
+    {
+        "Power Tools" => "#e8e4de",
+        "Hand Tools" => "#e0e8df",
+        "Equipment" => "#e4dfe8",
+        "Garden" => "#dde8dd",
+        "Cleaning" => "#dde5e8",
+        _ => "#e8e4de"
+    };
 }

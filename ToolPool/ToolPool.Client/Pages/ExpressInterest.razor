@@ -1,6 +1,237 @@
 ﻿@page "/express_interest"
+@page "/express_interest/{ToolId:guid}"
+@rendermode InteractiveWebAssembly
+@using BlazorBootstrap
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
+@inject ToolService ToolService
+@inject NavigationManager Nav
 
-<h2 class="pageTitle">Express Interest</h2>
-<span class="pageSubtitle">
-    todo
-</span>
+@if (ToolId is null)
+{
+    <h2 class="pageTitle">Express Interest</h2>
+    <span class="pageSubtitle">Select a tool from the Browse page to express interest.</span>
+    <div class="ei-empty">
+        <p>No tool selected. Browse available tools to get started.</p>
+        <button class="ei-browse-btn" @onclick='() => Nav.NavigateTo("/browse")'>Browse Tools</button>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="ei-loading">
+        <Spinner />
+        <p>Loading tool details...</p>
+    </div>
+}
+else if (tool is null)
+{
+    <h2 class="pageTitle">Tool Not Found</h2>
+    <div class="ei-empty">
+        <p>We couldn't find that tool. It may have been removed.</p>
+        <button class="ei-browse-btn" @onclick='() => Nav.NavigateTo("/browse")'>Browse Tools</button>
+    </div>
+}
+else
+{
+    <div class="ei-back-row">
+        <button class="ei-back-btn" @onclick='() => Nav.NavigateTo("/browse")'>← Back to Browse</button>
+    </div>
+
+    <div class="ei-layout">
+        <div class="ei-left">
+            <div class="ei-image" style="background: @GetBgColor(tool.Category)">
+                @if (!string.IsNullOrEmpty(tool.ImageUrl))
+                {
+                    <img src="@tool.ImageUrl" alt="@tool.Name" class="ei-img" />
+                }
+                <span class="ei-category-tag">@(string.IsNullOrEmpty(tool.Category) ? "General" : tool.Category)</span>
+            </div>
+
+            <div class="ei-owner-card">
+                <h4 class="ei-owner-title">Listed by</h4>
+                <div class="ei-owner-info">
+                    <div class="ei-owner-avatar">@(string.IsNullOrEmpty(tool.OwnerName) ? "?" : tool.OwnerName[0].ToString())</div>
+                    <div>
+                        <span class="ei-owner-name">@(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)</span>
+                        <span class="ei-owner-id">ID: @(string.IsNullOrEmpty(tool.OwnerId) ? "unknown" : tool.OwnerId)</span>
+                    </div>
+                </div>
+                <div class="ei-owner-location">
+                    <span>📍 @(string.IsNullOrEmpty(tool.Neighborhood) ? "Nearby" : tool.Neighborhood)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ei-right">
+            <h2 class="ei-tool-name">@tool.Name</h2>
+            <span class="ei-tool-category">@(string.IsNullOrEmpty(tool.Category) ? "General" : tool.Category)</span>
+
+            <div class="ei-price-row">
+                <span class="ei-price">$@tool.Price.ToString("F2")</span>
+                <span class="ei-price-unit">/ day</span>
+            </div>
+
+            <div class="ei-description">
+                <h4>Description</h4>
+                <p>@tool.Description</p>
+            </div>
+
+            <div class="ei-details-grid">
+                <div class="ei-detail-item">
+                    <span class="ei-detail-label">Location</span>
+                    <span class="ei-detail-value">📍 @(string.IsNullOrEmpty(tool.Neighborhood) ? "Nearby" : tool.Neighborhood)</span>
+                </div>
+                <div class="ei-detail-item">
+                    <span class="ei-detail-label">Category</span>
+                    <span class="ei-detail-value">@(string.IsNullOrEmpty(tool.Category) ? "General" : tool.Category)</span>
+                </div>
+                <div class="ei-detail-item">
+                    <span class="ei-detail-label">Owner</span>
+                    <span class="ei-detail-value">@(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)</span>
+                </div>
+                <div class="ei-detail-item">
+                    <span class="ei-detail-label">Availability</span>
+                    <span class="ei-detail-value ei-available">Available Now</span>
+                </div>
+            </div>
+
+            <div class="ei-location-note">
+                <span>🔒</span>
+                <span>Exact pickup address will be revealed after the owner confirms your booking.</span>
+            </div>
+
+            <div class="ei-form">
+                <h4>Express Your Interest</h4>
+
+                <div class="ei-form-group">
+                    <label class="ei-label">Your User ID</label>
+                    <input type="text" class="ei-input ei-input-full" placeholder="e.g. renter-1" @bind="renterId" />
+                </div>
+
+                <div class="ei-form-group">
+                    <label class="ei-label">Preferred rental dates</label>
+                    <div class="ei-date-row">
+                        <input type="date" class="ei-input" @bind="startDate" />
+                        <span class="ei-date-sep">to</span>
+                        <input type="date" class="ei-input" @bind="endDate" />
+                    </div>
+                </div>
+
+                <div class="ei-form-group">
+                    <label class="ei-label">Message to owner (optional)</label>
+                    <textarea class="ei-textarea" rows="3" placeholder="Hi! I'd like to rent this tool for a weekend project..." @bind="message"></textarea>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <div class="ei-error">@errorMsg</div>
+                }
+
+                @if (submitted)
+                {
+                    <div class="ei-success">
+                        <span>✔ Interest submitted! A chat channel has been created with the owner.</span>
+                    </div>
+                    <button class="ei-chat-btn" @onclick="GoToChat">
+                        💬 Chat with @(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)
+                    </button>
+                }
+                else
+                {
+                    <button class="ei-submit-btn" @onclick="SubmitInterest" disabled="@submitting">
+                        @(submitting ? "Submitting..." : "Express Interest & Start Chat")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? ToolId { get; set; }
+
+    private Tool? tool;
+    private bool isLoading = true;
+    private string renterId = "renter-1";
+    private string message = "";
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private bool submitting = false;
+    private bool submitted = false;
+    private string? errorMsg;
+    private string? channelUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ToolId is null) { isLoading = false; return; }
+
+        try
+        {
+            tool = await ToolService.GetToolByIdAsync(ToolId.Value);
+        }
+        catch
+        {
+            tool = null;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SubmitInterest()
+    {
+        errorMsg = null;
+
+        if (string.IsNullOrWhiteSpace(renterId))
+        {
+            errorMsg = "Please enter your user ID.";
+            return;
+        }
+
+        if (tool is null) return;
+
+        submitting = true;
+        try
+        {
+            var request = new InterestRequest
+            {
+                ToolId = tool.Id,
+                ToolName = tool.Name,
+                RenterId = renterId.Trim(),
+                OwnerId = string.IsNullOrEmpty(tool.OwnerId) ? "owner-unknown" : tool.OwnerId,
+                Message = message,
+                StartDate = startDate?.ToString("yyyy-MM-dd"),
+                EndDate = endDate?.ToString("yyyy-MM-dd")
+            };
+
+            var response = await ToolService.SubmitInterestAsync(request);
+            channelUrl = response.ChannelUrl;
+            submitted = true;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Failed to submit: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private void GoToChat()
+    {
+        if (!string.IsNullOrEmpty(channelUrl))
+        {
+            Nav.NavigateTo($"/chat/{channelUrl}?userId={Uri.EscapeDataString(renterId.Trim())}");
+        }
+    }
+
+    private static string GetBgColor(string category) => category switch
+    {
+        "Power Tools" => "#e8e4de",
+        "Hand Tools" => "#e0e8df",
+        "Equipment" => "#e4dfe8",
+        "Garden" => "#dde8dd",
+        "Cleaning" => "#dde5e8",
+        _ => "#e8e4de"
+    };
+}

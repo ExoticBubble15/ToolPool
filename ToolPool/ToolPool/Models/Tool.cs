@@ -1,4 +1,6 @@
-﻿namespace ToolPool.Models
+﻿using System.Text.Json.Serialization;
+
+namespace ToolPool.Models
 {
     public class Tool
     {
@@ -6,6 +8,21 @@
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public string Category { get; set; } = string.Empty;
+
+        [JsonPropertyName("owner_id")]
+        public string OwnerId { get; set; } = string.Empty;
+
+        [JsonPropertyName("owner_name")]
+        public string OwnerName { get; set; } = string.Empty;
+
+        public string Neighborhood { get; set; } = string.Empty;
+
+        [JsonPropertyName("image_url")]
+        public string ImageUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
     }
 
     public class CartItem
@@ -15,15 +32,48 @@
         public decimal Price { get; set; }
         public string Name { get; set; } = string.Empty;
     }
+
     public class ToolSubmission
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public decimal Price { get; set; }
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
 
-    [System.Text.Json.Serialization.JsonPropertyName("submitted_at")]
-    public DateTimeOffset SubmittedAt { get; set; }
-}
+        [JsonPropertyName("submitted_at")]
+        public DateTimeOffset SubmittedAt { get; set; }
+    }
 
+    public class InterestSubmission
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("tool_id")]
+        public Guid ToolId { get; set; }
+
+        [JsonPropertyName("tool_name")]
+        public string ToolName { get; set; } = string.Empty;
+
+        [JsonPropertyName("renter_id")]
+        public string RenterId { get; set; } = string.Empty;
+
+        [JsonPropertyName("owner_id")]
+        public string OwnerId { get; set; } = string.Empty;
+
+        public string Message { get; set; } = string.Empty;
+
+        [JsonPropertyName("start_date")]
+        public string? StartDate { get; set; }
+
+        [JsonPropertyName("end_date")]
+        public string? EndDate { get; set; }
+
+        [JsonPropertyName("channel_url")]
+        public string? ChannelUrl { get; set; }
+
+        public string Status { get; set; } = "pending";
+
+        [JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
 }
