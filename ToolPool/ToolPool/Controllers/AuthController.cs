@@ -41,9 +41,9 @@ namespace ToolPool.Controllers
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
-            var user = supabase.Auth.CurrentUser;
+            var session = supabase.Auth.CurrentSession;
 
-            return Ok(user != null);
+            return Ok(session != null);
         }
     }
 }
