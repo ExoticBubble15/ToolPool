@@ -29,12 +29,6 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<InterestResponse>() ?? new InterestResponse();
     }
 
-    public async Task InsertSubmissionAsync(string name, string description, decimal price)
-    {
-        var resp = await _http.PostAsJsonAsync("/api/submissions", new { name, description, price });
-        resp.EnsureSuccessStatusCode();
-    }
-
     public async Task<Tool> InsertToolAsync(string name, string description, decimal price)
     {
         var resp = await _http.PostAsJsonAsync("/api/Tools", new { name, description, price });

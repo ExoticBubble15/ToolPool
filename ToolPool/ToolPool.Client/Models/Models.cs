@@ -11,7 +11,7 @@ public class Tool
     public string Category { get; set; } = string.Empty;
 
     [JsonPropertyName("owner_id")]
-    public string OwnerId { get; set; } = string.Empty;
+    public Guid? OwnerId { get; set; }
 
     [JsonPropertyName("owner_name")]
     public string OwnerName { get; set; } = string.Empty;
@@ -42,7 +42,7 @@ public class InterestRequest
     public string RenterId { get; set; } = string.Empty;
 
     [JsonPropertyName("owner_id")]
-    public string OwnerId { get; set; } = string.Empty;
+    public Guid? OwnerId { get; set; }
 
     public string Message { get; set; } = string.Empty;
 

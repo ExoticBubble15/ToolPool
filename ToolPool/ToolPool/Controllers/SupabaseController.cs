@@ -49,13 +49,6 @@ namespace ToolPool.Controllers
             return Ok(tool);
         }
 
-        [HttpPost("submissions")]
-        public async Task<IActionResult> InsertSubmission([FromBody] CreateToolRequest request)
-        {
-            await _supabase.InsertSubmissionAsync(request.Name, request.Description, request.Price);
-            return Ok();
-        }
-
         [HttpPost("Tools")]
         public async Task<ActionResult<Tool>> InsertTool([FromBody] CreateToolRequest request)
         {
@@ -73,8 +66,19 @@ namespace ToolPool.Controllers
         [HttpPost("interests")]
         public async Task<ActionResult<InterestResponse>> SubmitInterest([FromBody] InterestRequest request)
         {
-            var channel = await _sendbird.CreateGroupChannelAsync(
-                request.RenterId, request.OwnerId, request.ToolName);
+            string? channelUrl = null;
+
+            try
+            {
+                var ownerId = request.OwnerId?.ToString() ?? "owner-unknown";
+                var channel = await _sendbird.CreateGroupChannelAsync(
+                    request.RenterId, ownerId, request.ToolName);
+                channelUrl = channel.ChannelUrl;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Sendbird error (non-fatal): {ex.Message}");
+            }
 
             var interest = new InterestSubmission
             {
@@ -85,18 +89,25 @@ namespace ToolPool.Controllers
                 Message = request.Message,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
-                ChannelUrl = channel.ChannelUrl,
+                ChannelUrl = channelUrl,
                 Status = "pending"
             };
 
-            var saved = await _supabase.InsertInterestAsync(interest);
-
-            return Ok(new InterestResponse
+            try
             {
-                Success = true,
-                ChannelUrl = channel.ChannelUrl,
-                InterestId = saved.Id
-            });
+                var saved = await _supabase.InsertInterestAsync(interest);
+                return Ok(new InterestResponse
+                {
+                    Success = true,
+                    ChannelUrl = channelUrl,
+                    InterestId = saved.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Supabase interest insert error: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpPost("Tools/seed")]
@@ -113,7 +124,7 @@ namespace ToolPool.Controllers
             public Guid ToolId { get; set; }
             public string ToolName { get; set; } = "";
             public string RenterId { get; set; } = "";
-            public string OwnerId { get; set; } = "";
+            public Guid? OwnerId { get; set; }
             public string Message { get; set; } = "";
             public string? StartDate { get; set; }
             public string? EndDate { get; set; }

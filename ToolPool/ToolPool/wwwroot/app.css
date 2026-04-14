@@ -56,6 +56,16 @@
     font-weight: 600;
 }
 
+.sidebarButtonDisabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+    .sidebarButtonDisabled:hover {
+        background: transparent;
+    }
+
 .wrap {
     width: 58px;
     height: 58px;

@@ -11,7 +11,7 @@ namespace ToolPool.Models
         public string Category { get; set; } = string.Empty;
 
         [JsonPropertyName("owner_id")]
-        public string OwnerId { get; set; } = string.Empty;
+        public Guid? OwnerId { get; set; }
 
         [JsonPropertyName("owner_name")]
         public string OwnerName { get; set; } = string.Empty;
@@ -33,17 +33,6 @@ namespace ToolPool.Models
         public string Name { get; set; } = string.Empty;
     }
 
-    public class ToolSubmission
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-
-        [JsonPropertyName("submitted_at")]
-        public DateTimeOffset SubmittedAt { get; set; }
-    }
-
     public class InterestSubmission
     {
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -58,7 +47,7 @@ namespace ToolPool.Models
         public string RenterId { get; set; } = string.Empty;
 
         [JsonPropertyName("owner_id")]
-        public string OwnerId { get; set; } = string.Empty;
+        public Guid? OwnerId { get; set; }
 
         public string Message { get; set; } = string.Empty;
 

@@ -2,72 +2,140 @@
 @inject NavigationManager NavigationManager
 
 <div style="display: flex; flex-direction: row; align-items: flex-start; gap: 10px; border-right: 2px solid var(--divide); padding-right: 15px; margin-right: 15px">
-    <NavLink href="/browse" class="sidebarButton" ActiveClass="sidebarButtonActive">
-            <Image Src="/browse.png" Alt="placeholder" />
+
+    @if (IsStageAccessible(0))
+    {
+        <NavLink href="/browse" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <Image Src="/browse.png" Alt="Browse" />
             <div>Browse</div>
-    </NavLink>
-
-    <NavLink href="/express_interest" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">
-            <Image Src="@expressInterestImg" Alt="placeholder" />
+        </NavLink>
+    }
+    else
+    {
+        <div class="sidebarButton sidebarButtonDisabled">
+            <Image Src="/browse.png" Alt="Browse" />
+            <div>Browse</div>
         </div>
-        Express<br />Interest
-    </NavLink>
+    }
 
-    <NavLink href="/confirm_booking" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">    
-            <Image Src="@confirmBookingImg" Alt="placeholder" />
+    @if (IsStageAccessible(1))
+    {
+        <NavLink href="/express_interest" class="sidebarButton" ActiveClass="sidebarButtonActive" Match="NavLinkMatch.Prefix">
+            <div class="wrap">
+                <Image Src="@expressInterestImg" Alt="Express Interest" />
+            </div>
+            Express<br />Interest
+        </NavLink>
+    }
+    else
+    {
+        <div class="sidebarButton sidebarButtonDisabled">
+            <div class="wrap">
+                <Image Src="@(unselectedIcons[0])" Alt="Express Interest" />
+            </div>
+            Express<br />Interest
         </div>
-        Confirm<br/>Booking
-    </NavLink>
+    }
 
-    <NavLink href="/handoff" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">
-            <Image Src="@handoffImg" Alt="placeholder" />
+    @if (IsStageAccessible(2))
+    {
+        <NavLink href="/confirm_booking" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">
+                <Image Src="@confirmBookingImg" Alt="Confirm Booking" />
+            </div>
+            Confirm<br/>Booking
+        </NavLink>
+    }
+    else
+    {
+        <div class="sidebarButton sidebarButtonDisabled">
+            <div class="wrap">
+                <Image Src="@(unselectedIcons[1])" Alt="Confirm Booking" />
+            </div>
+            Confirm<br/>Booking
         </div>
-        Handoff
-     </NavLink>
+    }
 
-    <NavLink href="/return" class="sidebarButton" ActiveClass="sidebarButtonActive">
-        <div class="wrap">    
-            <Image Src="@returnImg" Alt="placeholder" />
+    @if (IsStageAccessible(3))
+    {
+        <NavLink href="/handoff" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">
+                <Image Src="@handoffImg" Alt="Handoff" />
+            </div>
+            Handoff
+        </NavLink>
+    }
+    else
+    {
+        <div class="sidebarButton sidebarButtonDisabled">
+            <div class="wrap">
+                <Image Src="@(unselectedIcons[2])" Alt="Handoff" />
+            </div>
+            Handoff
         </div>
-        Return
-    </NavLink>
-    @* <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/browse">Browse</Button>
-    <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/cart">Cart</Button>
-    <Button Class="sidebarButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-    <Button Class="but" Type="ButtonType.Link" Color="ButtonColor.Primary" To="/stripe">Stripe</Button> *@
+    }
+
+    @if (IsStageAccessible(4))
+    {
+        <NavLink href="/return" class="sidebarButton" ActiveClass="sidebarButtonActive">
+            <div class="wrap">
+                <Image Src="@returnImg" Alt="Return" />
+            </div>
+            Return
+        </NavLink>
+    }
+    else
+    {
+        <div class="sidebarButton sidebarButtonDisabled">
+            <div class="wrap">
+                <Image Src="@(unselectedIcons[3])" Alt="Return" />
+            </div>
+            Return
+        </div>
+    }
+
 </div>
 
 @code{
-    private static string[] unselectedIcons = {"/expressInterest_unselect.png", "/confirmBooking_unselect.png", "/handoff_unselect.png", "/return_unselect.png"};
-    private static string[] selectedIcons = { "/expressInterest_selected.png", "/confirmBooking_selected.png", "/handoff_selected.png", "/return_selected.png" };
+    private static readonly string[] unselectedIcons = {"/expressInterest_unselect.png", "/confirmBooking_unselect.png", "/handoff_unselect.png", "/return_unselect.png"};
+    private static readonly string[] selectedIcons = { "/expressInterest_selected.png", "/confirmBooking_selected.png", "/handoff_selected.png", "/return_selected.png" };
 
     private string expressInterestImg = unselectedIcons[0];
     private string confirmBookingImg = unselectedIcons[1];
     private string handoffImg = unselectedIcons[2];
     private string returnImg = unselectedIcons[3];
 
+    private int currentStage = 0;
+
+    private bool IsStageAccessible(int stage) => stage <= currentStage;
+
     protected override void OnInitialized()
     {
         string path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        switch(path)
+
+        if (path.StartsWith("return", StringComparison.OrdinalIgnoreCase))
         {
-            case "express_interest":
-                selectExpressInterest();
-                break;
-            case "confirm_booking":
-                selectConfirmBooking();
-                break;
-            case "handoff":
-                selectHandoff();
-                break;
-            case "return":
-                selectReturn();
-                break;
-            default:
-                break;
+            currentStage = 4;
+            selectReturn();
+        }
+        else if (path.StartsWith("handoff", StringComparison.OrdinalIgnoreCase))
+        {
+            currentStage = 3;
+            selectHandoff();
+        }
+        else if (path.StartsWith("confirm_booking", StringComparison.OrdinalIgnoreCase))
+        {
+            currentStage = 2;
+            selectConfirmBooking();
+        }
+        else if (path.StartsWith("express_interest", StringComparison.OrdinalIgnoreCase))
+        {
+            currentStage = 1;
+            selectExpressInterest();
+        }
+        else
+        {
+            currentStage = 0;
         }
     }
 

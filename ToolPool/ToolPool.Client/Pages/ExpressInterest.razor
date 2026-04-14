@@ -53,7 +53,7 @@ else
                     <div class="ei-owner-avatar">@(string.IsNullOrEmpty(tool.OwnerName) ? "?" : tool.OwnerName[0].ToString())</div>
                     <div>
                         <span class="ei-owner-name">@(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)</span>
-                        <span class="ei-owner-id">ID: @(string.IsNullOrEmpty(tool.OwnerId) ? "unknown" : tool.OwnerId)</span>
+                        <span class="ei-owner-id">ID: @(tool.OwnerId?.ToString() ?? "unknown")</span>
                     </div>
                 </div>
                 <div class="ei-owner-location">
@@ -197,7 +197,7 @@ else
                 ToolId = tool.Id,
                 ToolName = tool.Name,
                 RenterId = renterId.Trim(),
-                OwnerId = string.IsNullOrEmpty(tool.OwnerId) ? "owner-unknown" : tool.OwnerId,
+                OwnerId = tool.OwnerId,
                 Message = message,
                 StartDate = startDate?.ToString("yyyy-MM-dd"),
                 EndDate = endDate?.ToString("yyyy-MM-dd")

@@ -30,7 +30,6 @@
                 <button class="btn-submit" @onclick="SubmitDemoItem" disabled="@IsSubmitting">
                     @(IsSubmitting ? "Submitting..." : "Submit Tool")
                 </button>
-                <a href="/latest-submissions" class="btn-submissions">Latest Submissions →</a>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(SubmitMessage))
@@ -118,7 +117,6 @@
             var name = FormName.Trim();
             var description = FormDescription.Trim();
 
-            await ItemService.InsertSubmissionAsync(name, description, price);
             await ItemService.InsertToolAsync(name, description, price);
             Items = await ItemService.GetToolsAsync();
 
