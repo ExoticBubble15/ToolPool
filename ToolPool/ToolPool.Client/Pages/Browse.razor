@@ -7,14 +7,15 @@
 @using GoogleMapsComponents.Maps
 @inject ToolService ToolService
 @inject NavigationManager Nav
+@using System.Text
+@inject IJSRuntime JS
 
 <h2 class="pageTitle">Discover Tools Near You</h2>
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
 
 <div class="browse-location-card">
     <div class="browse-location-header">
-        <span class="browse-location-icon">📍</span>
-        <span class="browse-location-label">Location</span>
+        <span class="browse-location-icon">📍 Location</span>
     </div>
     <div class="browse-location-field">
         <span>Downtown</span>
@@ -25,9 +26,9 @@
     <div class="browse-location-hint">
         <span>🔒 Exact address revealed after booking confirmation</span>
     </div>
-    <div class="browse-location-note">
+    @* <div class="browse-location-note">
         Your location is shared progressively to protect your privacy while building trust.
-    </div>
+    </div> *@
 </div>
 
 <div class="browse-filters">
@@ -57,17 +58,19 @@
     </div>
 </div>
 
-<div class="browse-map-placeholder">
-    <div class="browse-map-inner">
-        @if (!mapLoaded)
-        {
-            <Spinner />
-            <i>loading map</i>
-        }
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center">
+    @if (!mapLoaded)
+    {
+        <Spinner />
+        <i>loading map</i>
+    }
+
+    <i>@locationMessage</i>
+    <div class="map">
+        @* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
         <GoogleMapsComponents.GoogleMap @ref="map"
-                                        Options="mapOptions"
-                                        Height="30vh"
-                                        OnAfterInit="mapRenderDone">
+        Options="mapOptions"
+        OnAfterInit="mapRenderDone">
         </GoogleMapsComponents.GoogleMap>
     </div>
 </div>
@@ -149,13 +152,14 @@ else
         "All Categories", "Power Tools", "Hand Tools", "Equipment", "Garden", "Cleaning"
     };
 
+    private string locationMessage;
     private bool mapLoaded = false;
     private GoogleMapsComponents.GoogleMap? map;
     private MapOptions mapOptions = new MapOptions()
     {
         Zoom = 13,
-        Center = new LatLngLiteral(42.3604, -71.0580),
-        MapId = "39cf637b3be049e5f469447c",
+        Center = new LatLngLiteral(42.3604, -71.0580), //city hall
+        MapId = "39cf637b3be049e5f469447c", //custom map and style
         MapTypeId = MapTypeId.Roadmap,
         MapTypeControl = false,
         StreetViewControl = false
@@ -163,9 +167,34 @@ else
 
     private void NavigateToTool(Guid id) => Nav.NavigateTo($"/express_interest/{id}");
 
-    private void mapRenderDone()
+    // called once the map renders
+    private async Task mapRenderDone()
     {
+        //disable loading icon
         mapLoaded = true;
+
+        //request browser location and center map
+        locationMessage = "Please allow browser location to locate nearby tools";
+        try
+        {
+            var browserLocation = await JS.InvokeAsync<Location>("getBrowserLocation");
+            Console.WriteLine($"browser location successful: ({browserLocation.Latitude}, {browserLocation.Longitude})");
+            locationMessage = "Centering at your location...";
+            await map.InteropObject.SetCenter(new LatLngLiteral(browserLocation.Latitude, browserLocation.Longitude));
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"browser location ERROR: {ex.Message}");
+        } finally
+        {
+            locationMessage = "";
+        }
+    }
+
+    //object for browser location
+    public class Location
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     protected override async Task OnInitializedAsync()

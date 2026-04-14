@@ -4,17 +4,19 @@ using ToolPool.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+//get localhost
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
 
+//blazor google maps
 var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/Google:Maps");
+builder.Services.AddBlazorGoogleMaps(googleMapsKey);
 
-// comment this out if don't have a google maps api key in secrets and hardcode key in AddBlazorGoogleMaps() method below
-//string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/GoogleMapsApiKey");
-
-builder.Services.AddBlazorGoogleMaps("");
+//blazor bootstrap
+builder.Services.AddBlazorBootstrap();
 
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<ToolService>();
