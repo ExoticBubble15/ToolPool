@@ -1,0 +1,105 @@
+﻿@page "/cart"
+@rendermode InteractiveWebAssembly
+@using ToolPool.Client.Services
+@using ToolPool.Client.Models
+@inject CartService cart
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<div class="page-wrap">
+    <h1 class="cart-title">Your Cart</h1>
+
+    @if (!cart.Items.Any())
+    {
+        <div class="empty-cart">
+            <div class="empty-icon">🛒</div>
+            <p>Your cart is empty.</p>
+            <a href="/stripe" class="btn-back">Browse Items</a>
+        </div>
+    }
+    else
+    {
+        <div class="cart-layout">
+            <div class="cart-items">
+                @foreach (var item in cart.Items)
+                {
+                    <div class="cart-row">
+                        <span class="cart-name">@item.Name</span>
+                        <span class="cart-price">$@item.Price.ToString("F2")</span>
+                        <button class="btn-x" @onclick="() => Remove(item.Id)">✕</button>
+                    </div>
+                }
+            </div>
+
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Items</span>
+                    <span>@cart.Count</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span>$@cart.Total.ToString("F2")</span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <div class="error-msg">@Error</div>
+                }
+
+                <button class="btn-pay" @onclick="Checkout" disabled="@Loading">
+                    @(Loading ? "Redirecting..." : "Pay with Stripe →")
+                </button>
+
+                <p class="stripe-note">Powered by Stripe · Test card: 4242 4242 4242 4242</p>
+
+                <a href="/stripe" class="btn-back-sm">← Keep browsing</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool Loading = false;
+    private string Error = "";
+
+    protected override void OnInitialized()
+    {
+        cart.OnChange += StateHasChanged;
+    }
+
+    // load cart from loacl storage
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await cart.LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async void Remove(Guid id)
+    {
+        await cart.RemoveAsync(id);
+        cart.NotifyChanged();
+    }
+
+    private async Task Checkout()
+    {
+        Error = "";
+        Loading = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/stripe/checkout", cart.Items);
+            var url = await response.Content.ReadAsStringAsync();
+            Nav.NavigateTo(url.Trim('"'), forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Error = $"Stripe error: {ex.Message}";
+            Loading = false;
+        }
+    }
+
+    public void Dispose() => cart.OnChange -= StateHasChanged;
+}

@@ -1,0 +1,32 @@
+﻿@using BlazorBootstrap
+@using ToolPool.Client.Services
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject AuthService AuthService
+
+<span style="display: flex; align-items: center; gap: 5px">
+    @if(authenticated)
+    {
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/logout">Logout</Button>
+    } else
+    {
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/login">Login</Button>
+    }
+</span>
+
+@code {
+    private bool authenticated;
+
+    protected override void OnInitialized()
+    {
+        authenticated = false;
+    }
+
+
+    // switch login to users page if authenticated
+    protected override async Task OnInitializedAsync()
+    {
+        authenticated = await AuthService.AsyncCheckAuth();
+    }
+} 

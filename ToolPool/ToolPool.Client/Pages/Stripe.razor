@@ -1,0 +1,170 @@
+﻿@page "/stripe"
+@rendermode InteractiveWebAssembly
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
+@using System.Globalization
+@inject DemoItemService ItemService
+@inject CartService Cart
+
+
+<div class="page-wrap">
+    <div class="page-hero">
+        <h1>Tool Pool</h1>
+        <p>Browse items from Supabase and suggest a new tool.</p>
+    </div>
+
+    <div class="suggest-wrap">
+        <div class="item-card suggest-card">
+            <div class="item-info">
+                <h3>Suggest a Tool</h3>
+                <p>Submit a tool idea to Supabase.</p>
+            </div>
+
+            <div class="submit-grid">
+                <input class="submit-input" placeholder="Tool name" @bind="FormName" />
+                <input class="submit-input" placeholder="Short description" @bind="FormDescription" />
+                <input class="submit-input" type="number" step="0.01" min="0" placeholder="Daily price (USD)" @bind="FormPriceText" />
+            </div>
+
+            <div class="submit-actions">
+                <button class="btn-submit" @onclick="SubmitDemoItem" disabled="@IsSubmitting">
+                    @(IsSubmitting ? "Submitting..." : "Submit Tool")
+                </button>
+                <a href="/latest-submissions" class="btn-submissions">Latest Submissions →</a>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(SubmitMessage))
+            {
+                <span class="submit-msg @(SubmitOk ? "ok" : "err")">@SubmitMessage</span>
+            }
+        </div>
+    </div>
+
+    <div class="item-grid">
+        @foreach (var item in Items)
+        {
+            var inCart = Cart.IsInCart(item.Id);
+            <div class="item-card @(inCart ? "in-cart" : "")">
+                <div class="item-info">
+                    <h3>@item.Name</h3>
+                    <p>@item.Description</p>
+                </div>
+                <div class="item-footer">
+                    <span class="item-price">$@item.Price.ToString("F2")</span>
+                    <button class="@(inCart ? "btn-remove" : "btn-add")" @onclick="() => Toggle(item)">
+                        @(inCart ? "Added" : "+ Add")
+                    </button>
+
+                    @*Change to only show for item owner after login fully working*@
+                    <button class="btn-delete" @onclick="() => DeleteItem(item)" title="Delete item">Delete Item</button>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Cart.Count > 0)
+    {
+        <div class="sticky-bar">
+            <span>@Cart.Count item(s) · $@Cart.Total.ToString("F2")</span>
+            <a href="/cart" class="btn-checkout-sticky">View Cart →</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<DemoItem> Items = new();
+    private string FormName = "";
+    private string FormDescription = "";
+    private string FormPriceText = "";
+    private bool IsSubmitting = false;
+    private string SubmitMessage = "";
+    private bool SubmitOk = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Items = await ItemService.GetDemoItemsAsync();
+        Cart.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Cart.LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitDemoItem()
+    {
+        SubmitMessage = "";
+        SubmitOk = false;
+
+        if (string.IsNullOrWhiteSpace(FormName))
+        {
+            SubmitMessage = "Name is required.";
+            return;
+        }
+
+        if (!decimal.TryParse(FormPriceText, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) || price < 0)
+        {
+            SubmitMessage = "Enter a valid non-negative price (e.g. 12.34).";
+            return;
+        }
+
+        IsSubmitting = true;
+        try
+        {
+            var name = FormName.Trim();
+            var description = FormDescription.Trim();
+
+            await ItemService.InsertSubmissionAsync(name, description, price);
+            await ItemService.InsertDemoItemAsync(name, description, price);
+            Items = await ItemService.GetDemoItemsAsync();
+
+            SubmitOk = true;
+            SubmitMessage = "Submitted and added to item list.";
+            FormName = "";
+            FormDescription = "";
+            FormPriceText = "";
+        }
+        catch (Exception ex)
+        {
+            SubmitMessage = $"Submit failed: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private async void Toggle(DemoItem item)
+    {
+        if (Cart.IsInCart(item.Id))
+        {
+            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
+            await Cart.RemoveAsync(cartItem.Id);
+        }
+        else
+        {
+            await Cart.AddAsync(item);
+        }
+        Cart.NotifyChanged();
+    }
+
+    public void Dispose() => Cart.OnChange -= StateHasChanged;
+
+    private async Task DeleteItem(DemoItem item)
+    {
+        // Remove from cart first if present
+        if (Cart.IsInCart(item.Id))
+        {
+            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
+            await Cart.RemoveAsync(cartItem.Id);
+            Cart.NotifyChanged();
+        }
+
+        await ItemService.DeleteDemoItemAsync(item.Id);
+        Items = await ItemService.GetDemoItemsAsync();
+    }
+}

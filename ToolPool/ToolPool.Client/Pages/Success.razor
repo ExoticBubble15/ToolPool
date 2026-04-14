@@ -1,0 +1,18 @@
+@page "/success"
+@rendermode InteractiveWebAssembly
+@using ToolPool.Client.Services
+@inject CartService Cart
+@using ToolPool.Client.Models
+
+
+<div class="page-wrap success-wrap">
+    <div class="success-icon">✓</div>
+    <h1>Payment Complete!</h1>
+    <p>Demo complete.</p>
+    <p class="muted">Yipee!</p>
+    <a href="/" class="btn-back" @onclick="Cart.ClearAsync">Start Over</a>
+</div>
+
+@code {
+    protected override void OnInitialized() => Cart.ClearAsync();
+}

@@ -1,0 +1,81 @@
+﻿@page "/register"
+@rendermode InteractiveServer
+@using BlazorBootstrap
+<div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
+    <div class="mb-3"> 
+        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
+        @if(usernameEmpty)
+        {
+            <div class="invalid-feedback">
+                Username cannot be empty.
+            </div>
+        }
+    </div>
+    <div class="mb-3">
+        <input class="form-control @(emailEmpty ? "is-invalid" : "")" @bind="Email" @bind:event="oninput" placeholder="Enter Email" style="width: 300px;" />
+        @if (emailEmpty)
+        {
+            <div class="invalid-feedback">
+                Email cannot be empty.
+            </div>
+        }
+    </div>
+    <div class="mb-3"> 
+        <input type="password" class="form-control @(passwordEmpty ? "is-invalid" : "")" @bind="PasswordPlain" @bind:event="oninput" placeholder="Enter Password" style="width: 300px;" />
+        @if (passwordEmpty)
+        {
+            <div class="invalid-feedback">
+                Password cannot be empty.
+            </div>
+        }
+    </div>
+    <div class="mb-3">
+        <input type="password" class="form-control @(passwordMismatch ? "is-invalid" : "")" @bind="PasswordPlainConfirm" @bind:event="oninput" placeholder="Confirm Password" style="width: 300px;" />
+        @if (passwordMismatch)
+        {
+            <div class="invalid-feedback">
+                Passwords do not match.
+            </div>
+        }
+    </div>
+    
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryRegister">Register</Button>
+</div>
+
+@code {
+    private string? Email { get; set; }
+    private string? Username { get; set; }
+    private string? PasswordPlain { get; set; }
+    private string? PasswordPlainConfirm { get; set; }
+
+    private bool emailEmpty;
+    private bool usernameEmpty;
+    private bool passwordEmpty;
+    private bool passwordMismatch = false;
+
+    private void tryRegister()
+    {
+        emailEmpty = string.IsNullOrEmpty(Email);
+        usernameEmpty = string.IsNullOrEmpty(Username);
+        passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
+        passwordMismatch = !PasswordPlain?.Equals(PasswordPlainConfirm) ?? true;
+
+        if (!(emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch))
+        {
+
+            // var options = new AccountCreateOptions
+            // {
+            //     Type = "express",
+            //     Email = user.Email,
+            // };
+            //
+            // var service = new AccountService();
+            // Account account = service.Create(options);
+            //
+            // // Save account.Id in your DB
+            // user.StripeAccountId = account.Id;
+            // TODO: add new user creation logic / api call to backend user creation service here
+
+        }
+    }
+}
