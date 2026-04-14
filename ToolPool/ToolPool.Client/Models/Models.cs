@@ -30,36 +30,9 @@ public class CartItem
     public string Name { get; set; } = string.Empty;
 }
 
-public class InterestRequest
+// user auth status
+public class AuthStatus
 {
-    [JsonPropertyName("tool_id")]
-    public Guid ToolId { get; set; }
-
-    [JsonPropertyName("tool_name")]
-    public string ToolName { get; set; } = string.Empty;
-
-    [JsonPropertyName("renter_id")]
-    public string RenterId { get; set; } = string.Empty;
-
-    [JsonPropertyName("owner_id")]
-    public Guid? OwnerId { get; set; }
-
-    public string Message { get; set; } = string.Empty;
-
-    [JsonPropertyName("start_date")]
-    public string? StartDate { get; set; }
-
-    [JsonPropertyName("end_date")]
-    public string? EndDate { get; set; }
-}
-
-public class InterestResponse
-{
-    public bool Success { get; set; }
-
-    [JsonPropertyName("channel_url")]
-    public string? ChannelUrl { get; set; }
-
-    [JsonPropertyName("interest_id")]
-    public Guid? InterestId { get; set; }
+    public string? username { get; set; }
+    public bool? isAuthed { get; set; }
 }

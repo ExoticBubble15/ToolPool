@@ -1,8 +1,8 @@
 ﻿@using BlazorBootstrap
+@using ToolPool.Client.Services
 @inject NavigationManager Navigation
-@* NEED TO FIX OAUTH STUFF *@
-@* @inject AuthenticationStateProvider AuthStateProvider
-@using Microsoft.AspNetCore.Components.Authorization *@
+@inject HttpClient Http
+@inject AuthService AuthService
 
 <span style="display: flex; align-items: center; gap: 5px">
     @if(authenticated)
@@ -23,17 +23,10 @@
         authenticated = false;
     }
 
-    // FIX THIS TOO
-    // switch login to users page if authenticated
-    // protected override async Task OnInitializedAsync()
-    // {   
-    //     var authStatus = await AuthStateProvider.GetAuthenticationStateAsync();
-    //     var user = authStatus.User;
 
-    //     if user.Identity not null, check isAuthed, else coalesce to false
-    //     if (user.Identity?.IsAuthenticated ?? false)
-    //     {
-    //         authenticated = true;
-    //     }
-    // }
+    // switch login to users page if authenticated
+    protected override async Task OnInitializedAsync()
+    {
+        authenticated = await AuthService.AsyncCheckAuth();
+    }
 } 

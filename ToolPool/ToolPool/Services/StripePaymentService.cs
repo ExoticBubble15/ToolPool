@@ -19,6 +19,31 @@ public class StripePaymentService
         _http = http;
     }
 
+    public string CreateCustomer(string email)
+    {
+        var service = new CustomerService();
+
+        var customer = service.Create(new CustomerCreateOptions
+        {
+            Email = email,
+        });
+
+        return customer.Id;
+    }
+
+    public string CreateConnectedAccount(string email)
+    {
+        var service = new AccountService();
+
+        var account = service.Create(new AccountCreateOptions
+        {
+            Type = "express",
+            Email = email
+        });
+
+        return account.Id;
+    }
+
     // async method to create a stripe checkout session
     public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems, decimal total)
     {

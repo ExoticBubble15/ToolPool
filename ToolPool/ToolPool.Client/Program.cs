@@ -19,6 +19,7 @@ builder.Services.AddBlazorGoogleMaps(googleMapsKey);
 builder.Services.AddBlazorBootstrap();
 
 builder.Services.AddScoped<CartService>();
-builder.Services.AddScoped<ToolService>();
+builder.Services.AddScoped<DemoItemService>();
+builder.Services.AddScoped<AuthService>();
 
 await builder.Build().RunAsync();

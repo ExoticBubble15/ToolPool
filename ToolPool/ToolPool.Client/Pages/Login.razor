@@ -1,43 +1,48 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
-@inject NavigationManager Navigation
+@using BlazorBootstrap
 @* server rendermode for security *@
 
-<style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background: linear-gradient(to right, #d9d9d9, #000000);
-    }
-
-    .login-button {
-        padding: 15px 30px;
-        font-size: 1.2rem;
-        background-color: #000000;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-        .login-button:hover {
-            background-color: #d9d9d9;
-            transform: scale(1.05);
+<div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
+    <div class="mb-3">
+        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
+        @if (usernameEmpty)
+        {
+            <div class="invalid-feedback">
+                Username cannot be empty.
+            </div>
         }
-</style>
+    </div>
+    <div class="mb-3">
+        <input type="password" class="form-control @(passwordEmpty ? "is-invalid" : "")" @bind="PasswordPlain" @bind:event="oninput" placeholder="Enter Password" style="width: 300px;" />
+        @if (passwordEmpty)
+        {
+            <div class="invalid-feedback">
+                Password cannot be empty.
+            </div>
+        }
+    </div>
 
-<div class="login-container">
-    <button class="login-button" @onclick="RedirectToGoogle">
-        Login with Google
-    </button>
-</div>
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Login</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="api/auth/google">Login With Google</Button>
+</div> 
 
 @code {
-    void RedirectToGoogle()
+    private string? Username { get; set; }
+    private string? PasswordPlain { get; set; }
+
+    private bool usernameEmpty;
+    private bool passwordEmpty; 
+
+    private void tryLogin()
     {
-        Navigation.NavigateTo("auth/google", forceLoad: true);
+        usernameEmpty = string.IsNullOrEmpty(Username);
+        passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
+
+        if (!(usernameEmpty || passwordEmpty))
+        {
+            // TODO: login flow here
+        }
     }
 }
