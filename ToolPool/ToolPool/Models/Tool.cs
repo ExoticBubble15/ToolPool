@@ -2,6 +2,11 @@
 
 namespace ToolPool.Models
 {
+    public class ToolCategory
+    {
+        public string Category {  get; set; } = string.Empty;
+    }
+
     public class Tool
     {
         public Guid Id { get; set; } = Guid.NewGuid();

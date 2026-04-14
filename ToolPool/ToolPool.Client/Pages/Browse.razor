@@ -34,12 +34,15 @@
 <div class="browse-filters">
     <div class="browse-filter-group">
         <span class="browse-filter-label">Category</span>
-        <select class="browse-filter-select" @bind="selectedCategory">
-            @foreach (var cat in categories)
-            {
-                <option value="@cat">@cat</option>
-            }
-        </select>
+        @if(categoriesLoaded)
+        {
+            <select class="browse-filter-select" @bind="selectedCategory">
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat">@cat</option>
+                }
+            </select>
+        }
     </div>
     <div class="browse-filter-group">
         <span class="browse-filter-label">Distance</span>
@@ -148,9 +151,11 @@ else
     private string selectedCategory = "All Categories";
     private string selectedDistance = "All";
 
-    private static readonly string[] categories = {
-        "All Categories", "Power Tools", "Hand Tools", "Equipment", "Garden", "Cleaning"
-    };
+    // private static readonly string[] categories = {
+    //     "All Categories", "Power Tools", "Hand Tools", "Equipment", "Garden", "Cleaning"
+    // };
+    private bool categoriesLoaded = false;
+    private List<String> categories;
 
     private string locationMessage;
     private bool mapLoaded = false;
@@ -201,6 +206,10 @@ else
     {
         try
         {
+            categories = await ToolService.GetCategoriesAsync();
+            categories.Insert(0, "All Categories");
+            categoriesLoaded = true;
+
             allTools = await ToolService.GetToolsAsync();
             if (!allTools.Any())
             {

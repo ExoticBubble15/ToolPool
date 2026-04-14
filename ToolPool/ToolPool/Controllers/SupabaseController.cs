@@ -34,6 +34,18 @@ namespace ToolPool.Controllers
             return val ?? string.Empty;
         }
 
+        [HttpGet("categories")]
+        public async Task<List<String>> Categories()
+        {
+            List<String> categories = new List<String>();
+            var toolCategories = await _supabase.GetCategories();
+            foreach(var c in toolCategories)
+            {
+                categories.Add(c.Category);
+            }
+            return categories;
+        }
+
         [HttpGet("Tools")]
         public async Task<ActionResult<List<Tool>>> GetTools()
         {

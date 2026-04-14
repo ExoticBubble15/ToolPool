@@ -12,6 +12,9 @@ public class ToolService
         _http = http;
     }
 
+    public async Task<List<String>> GetCategoriesAsync()
+        => await _http.GetFromJsonAsync<List<String>>("/api/categories") ?? new();
+
     public async Task<List<Tool>> GetToolsAsync()
         => await _http.GetFromJsonAsync<List<Tool>>("/api/Tools") ?? new();
 
