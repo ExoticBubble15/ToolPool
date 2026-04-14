@@ -8,12 +8,14 @@ public class UserService
     private readonly SupabaseDemoService _db;
     private readonly StripePaymentService _stripe;
     private readonly Supabase.Client _supabase;
+    private readonly HttpClient _http;
 
-    public UserService(SupabaseDemoService db, StripePaymentService stripe,  Supabase.Client supabase)
+    public UserService(SupabaseDemoService db, StripePaymentService stripe, Supabase.Client supabase, HttpClient http)
     {
         _db = db;
         _stripe = stripe;
         _supabase = supabase;
+        _http = http;
     }
 
     public async Task<User> RegisterUserAsync(RegisterRequest request)
@@ -25,7 +27,9 @@ public class UserService
         var customerId = _stripe.CreateCustomer(request.Email);
         // Create Stripe Seller Account
         var accountId = _stripe.CreateConnectedAccount(request.Email);
-        // create sendbird id
+        // TODO: create sendbird id
+        var sendbirdId = await sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
+        
         
         // 4. Save to Supabase
         var newUser = new User
