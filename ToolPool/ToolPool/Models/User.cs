@@ -2,10 +2,11 @@
 {
     public class User
     {
-        //private readonly string _uid;
-        //private readonly string _stripe_uid;
-        //private readonly string _username;
-        //private readonly string _email;
+        public Guid Id { get; set; }
+
+        public string Email { get; set; } = "";
+        public string? StripeCustomerId { get; set; }
+        public string? StripeAccountId { get; set; }
 
     }
 }
