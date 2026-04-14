@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Stripe;
+using Supabase;
+using System.Text;
+using ToolPool.Client.Services;
 using ToolPool.Components;
 using ToolPool.Models;
 using ToolPool.Services;
@@ -17,11 +21,12 @@ builder.Services.AddRazorComponents()
 builder.Services.AddControllers();
 builder.Configuration.AddUserSecrets<Program>();
 
-builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
+builder.Services.Configure<ToolPool.Models.SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
 builder.Services.Configure<SendbirdOptions>(builder.Configuration.GetSection("Sendbird"));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<SupabaseDemoService>();
 builder.Services.AddScoped<SendbirdService>();
+builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
@@ -45,6 +50,21 @@ builder.Services.AddAuthentication(o =>
     googleo.ClientId = builder.Configuration["Google:ClientID"];
     googleo.ClientSecret = builder.Configuration["Google:ClientSecret"];
     googleo.CallbackPath = "/signin-google";
+});
+
+// supabase client setup
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var options = new Supabase.SupabaseOptions
+    {
+        AutoConnectRealtime = true
+    };
+
+    var client = new Supabase.Client(builder.Configuration["Supabase:Url"], builder.Configuration["Supabase:AnonKey"], options);
+    client.InitializeAsync();
+
+    return client;
 });
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];

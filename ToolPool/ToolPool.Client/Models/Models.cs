@@ -22,3 +22,9 @@ public class CartItem
     public string Name { get; set; } = string.Empty;
 }
 
+// user auth status
+public class AuthStatus
+{
+    public string? username { get; set; }
+    public bool? isAuthed { get; set; }
+}
