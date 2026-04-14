@@ -63,18 +63,18 @@
         if (!(emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch))
         {
 
-            // var options = new AccountCreateOptions
-            // {
-            //     Type = "express",
-            //     Email = user.Email,
-            // };
-            //
-            // var service = new AccountService();
-            // Account account = service.Create(options);
-            //
-            // // Save account.Id in your DB
-            // user.StripeAccountId = account.Id;
-            // TODO: add new user creation logic / api call to backend user creation service here
+            var options = new AccountCreateOptions
+            {
+                Type = "express",
+                Email = user.Email,
+            };
+            
+            var service = new AccountService();
+            Account account = service.Create(options);
+            
+            // Save account.Id in your DB
+            user.StripeAccountId = account.Id;
+            TODO: add new user creation logic / api call to backend user creation service here
 
         }
     }

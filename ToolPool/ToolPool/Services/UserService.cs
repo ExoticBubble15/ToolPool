@@ -16,26 +16,26 @@ public class UserService
         _supabase = supabase;
     }
 
-    // public async Task<User> RegisterUserAsync(RegisterRequest request)
-    // {
-    //     // Create user in Supabase
-    //     var session = await _supabase.Auth.SignUp(request.Email, request.Password);
-    //     // ADD USER ALREADY EXISTS LOGIC - !
-    //     // Create Stripe Customer
-    //     var customerId = _stripe.CreateCustomer(request.Email);
-    //     // Create Stripe Seller Account
-    //     var accountId = _stripe.CreateConnectedAccount(request.Email);
-    //     // create sendbird id
-    //     
-    //     // 4. Save to Supabase
-    //     var newUser = new User
-    //     {
-    //         Username = session?.User?.Id ?? "",
-    //         Email = request.Email,
-    //         UserSession = session,
-    //         StripeCustomerId =  customerId,
-    //         StripeAccountId = accountId,
-    //     };
-    //     // Todo: add to user database
-    // }
+    public async Task<User> RegisterUserAsync(RegisterRequest request)
+    {
+        // Create user in Supabase
+        var session = await _supabase.Auth.SignUp(request.Email, request.Password);
+        // ADD USER ALREADY EXISTS LOGIC - !
+        // Create Stripe Customer
+        var customerId = _stripe.CreateCustomer(request.Email);
+        // Create Stripe Seller Account
+        var accountId = _stripe.CreateConnectedAccount(request.Email);
+        // create sendbird id
+        
+        // 4. Save to Supabase
+        var newUser = new User
+        {
+            Username = session?.User?.Id ?? "",
+            Email = request.Email,
+            UserSession = session,
+            StripeCustomerId =  customerId,
+            StripeAccountId = accountId,
+        };
+        // Todo: add to user database
+    }
 }
