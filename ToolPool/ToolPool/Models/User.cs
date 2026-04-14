@@ -9,6 +9,6 @@ namespace ToolPool.Models
         public Session? UserSession { get; set; }
         public string? StripeCustomerId { get; set; }
         public string? StripeAccountId { get; set; }
-
+        public string? SendBirdId { get; set; }
     }
 }

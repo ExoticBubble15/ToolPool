@@ -9,12 +9,14 @@ public class UserService
     private readonly StripePaymentService _stripe;
     private readonly Supabase.Client _supabase;
     private readonly HttpClient _http;
+    private readonly SendbirdService _sendbird;
 
-    public UserService(SupabaseDemoService db, StripePaymentService stripe, Supabase.Client supabase, HttpClient http)
+    public UserService(SupabaseDemoService db, StripePaymentService stripe, Supabase.Client supabase, SendbirdService sendbird, HttpClient http)
     {
         _db = db;
         _stripe = stripe;
         _supabase = supabase;
+        _sendbird = sendbird;
         _http = http;
     }
 
@@ -28,7 +30,7 @@ public class UserService
         // Create Stripe Seller Account
         var accountId = _stripe.CreateConnectedAccount(request.Email);
         // TODO: create sendbird id
-        var sendbirdId = await sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
+        var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
         
         
         // 4. Save to Supabase
@@ -37,9 +39,12 @@ public class UserService
             Username = session?.User?.Id ?? "",
             Email = request.Email,
             UserSession = session,
-            StripeCustomerId =  customerId,
+            StripeCustomerId = customerId,
             StripeAccountId = accountId,
+            SendBirdId = sendbirdId,
         };
         // Todo: add to user database
+
+        return newUser;
     }
 }

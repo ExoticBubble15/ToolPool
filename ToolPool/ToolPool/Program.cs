@@ -52,7 +52,7 @@ builder.Services.AddAuthentication(o =>
     googleo.CallbackPath = "/signin-google";
 });
 
-// supabase client setup
+// supabase client setup ** UNTESTED **
 builder.Services.AddSingleton(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
