@@ -15,7 +15,7 @@ namespace ToolPool.Client.Services
         }
 
         // checks if user is logged in
-        pu lic async Task<bool> AsyncCheckAuth()
+        public async Task<bool> AsyncCheckAuth()
         {
             var authStatus = await _http.GetFromJsonAsync<bool>("api/auth/status");
             return authStatus;
