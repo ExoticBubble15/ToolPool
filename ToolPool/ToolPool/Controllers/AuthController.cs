@@ -43,26 +43,14 @@ namespace ToolPool.Controllers
             return Redirect("/");
         }
 
+        [Authorize]
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
-            try
+            return Ok(new
             {
-                var session = supabase.Auth.CurrentSession;
-                if (session != null)
-                {
-                    return Ok(true);
-                }
-                else
-                    return Ok(false);
-            }
-            catch (Exception ex) {
-
-                return StatusCode(500, new
-                {
-                    error = ex.Message
-                });
-            }
+                Email = User.Identity?.Name
+            });
         }
 
         [HttpPost("signup")]
