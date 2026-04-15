@@ -38,12 +38,34 @@ namespace ToolPool.Controllers
         public async Task<List<String>> Categories()
         {
             List<String> categories = new List<String>();
-            var toolCategories = await _supabase.GetCategories();
-            foreach(var c in toolCategories)
+            foreach(var c in (await _supabase.GetCategories()))
             {
                 categories.Add(c.Category);
             }
+            Console.WriteLine(categories.Count > 0 ? "success: \"categories\"" : "failure: \"categories\"");
             return categories;
+        }
+
+        //key = city, value = list of neighborhoods
+        [HttpGet("cityNeighborhoods")]
+        public async Task<Dictionary<String, List<String>>> CityNeighborhoods()
+        {
+            Dictionary<String, List<String>> cityNeighborhoods = new Dictionary<String, List<String>>();
+            foreach(var t in (await _supabase.GetCityNeighborhoods()))
+            {
+                var c = t.city;
+                var n = t.neighborhood;
+                if(cityNeighborhoods.ContainsKey(c))
+                {
+                    cityNeighborhoods[c].Add(n);
+                }
+                else
+                {
+                    cityNeighborhoods[c] = new List<String>{n};
+                }
+            }
+            Console.WriteLine(cityNeighborhoods.Count > 0 ? "success: \"cityNeighborhoods\"" : "failure: \"cityNeighborhoods\"");
+            return cityNeighborhoods;
         }
 
         [HttpGet("Tools")]

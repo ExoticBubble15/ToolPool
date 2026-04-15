@@ -7,6 +7,11 @@ namespace ToolPool.Models
         public string Category {  get; set; } = string.Empty;
     }
 
+    public class NeighborhoodTuple
+    {
+        public string neighborhood { get; set; } = string.Empty;
+        public string city { get; set; } = string.Empty;
+    }
     public class Tool
     {
         public Guid Id { get; set; } = Guid.NewGuid();

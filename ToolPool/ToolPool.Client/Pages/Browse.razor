@@ -31,33 +31,85 @@
     </div> *@
 </div>
 
-<div class="browse-filters">
-    <div class="browse-filter-group">
-        <span class="browse-filter-label">Category</span>
-        @if(categoriesLoaded)
-        {
-            <select class="browse-filter-select" @bind="selectedCategory">
-                @foreach (var cat in categories)
-                {
-                    <option value="@cat">@cat</option>
-                }
-            </select>
-        }
+<div>
+    <div class="browse-filters">
+        <div class="browse-filter-group">
+            <span class="browse-filter-label">Tool Types</span>
+            @if(categoriesLoaded)
+            {
+                <span class="browse-filter-select">
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories">Categories ⌵</Button>
+                </span>
+            }
+        </div>
+
+        <div class="browse-filter-group">
+            <span class="browse-filter-label">Locations</span>
+            @if (neighborhoodsLoaded)
+            {
+                <span class="browse-filter-select">
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleNeighborhoods">Neighborhoods ⌵</Button>
+                </span>
+            }
+        </div>
+
+        <div class="browse-search-group">
+            <span class="browse-filter-label">Search</span>
+            <input class="browse-search-input" type="text" placeholder="Enter tool title..." @bind="searchQuery" @bind:event="oninput" />
+        </div>
     </div>
-    <div class="browse-filter-group">
-        <span class="browse-filter-label">Distance</span>
-        <select class="browse-filter-select" @bind="selectedDistance">
-            <option value="All">Any Distance</option>
-            <option value="Downtown">Downtown</option>
-            <option value="Midtown">Midtown</option>
-            <option value="Uptown">Uptown</option>
-            <option value="Eastside">Eastside</option>
-            <option value="Westside">Westside</option>
-            <option value="Southend">Southend</option>
-        </select>
-    </div>
-    <div class="browse-search-group">
-        <input class="browse-search-input" type="text" placeholder="Search tools..." @bind="searchQuery" @bind:event="oninput" />
+
+
+    <div style="display: flex; justify-content:left; margin-bottom: 1.25rem">
+            @if(categoriesLoaded)
+            {
+                <Collapse @ref="categories">
+                <div class="filterOptions">
+                        <div>
+                            <span style="display: flex; justify-content: center">
+                            <input type="checkbox" id="allCategories" checked="@(selectedCategories.Count == categoriesList.Count)" @onchange="OnAllCategoriesChanged" />
+                                <label for="allCategories" style="margin-left: 5px"><b><i>All Categories</i></b></label>
+                            </span>
+                            @foreach(var cat in categoriesList)
+                            {
+                                <div style="display: flex; align-items: center;">
+                                    <input type="checkbox" id="@cat" checked="@selectedCategories.Contains(cat)" @onchange="(e) => OnCategoryChanged(cat, (bool)e.Value!)" />
+                                    <label for="@cat" style="margin-left: 5px">@cat</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </Collapse>
+            }
+
+            @if(categoriesExpanded && neighborhoodsExpanded)
+            {
+                <div style="border: 1px solid var(--divide)"/>
+            }
+
+            @if(neighborhoodsLoaded)
+            {
+                <Collapse @ref="neighborhoods">
+                <div class="filterOptions">
+                    @foreach (var city in cityNeighborhoods)
+                        {
+                            <div style="display: inline-block; vertical-align: top; margin: 0 10px">
+                                <div style="display: flex; align-items: center; border-bottom: 1px solid black">
+                                    <input type="checkbox" id="@city.Key" />
+                                    <label for="@city.Key" style="margin-left: 5px;"><b>@city.Key</b></label>
+                                </div>
+                                @foreach (var neighborhood in city.Value)
+                                {
+                                    <div style="display: flex; align-items: center;">
+                                        <input type="checkbox" id="@neighborhood" />
+                                        <label for="@neighborhood" style="margin-left: 5px;">@neighborhood</label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </Collapse>
+            }
     </div>
 </div>
 
@@ -70,7 +122,6 @@
 
     <i>@locationMessage</i>
     <div class="map">
-        @* have to specify package bc blazorbootstrap also has <GoogleMap> component *@
         <GoogleMapsComponents.GoogleMap @ref="map"
         Options="mapOptions"
         OnAfterInit="mapRenderDone">
@@ -125,7 +176,7 @@ else
                         <span class="browse-card-owner">@(string.IsNullOrEmpty(item.OwnerName) ? "Owner" : item.OwnerName)</span>
                     </div>
                     <div class="browse-card-footer">
-                        <span class="browse-card-price">$@item.Price.ToString("F2")/day</span>
+                        <span class="browse-card-price">$@item.Price.ToString("F2")</span>
                         <button class="browse-card-details-btn" @onclick="() => NavigateToTool(item.Id)">View Details</button>
                     </div>
                 </div>
@@ -148,14 +199,28 @@ else
     private bool isLoading = true;
     private string? errorMessage;
     private string searchQuery = "";
-    private string selectedCategory = "All Categories";
+
     private string selectedDistance = "All";
 
-    // private static readonly string[] categories = {
-    //     "All Categories", "Power Tools", "Hand Tools", "Equipment", "Garden", "Cleaning"
-    // };
+    private List<String> selectedCategories;
     private bool categoriesLoaded = false;
-    private List<String> categories;
+    Collapse categories = default!;
+    private List<String> categoriesList;
+    private bool categoriesExpanded = false;
+    private async Task ToggleCategories()
+    {
+        await categories.ToggleAsync();
+        categoriesExpanded = !categoriesExpanded;
+    }
+
+    private bool neighborhoodsLoaded = false;
+    Collapse neighborhoods = default!;
+    private Dictionary<String, List<String>> cityNeighborhoods;
+    private bool neighborhoodsExpanded = false;
+    private async Task ToggleNeighborhoods() {
+        await neighborhoods.ToggleAsync();
+        neighborhoodsExpanded = !neighborhoodsExpanded;
+    }
 
     private string locationMessage;
     private bool mapLoaded = false;
@@ -206,9 +271,12 @@ else
     {
         try
         {
-            categories = await ToolService.GetCategoriesAsync();
-            categories.Insert(0, "All Categories");
+            categoriesList = await ToolService.GetCategoriesAsync();
+            selectedCategories = new List<string>(categoriesList);
             categoriesLoaded = true;
+
+            cityNeighborhoods = await ToolService.GetCityNeighborhoodsAsync();
+            neighborhoodsLoaded = true;
 
             allTools = await ToolService.GetToolsAsync();
             if (!allTools.Any())
@@ -243,6 +311,30 @@ else
         isLoading = false;
     }
 
+    private void OnAllCategoriesChanged(ChangeEventArgs e)
+    {
+        if ((bool)e.Value!)
+        {
+            selectedCategories = new List<string>(categoriesList);
+        }
+        else
+        {
+            selectedCategories.Clear();
+        }
+    }
+
+    private void OnCategoryChanged(string category, bool isChecked)
+    {
+        if (isChecked)
+        {
+            selectedCategories.Add(category);
+        }
+        else
+        {
+            selectedCategories.Remove(category);
+        }
+    }
+
     private IEnumerable<Tool> FilteredTools
     {
         get
@@ -257,10 +349,12 @@ else
                     t.Description.Contains(q, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (selectedCategory != "All Categories")
+            if (selectedCategories.Any())
             {
-                result = result.Where(t =>
-                    t.Category.Equals(selectedCategory, StringComparison.OrdinalIgnoreCase));
+                result = result.Where(t => selectedCategories.Contains(t.Category));
+            } else
+            {
+                result = Enumerable.Empty<Tool>();
             }
 
             if (selectedDistance != "All")

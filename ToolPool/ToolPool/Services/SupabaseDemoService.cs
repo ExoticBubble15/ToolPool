@@ -33,6 +33,21 @@ public class SupabaseDemoService
         return items ?? new List<ToolCategory>();
     }
 
+    public async Task<List<NeighborhoodTuple>> GetCityNeighborhoods()
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Neighborhoods?select=neighborhood,city";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var items = await resp.Content.ReadFromJsonAsync<List<NeighborhoodTuple>>(_jsonOpts);
+        return items ?? new List<NeighborhoodTuple>();
+    }
     public async Task<List<Tool>> GetToolsAsync()
     {
         var client = _httpClientFactory.CreateClient();
