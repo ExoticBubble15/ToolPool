@@ -145,4 +145,24 @@ public class SupabaseDemoService
 
         resp.EnsureSuccessStatusCode();
     }
+
+    public async Task<User?> GetUserAsync(string email) 
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?email=eq.{email}&select=*&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Headers.Add("Prefer", "return=representation");
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+        var user = await resp.Content.ReadFromJsonAsync<User>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return user;
+    }
 }

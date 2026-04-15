@@ -27,9 +27,21 @@ public class RegistrationStatus
     public bool? isAuthed { get; set; }
 }
 
+public class LoginStatus
+{
+    public bool success { get; set; }
+    public string? failureMessage { get; set; }
+}
+
 public class RegisterRequest
 {
     public string Email { get; set; } = "";
     public string Password { get; set; } = "";
     public string Username { get; set; } = "";
+}
+
+public class LoginRequest
+{
+    public required string Email { get; set; }
+    public required string Password { get; set; }
 }
