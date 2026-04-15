@@ -98,7 +98,7 @@ public class UserService
             else
             {
                 // TODO: get user from db matching email, set users' session to response
-                ToolPool.Models.User user = _db.
+                //ToolPool.Models.User user = _db.
                 return new LoginStatus { success = true, };
             }
         }
