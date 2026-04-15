@@ -28,13 +28,13 @@ public class UserService
         {
             // TODO: error handling for all these below
             var response = await _supabase.Auth.SignUp(request.Email, request.Password);
-            var session =  await _supabase.Auth.SignIn(request.Email, request.Password);
+            //var session =  await _supabase.Auth.SignIn(request.Email, request.Password);
             // Create Stripe Customer
             var customerId = await _stripe.CreateCustomerAsync(request.Email);
             // Create Stripe Seller Account
             var accountId = await _stripe.CreateConnectedAccountAsync(request.Email);
             // create sendbird id
-            var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
+            var sendbirdId = await _sendbird.CreateOrGetUserAsync(response?.User?.Id ?? "", request.Email);
 
 
             // 4. Save to Supabase
@@ -42,7 +42,7 @@ public class UserService
             {
                 Username = response?.User?.Id ?? "",
                 Email = request.Email,
-                UserSession = session,
+                //UserSession = session,
                 StripeCustomerId = customerId,
                 StripeAccountId = accountId,
                 SendBirdId = sendbirdId,
@@ -52,12 +52,13 @@ public class UserService
 
             var payload = new
             {
-                id = session?.User?.Id,
+                id = response?.User?.Id,
                 stripe_account_id = accountId,
                 stripe_customer_id = customerId,
                 sendbird_user_id = sendbirdId,
                 created_at = DateTime.UtcNow,
-                updated_at = DateTime.UtcNow
+                updated_at = DateTime.UtcNow,
+                email = request.Email
             };
 
             await _db.InsertUserAsync(payload);
