@@ -123,4 +123,26 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
     }
+
+    public async Task InsertUserAsync(object payload)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users";
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url);
+
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        req.Headers.Add("Prefer", "return=representation");
+        req.Content = JsonContent.Create(payload);
+
+        using var resp = await client.SendAsync(req);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        Console.WriteLine("SUPABASE INSERT RESPONSE:");
+        Console.WriteLine(body);
+
+        resp.EnsureSuccessStatusCode();
+    }
 }

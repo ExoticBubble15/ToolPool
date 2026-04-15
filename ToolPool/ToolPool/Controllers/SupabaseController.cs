@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ToolPool.Models;
 using ToolPool.Services;
 
+
 namespace ToolPool.Controllers
 {
     [Route("api")]
@@ -22,10 +23,12 @@ namespace ToolPool.Controllers
         //".../api/getSecret/{key}"
         private readonly IConfiguration _config;
         private readonly SupabaseDemoService _supabase;
-        public SupabaseController(IConfiguration config, SupabaseDemoService supabase)
+        private readonly UserService _userService;
+        public SupabaseController(IConfiguration config, SupabaseDemoService supabase, UserService userService)
         {
             _config = config;
             _supabase = supabase;
+            _userService = userService;
         }
         [HttpGet("getSecret/{key}")]
         public string GetSecret(string key)
@@ -70,6 +73,22 @@ namespace ToolPool.Controllers
         {
             await _supabase.DeleteDemoItemAsync(id);
             return NoContent();
+        }
+
+        [HttpPost("users/register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            var result = await _userService.RegisterUserAsync(request);
+
+            if (!result.IsValid)
+            {
+                return BadRequest(new
+                {
+                    error = result.ErrorMessage
+                });
+            }
+
+            return Ok(result);
         }
     }
 }

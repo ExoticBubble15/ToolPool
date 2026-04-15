@@ -2,9 +2,7 @@
 @rendermode InteractiveServer
 @using BlazorBootstrap
 @using ToolPool.Client.Models
-@inject HttpClient http
-@inject NavigationManager nav
-
+@inject HttpClient Http
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
     <div class="mb-3"> 
         <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
@@ -42,15 +40,8 @@
             </div>
         }
     </div>
-    <div class="mb-3">
-    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryRegister">Register</Button>
-        @if (failedToRegister)
-        {
-            <div class="invalid-feedback">
-                Failed to register - @(registerFailureMessage ?? "Unknown Error")
-            </div>
-        }
-    </div>
+    
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="TryRegister">Register</Button>
 </div>
 
 @code {
@@ -66,27 +57,27 @@
     private bool failedToRegister = false;
     public string? registerFailureMessage;
 
-    private async Task tryRegister()
+    private async Task TryRegister()
     {
         emailEmpty = string.IsNullOrEmpty(Email);
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
-        passwordMismatch = !PasswordPlain?.Equals(PasswordPlainConfirm) ?? true;
+        passwordMismatch = PasswordPlain != PasswordPlainConfirm;
 
-        if (!(emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch))
+        if (emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch)
+            return;
+
+        var request = new RegisterRequest
         {
-            var registerResult = await http.GetFromJsonAsync<RegistrationStatus>(
-                "api/auth/signup?email={Email}&password={PasswordPlain}"
-            );
-            if (!registerResult?.IsValid ?? false) {
-                failedToRegister = true;
-                registerFailureMessage = registerResult?.ErrorMessage;
-            }
-            else
-            {
-                failedToRegister = false;
-                nav.NavigateTo("/");
-            }
+            Email = Email!,
+            Password = PasswordPlain!,
+            Username = Username!
+        };
+
+        var response = await Http.PostAsJsonAsync("/api/users/register", request);
+        if (response.IsSuccessStatusCode)
+        {
+            // redirect or success UI
         }
     }
 }

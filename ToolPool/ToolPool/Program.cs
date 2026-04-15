@@ -33,12 +33,14 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
 builder.Services.AddScoped<ToolPool.Client.Services.DemoItemService>();
 builder.Services.AddScoped<StripePaymentService>();
+builder.Services.AddScoped<UserService>();
 
-builder.Services.AddScoped<HttpClient>(sp =>
-{
-    var nav = sp.GetRequiredService<NavigationManager>();
-    return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
-});
+builder.Services.AddScoped(sp =>
+    new HttpClient
+    {
+        BaseAddress = new Uri("https://localhost:7040")
+    });
+
 
 builder.Services.AddAuthentication(o =>
 {
@@ -51,6 +53,15 @@ builder.Services.AddAuthentication(o =>
     googleo.ClientId = builder.Configuration["Google:ClientID"];
     googleo.ClientSecret = builder.Configuration["Google:ClientSecret"];
     googleo.CallbackPath = "/signin-google";
+});
+
+builder.Services.AddHttpClient("Sendbird", client =>
+{
+    var config = builder.Configuration;
+    var apiToken = config["Sendbird:ApiToken"];
+
+    client.BaseAddress = new Uri("https://api-cbf5c234-570d-4862-bfbb-63e59b75ccfa.sendbird.com");
+    client.DefaultRequestHeaders.Add("Api-Token", apiToken);
 });
 
 // supabase client setup ** UNTESTED **

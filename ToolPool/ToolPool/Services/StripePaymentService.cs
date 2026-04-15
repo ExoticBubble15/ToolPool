@@ -19,11 +19,11 @@ public class StripePaymentService
         _http = http;
     }
 
-    public string CreateCustomer(string email)
+    public async Task<string> CreateCustomerAsync(string email)
     {
         var service = new CustomerService();
 
-        var customer = service.Create(new CustomerCreateOptions
+        var customer = await service.CreateAsync(new CustomerCreateOptions
         {
             Email = email,
         });
@@ -31,11 +31,11 @@ public class StripePaymentService
         return customer.Id;
     }
 
-    public string CreateConnectedAccount(string email)
+    public async Task<string> CreateConnectedAccountAsync(string email)
     {
         var service = new AccountService();
 
-        var account = service.Create(new AccountCreateOptions
+        var account = await service.CreateAsync(new AccountCreateOptions
         {
             Type = "express",
             Email = email

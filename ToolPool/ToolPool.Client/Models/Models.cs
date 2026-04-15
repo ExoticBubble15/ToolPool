@@ -23,6 +23,13 @@ public class CartItem
 // user registration status
 public class RegistrationStatus
 {
-    public bool IsValid { get; set; }
-    public string? ErrorMessage { get; set; }
+    public string? username { get; set; }
+    public bool? isAuthed { get; set; }
+}
+
+public class RegisterRequest
+{
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Username { get; set; } = "";
 }

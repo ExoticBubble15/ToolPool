@@ -50,24 +50,28 @@ namespace ToolPool.Controllers
             return Ok(session != null);
         }
 
-        [HttpGet("signup")]
-        public async Task<IActionResult> RegisterUser(string email, string password)
+        [HttpPost("signup")]
+        public async Task<IActionResult> RegisterUser([FromBody] ToolPool.Models.RegisterRequest request)
         {
-            RegisterRequest req = new RegisterRequest { Email = email, Password = password };
-            User result = await _userService.RegisterUserAsync(req);
-            if (result.IsValid)
+            try
             {
-                return Ok(new User
+                var result = await _userService.RegisterUserAsync(request);
+
+                if (!result.IsValid)
                 {
-                    IsValid = true
-                });
+                    return BadRequest(new
+                    {
+                        error = result.ErrorMessage
+                    });
+                }
+
+                return Ok(result);
             }
-            else
+            catch (Exception ex)
             {
-                return Ok(new User
+                return StatusCode(500, new
                 {
-                    IsValid = false,
-                    ErrorMessage = result.ErrorMessage
+                    error = ex.Message
                 });
             }
         }
