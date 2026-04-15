@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.Data;
 using ToolPool.Services;
 using ToolPool.Models;
+using GoogleMapsComponents.Maps;
 
 public class UserService
 {
@@ -23,28 +24,42 @@ public class UserService
     public async Task<User> RegisterUserAsync(RegisterRequest request)
     {
         // Create user in Supabase
-        var session = await _supabase.Auth.SignUp(request.Email, request.Password);
-        // ADD USER ALREADY EXISTS LOGIC - !
-        // Create Stripe Customer
-        var customerId = _stripe.CreateCustomer(request.Email);
-        // Create Stripe Seller Account
-        var accountId = _stripe.CreateConnectedAccount(request.Email);
-        // TODO: create sendbird id
-        var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
-        
-        
-        // 4. Save to Supabase
-        var newUser = new User
+        // user alr exists try catch
+        try
         {
-            Username = session?.User?.Id ?? "",
-            Email = request.Email,
-            UserSession = session,
-            StripeCustomerId = customerId,
-            StripeAccountId = accountId,
-            SendBirdId = sendbirdId,
-        };
-        // Todo: add to user database
+            var session = await _supabase.Auth.SignUp(request.Email, request.Password);
+            // Create Stripe Customer
+            var customerId = _stripe.CreateCustomer(request.Email);
+            // Create Stripe Seller Account
+            var accountId = _stripe.CreateConnectedAccount(request.Email);
+            // create sendbird id
+            var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
 
-        return newUser;
+
+            // 4. Save to Supabase
+            var newUser = new User
+            {
+                Username = session?.User?.Id ?? "",
+                Email = request.Email,
+                UserSession = session,
+                StripeCustomerId = customerId,
+                StripeAccountId = accountId,
+                SendBirdId = sendbirdId,
+                IsValid = true
+            };
+            // Todo: add to user database
+
+            return newUser;
+        }
+        catch (Exception ex)
+        {
+            // kinda nasty way of passing a error message
+            var userError = new User
+            {
+                IsValid = false,
+                ErrorMessage = ex.Message
+            };
+            return userError;
+        }
     }
 }
