@@ -49,7 +49,6 @@ public class UserService
                 SendBirdId = sendbirdId,
                 IsValid = true
             };
-            // Todo: add to user database
 
             var payload = new
             {

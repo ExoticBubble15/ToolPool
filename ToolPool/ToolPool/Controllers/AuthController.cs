@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
@@ -89,8 +90,27 @@ namespace ToolPool.Controllers
                 });
             }
         }
-        
-        [HttpPost("login")]
-        public async
+
+        [HttpPost("signin")]
+        public async Task<IActionResult> TrySignIn([FromBody] ToolPool.Client.Models.LoginRequest request)
+        {
+            var loginStatus = await _userService.LoginUserAsync(request);
+            if (!loginStatus.success) return Ok(loginStatus);
+            // issue auth cookie
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Email, request.Email)
+            };
+            var identity = new ClaimsIdentity(claims, "cookies");
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("Cookies", principal, new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+            });
+            
+            return Ok(loginStatus);
+        }
     }
 }

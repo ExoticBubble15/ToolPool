@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using System.Net.Http.Json;
 using ToolPool.Client.Models;
+using ToolPool.Client.Pages;
 
 namespace ToolPool.Client.Services
 
@@ -18,13 +19,14 @@ namespace ToolPool.Client.Services
             return authStatus;
         }
 
-        public async Task<bool> AsyncTryLogin(NavigationManager nav)
+        public async Task<LoginStatus?> AsyncTrySignin(NavigationManager nav)
         {
             HttpClient http = new HttpClient 
             { 
                 BaseAddress = new Uri(nav.BaseUri)
             };
-            
+            var loginStatus = await http.GetFromJsonAsync<LoginStatus>("api/auth/signin");
+            return loginStatus;
         }
     }
 }

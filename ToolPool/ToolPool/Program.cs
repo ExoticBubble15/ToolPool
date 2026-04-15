@@ -55,6 +55,14 @@ builder.Services.AddAuthentication(o =>
     googleo.CallbackPath = "/signin-google";
 });
 
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies", options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
+
 builder.Services.AddHttpClient("Sendbird", client =>
 {
     var config = builder.Configuration;
