@@ -21,7 +21,7 @@ public class UserService
         _http = http;
     }
 
-    public async Task<User> RegisterUserAsync(RegisterRequest request)
+    public async Task<User> RegisterUserAsync(ToolPool.Models.RegisterRequest request)
     {
         // Create user in Supabase
         // user alr exists try catch
@@ -29,9 +29,9 @@ public class UserService
         {
             var session = await _supabase.Auth.SignUp(request.Email, request.Password);
             // Create Stripe Customer
-            var customerId = _stripe.CreateCustomer(request.Email);
+            var customerId = await _stripe.CreateCustomerAsync(request.Email);
             // Create Stripe Seller Account
-            var accountId = _stripe.CreateConnectedAccount(request.Email);
+            var accountId = await _stripe.CreateConnectedAccountAsync(request.Email);
             // create sendbird id
             var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
 
@@ -49,17 +49,33 @@ public class UserService
             };
             // Todo: add to user database
 
+            var payload = new
+            {
+                id = session?.User?.Id,
+                stripe_account_id = accountId,
+                stripe_customer_id = customerId,
+                sendbird_user_id = sendbirdId,
+                created_at = DateTime.UtcNow,
+                updated_at = DateTime.UtcNow
+            };
+
+            await _db.InsertUserAsync(payload);
+
             return newUser;
         }
-        catch (Exception ex)
+        catch (Supabase.Gotrue.Exceptions.GotrueException ex)
         {
-            // kinda nasty way of passing a error message
-            var userError = new User
-            {
-                IsValid = false,
-                ErrorMessage = ex.Message
-            };
-            return userError;
+            Console.WriteLine("=== GOTRUE ERROR ===");
+            Console.WriteLine("Message:");
+            Console.WriteLine(ex.Message);
+
+            Console.WriteLine("Content:");
+            Console.WriteLine(ex.Content);
+
+            Console.WriteLine("Full:");
+            Console.WriteLine(ex.ToString());
+
+            throw;
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿@page "/register"
 @rendermode InteractiveServer
 @using BlazorBootstrap
+@using ToolPool.Client.Models
+@inject HttpClient Http
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
     <div class="mb-3"> 
         <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
@@ -39,7 +41,7 @@
         }
     </div>
     
-    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryRegister">Register</Button>
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="TryRegister">Register</Button>
 </div>
 
 @code {
@@ -53,29 +55,27 @@
     private bool passwordEmpty;
     private bool passwordMismatch = false;
 
-    private void tryRegister()
+    private async Task TryRegister()
     {
         emailEmpty = string.IsNullOrEmpty(Email);
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
-        passwordMismatch = !PasswordPlain?.Equals(PasswordPlainConfirm) ?? true;
+        passwordMismatch = PasswordPlain != PasswordPlainConfirm;
 
-        if (!(emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch))
+        if (emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch)
+            return;
+
+        var request = new RegisterRequest
         {
+            Email = Email!,
+            Password = PasswordPlain!,
+            Username = Username!
+        };
 
-            var options = new AccountCreateOptions
-            {
-                Type = "express",
-                Email = user.Email,
-            };
-            
-            var service = new AccountService();
-            Account account = service.Create(options);
-            
-            // Save account.Id in your DB
-            user.StripeAccountId = account.Id;
-            TODO: add new user creation logic / api call to backend user creation service here
-
+        var response = await Http.PostAsJsonAsync("/api/users/register", request);
+        if (response.IsSuccessStatusCode)
+        {
+            // redirect or success UI
         }
     }
 }

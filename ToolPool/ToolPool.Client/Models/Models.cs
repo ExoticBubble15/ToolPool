@@ -28,3 +28,10 @@ public class AuthStatus
     public string? username { get; set; }
     public bool? isAuthed { get; set; }
 }
+
+public class RegisterRequest
+{
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Username { get; set; } = "";
+}
