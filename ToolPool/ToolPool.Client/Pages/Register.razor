@@ -54,6 +54,8 @@
     private bool usernameEmpty;
     private bool passwordEmpty;
     private bool passwordMismatch = false;
+    private bool failedToRegister = false;
+    public string? registerFailureMessage;
 
     private async Task TryRegister()
     {

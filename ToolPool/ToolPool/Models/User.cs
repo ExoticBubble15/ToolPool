@@ -11,7 +11,7 @@ namespace ToolPool.Models
         public string? StripeAccountId { get; set; }
         public string? SendBirdId { get; set; }
         // For error handling
-        public bool IsValid { get; set; }
+        public bool IsValid { get; set; } = false;
         public string? ErrorMessage { get; set; }
     }
 }
