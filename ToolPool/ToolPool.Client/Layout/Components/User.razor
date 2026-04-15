@@ -27,6 +27,6 @@
     // switch login to users page if authenticated
     protected override async Task OnInitializedAsync()
     {
-        authenticated = await AuthService.AsyncCheckAuth();
+        authenticated = await AuthService.AsyncCheckAuth(Navigation);
     }
 } 

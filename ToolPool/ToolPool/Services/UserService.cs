@@ -27,7 +27,8 @@ public class UserService
         try
         {
             // TODO: error handling for all these below
-            var session = await _supabase.Auth.SignUp(request.Email, request.Password);
+            var response = await _supabase.Auth.SignUp(request.Email, request.Password);
+            var session =  await _supabase.Auth.SignIn(request.Email, request.Password);
             // Create Stripe Customer
             var customerId = _stripe.CreateCustomer(request.Email);
             // Create Stripe Seller Account
@@ -39,7 +40,7 @@ public class UserService
             // 4. Save to Supabase
             var newUser = new User
             {
-                Username = session?.User?.Id ?? "",
+                Username = response?.User?.Id ?? "",
                 Email = request.Email,
                 UserSession = session,
                 StripeCustomerId = customerId,

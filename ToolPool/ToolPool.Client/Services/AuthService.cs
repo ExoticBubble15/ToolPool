@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using Microsoft.AspNetCore.Components;
+using System.Net.Http.Json;
 using ToolPool.Client.Models;
 
 namespace ToolPool.Client.Services
@@ -6,18 +7,15 @@ namespace ToolPool.Client.Services
 {
     public class AuthService
     {
-        // HttpClient for API calls
-        private readonly HttpClient _http;
-
-        public AuthService(HttpClient http)
-        {
-            _http = http; 
-        }
 
         // checks if user is logged in
-        public async Task<bool> AsyncCheckAuth()
+        public async Task<bool> AsyncCheckAuth(NavigationManager nav)
         {
-            var authStatus = await _http.GetFromJsonAsync<bool>("api/auth/status");
+            HttpClient http = new HttpClient 
+            { 
+                BaseAddress = new Uri(nav.BaseUri)
+            };
+            var authStatus = await http.GetFromJsonAsync<bool>("api/auth/status");
             return authStatus;
         }
         
