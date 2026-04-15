@@ -1,7 +1,6 @@
 ﻿/**
  * Models for demo stripe app
  */
-
 namespace ToolPool.Client.Models;
 
 // item in catalog
@@ -21,10 +20,9 @@ public class CartItem
     public decimal Price { get; set; }
     public string Name { get; set; } = string.Empty;
 }
-
-// user auth status
-public class AuthStatus
+// user registration status
+public class RegistrationStatus
 {
-    public string? username { get; set; }
-    public bool? isAuthed { get; set; }
+    public bool IsValid { get; set; }
+    public string? ErrorMessage { get; set; }
 }

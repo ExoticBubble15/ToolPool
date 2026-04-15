@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity.Data;
 using ToolPool.Services;
 using ToolPool.Models;
-using GoogleMapsComponents.Maps;
 
 public class UserService
 {
@@ -27,6 +26,7 @@ public class UserService
         // user alr exists try catch
         try
         {
+            // TODO: error handling for all these below
             var session = await _supabase.Auth.SignUp(request.Email, request.Password);
             // Create Stripe Customer
             var customerId = _stripe.CreateCustomer(request.Email);
@@ -56,6 +56,7 @@ public class UserService
             // kinda nasty way of passing a error message
             var userError = new User
             {
+                UserSession = null,
                 IsValid = false,
                 ErrorMessage = ex.Message
             };

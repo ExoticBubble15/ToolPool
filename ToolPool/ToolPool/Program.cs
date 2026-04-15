@@ -27,6 +27,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<SupabaseDemoService>();
 builder.Services.AddScoped<SendbirdService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 

@@ -1,6 +1,10 @@
 ﻿@page "/register"
 @rendermode InteractiveServer
 @using BlazorBootstrap
+@using ToolPool.Client.Models
+@inject HttpClient http
+@inject NavigationManager nav
+
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
     <div class="mb-3"> 
         <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
@@ -38,8 +42,15 @@
             </div>
         }
     </div>
-    
+    <div class="mb-3">
     <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryRegister">Register</Button>
+        @if (failedToRegister)
+        {
+            <div class="invalid-feedback">
+                Failed to register - @(registerFailureMessage ?? "Unknown Error")
+            </div>
+        }
+    </div>
 </div>
 
 @code {
@@ -52,8 +63,10 @@
     private bool usernameEmpty;
     private bool passwordEmpty;
     private bool passwordMismatch = false;
+    private bool failedToRegister = false;
+    public string? registerFailureMessage;
 
-    private void tryRegister()
+    private async Task tryRegister()
     {
         emailEmpty = string.IsNullOrEmpty(Email);
         usernameEmpty = string.IsNullOrEmpty(Username);
@@ -62,20 +75,18 @@
 
         if (!(emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch))
         {
-
-            var options = new AccountCreateOptions
+            var registerResult = await http.GetFromJsonAsync<RegistrationStatus>(
+                "api/auth/signup?email={Email}&password={PasswordPlain}"
+            );
+            if (!registerResult?.IsValid ?? false) {
+                failedToRegister = true;
+                registerFailureMessage = registerResult?.ErrorMessage;
+            }
+            else
             {
-                Type = "express",
-                Email = user.Email,
-            };
-            
-            var service = new AccountService();
-            Account account = service.Create(options);
-            
-            // Save account.Id in your DB
-            user.StripeAccountId = account.Id;
-            TODO: add new user creation logic / api call to backend user creation service here
-
+                failedToRegister = false;
+                nav.NavigateTo("/");
+            }
         }
     }
 }
