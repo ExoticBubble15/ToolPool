@@ -41,12 +41,6 @@ public class SendbirdService
         if (getResp.IsSuccessStatusCode)
             return userId;
 
-        if (getResp.StatusCode != System.Net.HttpStatusCode.NotFound)
-        {
-            var err = await getResp.Content.ReadAsStringAsync();
-            throw new Exception($"GET failed: {(int)getResp.StatusCode} {err}");
-        }
-
         using var createReq = BuildRequest(HttpMethod.Post, "/users", new
         {
             user_id = userId,
@@ -56,9 +50,6 @@ public class SendbirdService
         using var createResp = await client.SendAsync(createReq);
 
         var body = await createResp.Content.ReadAsStringAsync();
-
-        if (!createResp.IsSuccessStatusCode)
-            throw new Exception($"CREATE failed: {(int)createResp.StatusCode} {body}");
 
         return userId;
     }

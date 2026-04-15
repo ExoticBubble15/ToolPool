@@ -35,7 +35,7 @@ public class UserService
             // Create Stripe Seller Account
             var accountId = await _stripe.CreateConnectedAccountAsync(request.Email);
             // create sendbird id
-            var sendbirdId = await _sendbird.CreateOrGetUserAsync(request.Email, session?.User?.Id ?? "");
+            var sendbirdId = await _sendbird.CreateOrGetUserAsync(response?.User?.Id ?? "", request.Email);
 
 
             // 4. Save to Supabase
@@ -53,12 +53,13 @@ public class UserService
 
             var payload = new
             {
-                id = session?.User?.Id,
+                id = response?.User?.Id,
                 stripe_account_id = accountId,
                 stripe_customer_id = customerId,
                 sendbird_user_id = sendbirdId,
                 created_at = DateTime.UtcNow,
-                updated_at = DateTime.UtcNow
+                updated_at = DateTime.UtcNow,
+                email = request.Email
             };
 
             await _db.InsertUserAsync(payload);
