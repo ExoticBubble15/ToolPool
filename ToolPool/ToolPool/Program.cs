@@ -55,6 +55,15 @@ builder.Services.AddAuthentication(o =>
     googleo.CallbackPath = "/signin-google";
 });
 
+builder.Services.AddHttpClient("Sendbird", client =>
+{
+    var config = builder.Configuration;
+    var apiToken = config["Sendbird:ApiToken"];
+
+    client.BaseAddress = new Uri("https://api-cbf5c234-570d-4862-bfbb-63e59b75ccfa.sendbird.com");
+    client.DefaultRequestHeaders.Add("Api-Token", apiToken);
+});
+
 // supabase client setup ** UNTESTED **
 builder.Services.AddSingleton(sp =>
 {
