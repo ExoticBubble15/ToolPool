@@ -45,9 +45,23 @@ namespace ToolPool.Controllers
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
-            var session = supabase.Auth.CurrentSession;
+            try
+            {
+                var session = supabase.Auth.CurrentSession;
+                if (session != null)
+                {
+                    return Ok(true);
+                }
+                else
+                    return Ok(false);
+            }
+            catch (Exception ex) {
 
-            return Ok(session != null);
+                return StatusCode(500, new
+                {
+                    error = ex.Message
+                });
+            }
         }
 
         [HttpPost("signup")]

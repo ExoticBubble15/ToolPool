@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.Data;
 using ToolPool.Services;
 using ToolPool.Models;
+using ToolPool.Client.Models;
 
 public class UserService
 {
@@ -78,6 +79,35 @@ public class UserService
             Console.WriteLine(ex.ToString());
 
             throw;
+        }
+    }
+
+    public async Task<LoginStatus> LoginUserAsync(ToolPool.Client.Models.LoginRequest request)
+    {
+        try
+        {
+            var response = await _supabase.Auth.SignIn(request.Email, request.Password);
+            if (response?.User == null)
+            {
+                return new LoginStatus
+                {
+                    success = false,
+                    failureMessage = "Failed to Login"
+                };
+            }
+            else
+            {
+                // TODO: get user from db matching email, set users' session to response
+                ToolPool.Models.User user = _db.
+                return new LoginStatus { success = true, };
+            }
+        }
+        catch (Exception ex) 
+        {
+            return new LoginStatus { 
+                success = false,
+                failureMessage = "Wrong Email or Password"
+            };
         }
     }
 }
