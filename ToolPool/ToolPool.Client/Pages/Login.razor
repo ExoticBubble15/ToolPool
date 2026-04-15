@@ -1,15 +1,17 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
 @using BlazorBootstrap
+@using ToolPool.Client.Models
+@inject HttpClient Http
 @* server rendermode for security *@
 
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
     <div class="mb-3">
-        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
+        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Email" style="width: 300px;" />
         @if (usernameEmpty)
         {
             <div class="invalid-feedback">
-                Username cannot be empty.
+                Email cannot be empty.
             </div>
         }
     </div>
@@ -22,8 +24,14 @@
             </div>
         }
     </div>
-
-    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Login</Button>
+    @if (loginFailed)
+    {
+        <div class="invalid-feedback">
+            Incorrect Password/Email
+        </div>
+    }
+    
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Sign In</Button>
     <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
     <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="api/auth/google">Login With Google</Button>
 </div> 
@@ -33,16 +41,26 @@
     private string? PasswordPlain { get; set; }
 
     private bool usernameEmpty;
-    private bool passwordEmpty; 
+    private bool passwordEmpty;
+    private bool loginFailed;
 
-    private void tryLogin()
+    private async void tryLogin()
     {
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
 
         if (!(usernameEmpty || passwordEmpty))
         {
-            
+            var request = new LoginRequest
+            {
+                Email = Username,
+                Password = PasswordPlain
+            };
+            var loginStatus = await Http.PostAsJsonAsync("api/auth/signin", request);
+            if (!loginStatus.IsSuccessStatusCode)
+            {
+                loginFailed = true;
+            }
         }
     }
 }

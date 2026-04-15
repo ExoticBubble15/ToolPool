@@ -17,15 +17,5 @@ namespace ToolPool.Client.Services
             var authStatus = await http.GetFromJsonAsync<bool>("api/auth/status");
             return authStatus;
         }
-
-        public async Task<LoginStatus?> AsyncTrySignin(NavigationManager nav)
-        {
-            HttpClient http = new HttpClient 
-            { 
-                BaseAddress = new Uri(nav.BaseUri)
-            };
-            var loginStatus = await http.GetFromJsonAsync<LoginStatus>("api/auth/signin");
-            return loginStatus;
-        }
     }
 }
