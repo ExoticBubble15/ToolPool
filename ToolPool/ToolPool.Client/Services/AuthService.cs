@@ -18,13 +18,13 @@ namespace ToolPool.Client.Services
             return authStatus;
         }
 
-        public async Task<bool> AsyncTryLogin(NavigationManager nav)
-        {
-            HttpClient http = new HttpClient 
-            { 
-                BaseAddress = new Uri(nav.BaseUri)
-            };
+        //public async Task<bool> AsyncTryLogin(NavigationManager nav)
+        //{
+        //    HttpClient http = new HttpClient 
+        //    { 
+        //        BaseAddress = new Uri(nav.BaseUri)
+        //    };
             
-        }
+        //}
     }
 }
