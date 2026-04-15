@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using System.Net.Http.Json;
 using ToolPool.Client.Models;
-using ToolPool.Client.Pages;
 
 namespace ToolPool.Client.Services
 
