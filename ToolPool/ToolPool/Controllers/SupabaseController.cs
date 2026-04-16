@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 using ToolPool.Models;
 using ToolPool.Services;
 
@@ -55,7 +56,29 @@ namespace ToolPool.Controllers
         [HttpPost("submissions")]
         public async Task<IActionResult> InsertSubmission([FromBody] CreateDemoItemRequest request)
         {
-            await _supabase.InsertSubmissionAsync(request.Name, request.Description, request.Price);
+            if (request == null)
+                return BadRequest("Request body is null");
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("Name is required");
+
+            if (string.IsNullOrWhiteSpace(request.OwnerId))
+                return BadRequest("OwnerId is required");
+
+            if (string.IsNullOrWhiteSpace(request.OwnerName))
+                return BadRequest("OwnerName is required");
+
+            await _supabase.InsertSubmissionAsync(
+                request.Name,
+                request.Description,
+                request.Price,
+                request.OwnerId,
+                request.Category,
+                request.OwnerName,
+                request.Neighborhood,
+                request.ImageUrl
+            );
+
             return Ok();
         }
 
@@ -66,8 +89,23 @@ namespace ToolPool.Controllers
             return Ok(item);
         }
 
-        public record CreateDemoItemRequest(string Name, string Description, decimal Price);
+        public class CreateDemoItemRequest
+        {
+            public string Name { get; set; }
+            public string Description { get; set; }
+            public decimal Price { get; set; }
 
+            public string OwnerId { get; set; }
+            public string Category { get; set; }
+
+            [JsonPropertyName("owner_name")]
+            public string OwnerName { get; set; }
+
+            public string Neighborhood { get; set; }
+
+            [JsonPropertyName("imageUrl")]
+            public string ImageUrl { get; set; }
+        }
         [HttpDelete("demo-items/{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

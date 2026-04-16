@@ -50,7 +50,7 @@
             <div class="submit-actions">
                 <button class="btn-submit"
                         @onclick="SubmitDemoItem"
-                        disabled="@IsSubmitting || !HasStripeOnboarded">
+                        disabled="@(IsSubmitting || !HasStripeOnboarded)">
                     @(IsSubmitting ? "Submitting..." : "Submit Tool")
                 </button>
             </div>
@@ -118,8 +118,8 @@
 
     private bool HasStripeOnboarded = false;
 
-    private string OwnerId = "demo-user-123";
-    private string OwnerName = "Demo User";
+    private string OwnerId = "2365d6d0-28f9-4ada-b061-0b5339e95909";
+    private string OwnerName = "yc3146";
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,6 +168,7 @@
             await Cart.LoadAsync();
             StateHasChanged();
         }
+
     }
 
     private async Task SubmitDemoItem()
@@ -208,11 +209,7 @@
                 FormNeighborhood.Trim()
             );
 
-            await ItemService.InsertDemoItemAsync(
-                FormName.Trim(),
-                FormDescription.Trim(),
-                price
-            );
+
 
             Items = await ItemService.GetDemoItemsAsync();
 

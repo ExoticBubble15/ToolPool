@@ -36,26 +36,53 @@ public class SupabaseDemoService
         return items ?? new List<DemoItem>();
     }
 
-    public async Task InsertSubmissionAsync(string name, string description, decimal price)
+    public async Task InsertSubmissionAsync(
+        string name,
+        string description,
+        decimal price,
+        string ownerId,
+        string category,
+        string ownerName,
+        string neighborhood,
+        string imageUrl)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools_submissions";
+        var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
         {
-            name,
-            description,
-            price
+            name = name.Trim(),
+            description = description.Trim(),
+            price = price,
+            created_at = DateTime.UtcNow,
+            image_url = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim(),
+            category = string.IsNullOrWhiteSpace(category) ? null : category.Trim(),
+            neighborhood = string.IsNullOrWhiteSpace(neighborhood) ? null : neighborhood.Trim(),
+            owner_id = ownerId,
+            owner_name = ownerName
         };
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Headers.Add("apikey", _opt.ServiceRoleKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
-        req.Headers.Add("Prefer", "return=representation");
-        req.Content = JsonContent.Create(payload);
 
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        req.Headers.Add("Prefer", "return=representation");
+
+        req.Content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(payload),
+            System.Text.Encoding.UTF8,
+            "application/json"
+        );
+
+        var resp = await client.SendAsync(req);
+        var body = await resp.Content.ReadAsStringAsync();
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new Exception($"Insert failed: {resp.StatusCode} - {body}");
+        }
     }
 
     public async Task<DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
