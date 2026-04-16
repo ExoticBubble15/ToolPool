@@ -19,7 +19,7 @@ public class SupabaseDemoService
     public async Task<List<DemoItem>> GetDemoItemsAsync()
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items?select=id,name,description,price&order=created_at.desc";
+        var url = $"{_opt.Url}/rest/v1/Tools?select=id,name,description,price&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
@@ -39,7 +39,7 @@ public class SupabaseDemoService
     public async Task InsertSubmissionAsync(string name, string description, decimal price)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_item_submissions";
+        var url = $"{_opt.Url}/rest/v1/Tools_submissions";
 
         var payload = new
         {
@@ -61,7 +61,7 @@ public class SupabaseDemoService
     public async Task<DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items";
+        var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
         {
@@ -95,7 +95,7 @@ public class SupabaseDemoService
     public async Task<List<DemoItemSubmission>> GetLatestSubmissionsAsync(int limit = 5)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_item_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
+        var url = $"{_opt.Url}/rest/v1/Tools_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
