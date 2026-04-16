@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ToolPool.Models;
 
 namespace ToolPool.Services;
@@ -37,26 +38,53 @@ public class SupabaseDemoService
         return items ?? new List<DemoItem>();
     }
 
-    public async Task InsertSubmissionAsync(string name, string description, decimal price)
+    public async Task InsertSubmissionAsync(
+        string name,
+        string description,
+        decimal price,
+        string ownerId,
+        string category,
+        string ownerName,
+        string neighborhood,
+        string imageUrl)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools_submissions";
+        var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
         {
-            name,
-            description,
-            price
+            name = name.Trim(),
+            description = description.Trim(),
+            price = price,
+            created_at = DateTime.UtcNow,
+            image_url = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim(),
+            category = string.IsNullOrWhiteSpace(category) ? null : category.Trim(),
+            neighborhood = string.IsNullOrWhiteSpace(neighborhood) ? null : neighborhood.Trim(),
+            owner_id = ownerId,
+            owner_name = ownerName
         };
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Headers.Add("apikey", _opt.ServiceRoleKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
-        req.Headers.Add("Prefer", "return=representation");
-        req.Content = JsonContent.Create(payload);
 
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        req.Headers.Add("Prefer", "return=representation");
+
+        req.Content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(payload),
+            System.Text.Encoding.UTF8,
+            "application/json"
+        );
+
+        var resp = await client.SendAsync(req);
+        var body = await resp.Content.ReadAsStringAsync();
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new Exception($"Insert failed: {resp.StatusCode} - {body}");
+        }
     }
 
     public async Task<DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
@@ -149,29 +177,158 @@ public class SupabaseDemoService
 
     public async Task<User?> GetUserAsync(string email) 
     {
-        // check online users cache
-        if (_users.ContainsKey(email))
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?email=eq.{email}&select=*&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+        var users = await resp.Content.ReadFromJsonAsync<List<User>>(new JsonSerializerOptions
         {
-            return _users[email];
-        }
-        else
-        {
-            var client = _httpClientFactory.CreateClient();
-            var url = $"{_opt.Url}/rest/v1/Users?email=eq.{email}&select=*&limit=1";
+            PropertyNameCaseInsensitive = true
+        });
 
-            using var req = new HttpRequestMessage(HttpMethod.Post, url);
-            req.Headers.Add("apikey", _opt.ServiceRoleKey);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
-            req.Headers.Add("Prefer", "return=representation");
-
-            using var resp = await client.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-            var user = await resp.Content.ReadFromJsonAsync<User>(new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            return user;
-        }
+        return users?.FirstOrDefault();
     }
+
+    public async Task<ProfileUserDto?> GetProfileUserAsync(Guid userId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}&select=id,email,username,created_at,updated_at,stripe_account_id,stripe_customer_id,sendbird_user_id&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var users = await resp.Content.ReadFromJsonAsync<List<ProfileUserDto>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return users?.FirstOrDefault();
+    }
+
+    public async Task<List<ProfileListingDto>> GetListingsByOwnerAsync(Guid ownerId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Tools?owner_id=eq.{ownerId}&select=id,name,description,price,category,neighborhood,image_url,owner_id,owner_name,created_at&order=created_at.desc";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var listings = await resp.Content.ReadFromJsonAsync<List<ProfileListingDto>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return listings ?? new List<ProfileListingDto>();
+    }
+
+    public async Task<List<ProfileActivityDto>> GetActivitiesByUserAsync(Guid userId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var filter = Uri.EscapeDataString($"(owner_id.eq.{userId},renter_id.eq.{userId})");
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?or={filter}&select=id,tool_id,tool_name,renter_id,owner_id,message,start_date,end_date,channel_url,status,created_at&order=created_at.desc";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var activities = await resp.Content.ReadFromJsonAsync<List<ProfileActivityDto>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return activities ?? new List<ProfileActivityDto>();
+    }
+}
+
+public class ProfileUserDto
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
+
+    [JsonPropertyName("updated_at")]
+    public DateTimeOffset? UpdatedAt { get; set; }
+
+    [JsonPropertyName("stripe_account_id")]
+    public string? StripeAccountId { get; set; }
+
+    [JsonPropertyName("stripe_customer_id")]
+    public string? StripeCustomerId { get; set; }
+
+    [JsonPropertyName("sendbird_user_id")]
+    public string? SendbirdUserId { get; set; }
+}
+
+public class ProfileListingDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string? Category { get; set; }
+    public string? Neighborhood { get; set; }
+
+    [JsonPropertyName("image_url")]
+    public string? ImageUrl { get; set; }
+
+    [JsonPropertyName("owner_id")]
+    public Guid? OwnerId { get; set; }
+
+    [JsonPropertyName("owner_name")]
+    public string? OwnerName { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
+}
+
+public class ProfileActivityDto
+{
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("tool_id")]
+    public Guid ToolId { get; set; }
+
+    [JsonPropertyName("tool_name")]
+    public string ToolName { get; set; } = string.Empty;
+
+    [JsonPropertyName("renter_id")]
+    public string? RenterId { get; set; }
+
+    [JsonPropertyName("owner_id")]
+    public Guid? OwnerId { get; set; }
+
+    public string? Message { get; set; }
+
+    [JsonPropertyName("start_date")]
+    public string? StartDate { get; set; }
+
+    [JsonPropertyName("end_date")]
+    public string? EndDate { get; set; }
+
+    [JsonPropertyName("channel_url")]
+    public string? ChannelUrl { get; set; }
+
+    public string? Status { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
 }
