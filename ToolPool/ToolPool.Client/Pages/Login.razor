@@ -12,7 +12,7 @@
         @if (usernameEmpty)
         {
             <div class="invalid-feedback">
-                Email cannot be empty.
+                Email cannot be empty
             </div>
         }
     </div>
@@ -21,14 +21,14 @@
         @if (passwordEmpty)
         {
             <div class="invalid-feedback">
-                Password cannot be empty.
+                Pasword cannot be empty
             </div>
         }
     </div>
     @if (loginFailed)
     {
-        <div class="invalid-feedback">
-            Incorrect Password/Email
+        <div class="text-danger mt-2" style="width: 300px; text-align: center;">
+            @errorText
         </div>
     }
     
@@ -44,8 +44,9 @@
     private bool usernameEmpty;
     private bool passwordEmpty;
     private bool loginFailed;
+    private string errorText = "";
 
-    private async void tryLogin()
+    private async Task tryLogin()
     {
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
@@ -57,11 +58,27 @@
                 Email = Username,
                 Password = PasswordPlain
             };
-            var loginStatus = await Http.PostAsJsonAsync("api/auth/signin", request);
-            if (!loginStatus.IsSuccessStatusCode)
+            var response = await Http.PostAsJsonAsync("api/auth/signin", request);
+            try
             {
+                response.EnsureSuccessStatusCode();
+                var result = await response.Content.ReadFromJsonAsync<LoginStatus>();
+
+                if ((!result?.success) ?? true)
+                {
+                    errorText = result?.failureMessage ?? "Unknown Error";
+                    loginFailed = true;
+                }
+                else
+                {
+                    loginFailed = false;
+                    Navigation.NavigateTo("/");
+                }
+            }
+            catch (Exception ex)
+            {
+                errorText = ex.Message;
                 loginFailed = true;
-                Navigation.NavigateTo("/");
             }
         }
     }

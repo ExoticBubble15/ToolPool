@@ -64,10 +64,14 @@ namespace ToolPool.Controllers
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
-            return Ok(new
+            if (User.Identity != null &&  User.Identity.IsAuthenticated)
             {
-                Email = User.Identity?.Name
-            });
+                return Ok();
+            }
+            else
+            {
+                return BadRequest();
+            }
         }
 
         [HttpPost("signin")]
@@ -94,14 +98,8 @@ namespace ToolPool.Controllers
                 IsPersistent = true,
                 ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
             });
-            
+
             return Ok(loginStatus);
         }
     }
-
-    //[HttpGet("getUserIDs")]
-    //public async Task<IActionResult> GetUserIDs()
-    //    {
-    //        var curUser = 
-    //    }
 }
