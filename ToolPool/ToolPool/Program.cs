@@ -33,13 +33,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
 builder.Services.AddScoped<ToolPool.Client.Services.DemoItemService>();
 builder.Services.AddScoped<StripePaymentService>();
-builder.Services.AddScoped<UserService>();
-
-builder.Services.AddScoped(sp =>
-    new HttpClient
-    {
-        BaseAddress = new Uri("https://localhost:7040")
-    });
 
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>

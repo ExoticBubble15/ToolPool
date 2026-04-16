@@ -9,16 +9,14 @@ public class UserService
     private readonly SupabaseDemoService _db;
     private readonly StripePaymentService _stripe;
     private readonly Supabase.Client _supabase;
-    private readonly HttpClient _http;
     private readonly SendbirdService _sendbird;
 
-    public UserService(SupabaseDemoService db, StripePaymentService stripe, Supabase.Client supabase, SendbirdService sendbird, HttpClient http)
+    public UserService(SupabaseDemoService db, StripePaymentService stripe, Supabase.Client supabase, SendbirdService sendbird)
     {
         _db = db;
         _stripe = stripe;
         _supabase = supabase;
         _sendbird = sendbird;
-        _http = http;
     }
 
     public async Task<User> RegisterUserAsync(ToolPool.Models.RegisterRequest request)

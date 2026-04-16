@@ -1,13 +1,433 @@
 ﻿@page "/profile"
 @rendermode InteractiveWebAssembly
 @using BlazorBootstrap
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
-@* TODO *@
-<div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
-    
+<div class="profile-page">
+    <div class="profile-header">
+        <h1>Profile</h1>
+        <p>Manage your account and track your listing activity.</p>
+    </div>
+
+    @if (IsLoading)
+    {
+        <section class="profile-card">
+            <p class="empty">Loading profile...</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(LoadError))
+    {
+        <section class="profile-card">
+            <p class="error">@LoadError</p>
+        </section>
+    }
+
+    <div class="profile-grid" style="display:@(IsLoading || !string.IsNullOrWhiteSpace(LoadError) ? "none" : "grid")">
+        <section class="profile-card">
+            <h2>Account Info</h2>
+            <div class="info-row">
+                <span class="label">Username</span>
+                <span class="value">@Account.Username</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Email</span>
+                <span class="value">@Account.Email</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Joined</span>
+                <span class="value">@Account.JoinedAt.ToString("MMM dd, yyyy")</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Stripe</span>
+                <span class="value">
+                    @if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
+                    {
+                        <span class="badge text-bg-secondary">Not connected</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-success">Connected</span>
+                    }
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="label">Sendbird</span>
+                <span class="value">
+                    @if (string.IsNullOrWhiteSpace(Account.SendbirdUserId))
+                    {
+                        <span class="badge text-bg-secondary">Not linked</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-success">Linked</span>
+                    }
+                </span>
+            </div>
+        </section>
+
+        <section class="profile-card">
+            <h2>Account Actions</h2>
+            <div class="actions">
+                <button class="btn btn-outline-primary" @onclick="OnLogoutClicked">Logout</button>
+                <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirmation">Delete Account</button>
+            </div>
+
+            @if (ShowDeleteConfirm)
+            {
+                <div class="danger-box">
+                    <p>This will permanently remove your account. This action cannot be undone.</p>
+                    <div class="actions">
+                        <button class="btn btn-danger" @onclick="OnDeleteAccountConfirmed">Confirm Delete</button>
+                        <button class="btn btn-secondary" @onclick="HideDeleteConfirmation">Cancel</button>
+                    </div>
+                </div>
+            }
+        </section>
+    </div>
+
+    <section class="profile-card">
+        <div class="section-head">
+            <h2>My Listings</h2>
+            <span class="meta">@MyListings.Count item(s)</span>
+        </div>
+        @if (!MyListings.Any())
+        {
+            <p class="empty">No listings yet.</p>
+        }
+        else
+        {
+            <div class="items-grid">
+                @foreach (var listing in MyListings)
+                {
+                    <article class="item-card">
+                        <div class="item-top">
+                            <h3>@listing.Name</h3>
+                            <span class="badge text-bg-light">@listing.Category</span>
+                        </div>
+                        <p class="item-text">@listing.Description</p>
+                        <div class="item-bottom">
+                            <span>$@listing.Price.ToString("0.00")</span>
+                            <span>@listing.Neighborhood</span>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="profile-card">
+        <div class="section-head">
+            <h2>My Activities</h2>
+            <span class="meta">@MyActivities.Count activity item(s)</span>
+        </div>
+        @if (!MyActivities.Any())
+        {
+            <p class="empty">No activity yet.</p>
+        }
+        else
+        {
+            <div class="activities-list">
+                @foreach (var activity in MyActivities)
+                {
+                    <article class="activity-card">
+                        <div class="activity-main">
+                            <h3>@activity.ToolName</h3>
+                            <p>@activity.Message</p>
+                        </div>
+                        <div class="activity-side">
+                            <span class="badge @GetStatusBadgeClass(activity.Status)">@activity.Status</span>
+                            <small>@FormatActivityDate(activity.CreatedAt)</small>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
 </div>
 
 
 @code {
+    private bool ShowDeleteConfirm;
+    private bool IsLoading = true;
+    private string? LoadError;
 
+    private AccountInfo Account { get; set; } = new();
+    private List<ListingItem> MyListings { get; set; } = new();
+    private List<ActivityItem> MyActivities { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var me = await Http.GetFromJsonAsync<AccountInfo>("/api/profile/me");
+            var listings = await Http.GetFromJsonAsync<List<ListingItem>>("/api/profile/my-listings");
+            var activities = await Http.GetFromJsonAsync<List<ActivityItem>>("/api/profile/my-activities");
+
+            Account = me ?? new AccountInfo();
+            MyListings = listings ?? new List<ListingItem>();
+            MyActivities = activities ?? new List<ActivityItem>();
+        }
+        catch (Exception ex)
+        {
+            LoadError = $"Failed to load profile data: {ex.Message}";
+            Account = new AccountInfo();
+            MyListings = new List<ListingItem>();
+            MyActivities = new List<ActivityItem>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ShowDeleteConfirmation()
+    {
+        ShowDeleteConfirm = true;
+    }
+
+    private void HideDeleteConfirmation()
+    {
+        ShowDeleteConfirm = false;
+    }
+
+    private void OnLogoutClicked()
+    {
+        Navigation.NavigateTo("/api/auth/logout", forceLoad: true);
+    }
+
+    private void OnDeleteAccountConfirmed()
+    {
+        // Placeholder only until delete-account endpoint is implemented.
+        ShowDeleteConfirm = false;
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "In Chat" => "text-bg-primary",
+        "Interested" => "text-bg-warning",
+        "Booked" => "text-bg-success",
+        _ => "text-bg-secondary"
+    };
+
+    private static string FormatActivityDate(DateTimeOffset? value) =>
+        value?.ToString("MMM dd, HH:mm") ?? "--";
+
+    private sealed class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public DateTimeOffset? CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
+        public string? StripeAccountId { get; set; }
+        public string? SendbirdUserId { get; set; }
+        public string? StripeCustomerId { get; set; }
+
+        public DateTimeOffset JoinedAt => CreatedAt ?? DateTimeOffset.MinValue;
+    }
+
+    private sealed class ListingItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Neighborhood { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
+
+    private sealed class ActivityItem
+    {
+        public Guid Id { get; set; }
+        public Guid? ToolId { get; set; }
+        public string ToolName { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string? RenterId { get; set; }
+        public Guid? OwnerId { get; set; }
+        public string? ChannelUrl { get; set; }
+        public string? StartDate { get; set; }
+        public string? EndDate { get; set; }
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
 }
+
+<style>
+    .profile-page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .profile-header h1 {
+        margin: 0;
+    }
+
+    .profile-header p {
+        margin: 0.25rem 0 0;
+        color: #6b7280;
+    }
+
+    .profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .profile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: #fff;
+    }
+
+    .profile-card h2 {
+        font-size: 1.1rem;
+        margin: 0 0 0.8rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .label {
+        color: #6b7280;
+    }
+
+    .value {
+        font-weight: 600;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .danger-box {
+        margin-top: 0.9rem;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        border-radius: 0.6rem;
+        padding: 0.8rem;
+    }
+
+    .danger-box p {
+        margin: 0 0 0.6rem;
+        color: #b91c1c;
+    }
+
+    .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+
+    .meta {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .item-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 0.8rem;
+        background: #fafafa;
+    }
+
+    .item-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .item-top h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .item-text {
+        color: #4b5563;
+        margin: 0 0 0.7rem;
+        font-size: 0.92rem;
+    }
+
+    .item-bottom {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+    }
+
+    .activities-list {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .activity-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: #fafafa;
+    }
+
+    .activity-main h3 {
+        margin: 0 0 0.25rem;
+        font-size: 1rem;
+    }
+
+    .activity-main p {
+        margin: 0;
+        color: #4b5563;
+    }
+
+    .activity-side {
+        display: grid;
+        gap: 0.35rem;
+        justify-items: end;
+        align-content: start;
+    }
+
+    .empty {
+        margin: 0;
+        color: #6b7280;
+    }
+
+    .error {
+        margin: 0;
+        color: #b91c1c;
+        font-weight: 600;
+    }
+
+    @@media (max-width: 900px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

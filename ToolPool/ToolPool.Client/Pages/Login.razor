@@ -45,7 +45,7 @@
     private bool passwordEmpty;
     private bool loginFailed;
 
-    private async void tryLogin()
+    private async Task tryLogin()
     {
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
@@ -57,7 +57,7 @@
                 Email = Username,
                 Password = PasswordPlain
             };
-            var loginStatus = await Http.PostAsJsonAsync("api/auth/signin", request);
+            var loginStatus = await Http.PostAsJsonAsync(Navigation.ToAbsoluteUri("/api/auth/signin"), request);
             if (!loginStatus.IsSuccessStatusCode)
             {
                 loginFailed = true;

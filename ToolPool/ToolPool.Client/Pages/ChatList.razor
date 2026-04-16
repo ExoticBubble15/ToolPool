@@ -110,7 +110,7 @@
         IsCreating = true;
         try
         {
-            var resp = await Http.PostAsJsonAsync("/api/sendbird/channel", new
+            var resp = await Http.PostAsJsonAsync(Nav.ToAbsoluteUri("/api/sendbird/channel"), new
             {
                 renterId = RenterId.Trim(),
                 ownerId = OwnerId.Trim(),

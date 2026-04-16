@@ -90,7 +90,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/api/stripe/checkout", cart.Items);
+            var response = await Http.PostAsJsonAsync(Nav.ToAbsoluteUri("/api/stripe/checkout"), cart.Items);
             var url = await response.Content.ReadAsStringAsync();
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);
         }

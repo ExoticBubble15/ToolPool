@@ -3,6 +3,7 @@
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
     <div class="mb-3"> 
@@ -75,7 +76,7 @@
             Username = Username!
         };
 
-        var response = await Http.PostAsJsonAsync("/api/users/register", request);
+        var response = await Http.PostAsJsonAsync(Navigation.ToAbsoluteUri("/api/users/register"), request);
         if (response.IsSuccessStatusCode)
         {
             // redirect or success UI

@@ -3,6 +3,7 @@
  */
 
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Components;
 using ToolPool.Client.Models;
 
 namespace ToolPool.Client.Services;
@@ -11,10 +12,12 @@ public class DemoItemService
 {
     // HttpClient for API requests
     private readonly HttpClient _http;
+    private readonly NavigationManager _navigation;
 
-    public DemoItemService(HttpClient http)
+    public DemoItemService(HttpClient http, NavigationManager navigation)
     {
         _http = http;
+        _navigation = navigation;
     }
 
     // Returns a hardcoded list of demo items
@@ -31,12 +34,12 @@ public class DemoItemService
     // Fetches all demo items from the API
     // Returns an empty list if the response is null
     public async Task<List<DemoItem>> GetDemoItemsAsync()
-        => await _http.GetFromJsonAsync<List<DemoItem>>("/api/demo-items") ?? new();
+        => await _http.GetFromJsonAsync<List<DemoItem>>(_navigation.ToAbsoluteUri("/api/demo-items")) ?? new();
 
     // Submits a new item suggestion/submission to the API (does not return the created item)
     public async Task InsertSubmissionAsync(string name, string description, decimal price)
     {
-        var resp = await _http.PostAsJsonAsync("/api/submissions", new { name, description, price });
+        var resp = await _http.PostAsJsonAsync(_navigation.ToAbsoluteUri("/api/submissions"), new { name, description, price });
         resp.EnsureSuccessStatusCode();
     }
 
@@ -44,7 +47,7 @@ public class DemoItemService
     // Returns locally created DemoItem if the API response body is null
     public async Task<DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
     {
-        var resp = await _http.PostAsJsonAsync("/api/demo-items", new { name, description, price });
+        var resp = await _http.PostAsJsonAsync(_navigation.ToAbsoluteUri("/api/demo-items"), new { name, description, price });
         resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadFromJsonAsync<DemoItem>() ?? new DemoItem
         {
@@ -56,7 +59,7 @@ public class DemoItemService
 
     public async Task DeleteDemoItemAsync(Guid id)
     {
-        var resp = await _http.DeleteAsync($"api/demo-items/{id}");
+        var resp = await _http.DeleteAsync(_navigation.ToAbsoluteUri($"/api/demo-items/{id}"));
         resp.EnsureSuccessStatusCode();
     }
 }

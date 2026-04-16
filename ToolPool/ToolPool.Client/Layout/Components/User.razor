@@ -26,7 +26,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var response = await Http.GetAsync("api/auth/status");
+        var response = await Http.GetAsync(Navigation.ToAbsoluteUri("/api/auth/status"));
         if (response.IsSuccessStatusCode)
         {
             authenticated = true;
