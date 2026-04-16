@@ -44,10 +44,12 @@ public class UserService
                 Username = response?.User?.Id ?? "",
                 Email = request.Email,
                 UserSession = session,
-                StripeCustomerId = customerId,
-                StripeAccountId = accountId,
-                SendBirdId = sendbirdId,
-                IsValid = true
+                Stripe_Customer_Id = customerId,
+                Stripe_Account_Id = accountId,
+                Sendbird_User_Id = sendbirdId,
+                IsValid = true,
+                avg_rating = 0.0,
+                total_ratings = 0
             };
 
             var payload = new
@@ -59,7 +61,9 @@ public class UserService
                 created_at = DateTime.UtcNow,
                 updated_at = DateTime.UtcNow,
                 email = request.Email,
-                username = request.Username
+                username = request.Username,
+                avg_rating = 0.0,
+                total_ratings = 0
             };
 
             await _db.InsertUserAsync(payload);
