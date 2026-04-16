@@ -10,6 +10,9 @@ namespace ToolPool.Services;
 
 public class StripePaymentService
 {
+    private readonly AccountService _accountService = new();
+
+
     // provides access to current http request/response
     private readonly IHttpContextAccessor _http;
 
@@ -17,6 +20,7 @@ public class StripePaymentService
     public StripePaymentService(IHttpContextAccessor http)
     {
         _http = http;
+
     }
 
     public async Task<string> CreateCustomerAsync(string email)
@@ -42,6 +46,23 @@ public class StripePaymentService
         });
 
         return account.Id;
+    }
+    public async Task<bool> IsUserFullyOnboardedAsync(string stripeAccountId)
+    {
+        var account = await _accountService.GetAsync(stripeAccountId);
+
+        var hasNoPendingRequirements =
+            account.Requirements?.CurrentlyDue == null ||
+            account.Requirements.CurrentlyDue.Count == 0;
+
+        var isNotDisabled =
+            string.IsNullOrEmpty(account.Requirements?.DisabledReason);
+
+        return account.DetailsSubmitted
+            && account.ChargesEnabled
+            && account.PayoutsEnabled
+            && hasNoPendingRequirements
+            && isNotDisabled;
     }
 
     // async method to create a stripe checkout session

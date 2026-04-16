@@ -92,29 +92,29 @@ public class SupabaseDemoService
         };
     }
 
-    public async Task<List<DemoItemSubmission>> GetLatestSubmissionsAsync(int limit = 5)
-    {
-        var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
+    //public async Task<List<DemoItemSubmission>> GetLatestSubmissionsAsync(int limit = 5)
+    //{
+    //    var client = _httpClientFactory.CreateClient();
+    //    var url = $"{_opt.Url}/rest/v1/Tools_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
 
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("apikey", _opt.AnonKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+    //    using var req = new HttpRequestMessage(HttpMethod.Get, url);
+    //    req.Headers.Add("apikey", _opt.AnonKey);
+    //    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
 
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
+    //    using var resp = await client.SendAsync(req);
+    //    resp.EnsureSuccessStatusCode();
 
-        var rows = await resp.Content.ReadFromJsonAsync<List<DemoItemSubmission>>(new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+    //    var rows = await resp.Content.ReadFromJsonAsync<List<DemoItemSubmission>>(new JsonSerializerOptions
+    //    {
+    //        PropertyNameCaseInsensitive = true
+    //    });
 
-        return rows ?? new List<DemoItemSubmission>();
-    }
+    //    return rows ?? new List<DemoItemSubmission>();
+    //}
     public async Task DeleteDemoItemAsync(Guid id)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/demo_items?id=eq.{id}";
+        var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
         req.Headers.Add("apikey", _opt.ServiceRoleKey);
