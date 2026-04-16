@@ -3,6 +3,7 @@
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @inject HttpClient Http
+@inject NavigationManager Navigation
 @* server rendermode for security *@
 
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
@@ -60,6 +61,7 @@
             if (!loginStatus.IsSuccessStatusCode)
             {
                 loginFailed = true;
+                Navigation.NavigateTo("/");
             }
         }
     }

@@ -41,20 +41,6 @@ builder.Services.AddScoped(sp =>
         BaseAddress = new Uri("https://localhost:7040")
     });
 
-
-builder.Services.AddAuthentication(o =>
-{
-    o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-})
-.AddCookie()
-.AddGoogle(googleo =>
-{
-    googleo.ClientId = builder.Configuration["Google:ClientID"];
-    googleo.ClientSecret = builder.Configuration["Google:ClientSecret"];
-    googleo.CallbackPath = "/signin-google";
-});
-
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {

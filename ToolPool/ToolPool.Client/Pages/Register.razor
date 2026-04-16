@@ -3,6 +3,7 @@
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @inject HttpClient Http
+
 <div style="display: flex; flex-direction: column; align-items: center; row-gap: 5px; justify-content: space-between;">
     <div class="mb-3"> 
         <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Username" style="width: 300px;" />
