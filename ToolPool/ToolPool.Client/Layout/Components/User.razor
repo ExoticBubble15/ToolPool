@@ -4,12 +4,13 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject AuthService AuthService
+@inject Supabase.Client supabase
 
 <span style="display: flex; align-items: center; gap: 5px">
     @if(authenticated)
     {
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/logout">Logout</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="SignOutAsync">Sign Out</Button>
     } else
     {
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/login">Login</Button>
@@ -19,18 +20,36 @@
 @code {
     private bool authenticated;
 
-    protected override void OnInitialized()
-    {
-        authenticated = false;
-    }
-
     protected override async Task OnInitializedAsync()
     {
-        var response = await Http.GetAsync("api/auth/status");
-        if (response.IsSuccessStatusCode)
+        try
         {
-            authenticated = true;
+            var response = await Http.GetAsync("api/auth/status");
+            if (response.IsSuccessStatusCode)
+            {
+                authenticated = true;
+            }
+            else
+            {
+                authenticated = false;
+            }
+        }
+        catch
+        {
+            authenticated = false;
         }
     }
-    // switch login to users page if authenticated
+
+    protected async Task SignOutAsync()
+    {
+        var response = await Http.GetAsync("api/auth/logout");
+        // log user out of supabase auth
+        await supabase.Auth.SignOut();
+        if (response.IsSuccessStatusCode)
+        {
+            // redirect or success UI
+            Navigation.NavigateTo("/");
+            authenticated = false;
+        }
+    }
 } 

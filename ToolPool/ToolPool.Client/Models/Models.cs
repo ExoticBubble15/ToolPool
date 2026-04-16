@@ -46,3 +46,10 @@ public class LoginRequest
     public required string Email { get; set; }
     public required string Password { get; set; }
 }
+
+public class userIDs
+{
+    public string? StripeCustomerId { get; set; }
+    public string? StripeAccountId { get; set; }
+    public string? SendBirdId { get; set; }
+}

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Diagnostics.Tracing;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -6,7 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using OneOf.Types;
 using ToolPool.Models;
+using ToolPool.Services;
 
 namespace ToolPool.Controllers
 {
@@ -16,11 +19,15 @@ namespace ToolPool.Controllers
     {
         private readonly Supabase.Client supabase;
         private readonly UserService _userService;
+        private readonly SupabaseDemoService _supabaseService;
+        private Dictionary<String, User> _users;
 
-        public AuthController(Supabase.Client _supabase, UserService userService)
+        public AuthController(Supabase.Client _supabase, UserService userService, SupabaseDemoService supabaseService, Dictionary<string, User> users)
         {
             supabase = _supabase;
             _userService = userService;
+            _supabaseService = supabaseService;
+            _users = users;
         }
 
         [HttpGet("google")]
@@ -37,13 +44,23 @@ namespace ToolPool.Controllers
         [HttpGet("logout")]
         public async Task<IActionResult> Logout()
         {
-            // clear auth cookies
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // remove user from user cache
+            string email = User.Identity?.Name ?? "";
+            if (!string.IsNullOrEmpty(email)) _users.Remove(email);
 
-            return Redirect("/");
+            // clear auth cookies
+            try
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            // supabase auth handled clientside...
         }
 
-        [Authorize]
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
@@ -53,37 +70,17 @@ namespace ToolPool.Controllers
             });
         }
 
-        [HttpPost("signup")]
-        public async Task<IActionResult> RegisterUser([FromBody] ToolPool.Models.RegisterRequest request)
-        {
-            try
-            {
-                var result = await _userService.RegisterUserAsync(request);
-
-                if (!result.IsValid)
-                {
-                    return BadRequest(new
-                    {
-                        error = result.ErrorMessage
-                    });
-                }
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    error = ex.Message
-                });
-            }
-        }
-
         [HttpPost("signin")]
         public async Task<IActionResult> TrySignIn([FromBody] ToolPool.Client.Models.LoginRequest request)
         {
             var loginStatus = await _userService.LoginUserAsync(request);
             if (!loginStatus.success) return Ok(loginStatus);
+
+            // if login success, add the user to the cache
+            var user = await _supabaseService.GetUserAsync(request.Email);
+            if (user == null) return Ok(new Client.Models.LoginStatus { success = false });
+            _users[request.Email] = user;
+
             // issue auth cookie
             var claims = new List<Claim>
             {
@@ -101,4 +98,10 @@ namespace ToolPool.Controllers
             return Ok(loginStatus);
         }
     }
+
+    //[HttpGet("getUserIDs")]
+    //public async Task<IActionResult> GetUserIDs()
+    //    {
+    //        var curUser = 
+    //    }
 }

@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using ToolPool.Models;
 using ToolPool.Services;
 
@@ -87,6 +89,20 @@ namespace ToolPool.Controllers
                     error = result.ErrorMessage
                 });
             }
+
+            // issue auth cookie on success
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Email, request.Email)
+            };
+            var identity = new ClaimsIdentity(claims, "cookies");
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("Cookies", principal, new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+            });
 
             return Ok(result);
         }

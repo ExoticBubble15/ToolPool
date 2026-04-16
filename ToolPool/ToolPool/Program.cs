@@ -58,7 +58,7 @@ builder.Services.AddHttpClient("Sendbird", client =>
     client.DefaultRequestHeaders.Add("Api-Token", apiToken);
 });
 
-// supabase client setup ** UNTESTED **
+// supabase client setup
 builder.Services.AddSingleton(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -74,6 +74,9 @@ builder.Services.AddSingleton(sp =>
 });
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
+// singleton cache for logged in users
+builder.Services.AddSingleton<Dictionary<string, User>>();
 
 var app = builder.Build();
 
