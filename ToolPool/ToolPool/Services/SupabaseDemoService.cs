@@ -175,7 +175,7 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task<User?> GetUserAsync(string email) 
+    public async Task<ToolPool.Models.User?> GetUserAsync(string email) 
     {
         var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?email=eq.{email}&select=*&limit=1";
@@ -186,7 +186,7 @@ public class SupabaseDemoService
 
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
-        var users = await resp.Content.ReadFromJsonAsync<List<User>>(new JsonSerializerOptions
+        var users = await resp.Content.ReadFromJsonAsync<List<ToolPool.Models.User>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
@@ -253,6 +253,60 @@ public class SupabaseDemoService
         });
 
         return activities ?? new List<ProfileActivityDto>();
+    }
+
+    public async Task DeleteRatingsByUserAsync(Guid userId)
+    {
+        var filter = Uri.EscapeDataString($"(rater_id.eq.{userId},rated_user_id.eq.{userId})");
+        var url = $"{_opt.Url}/rest/v1/Ratings?or={filter}";
+        await SendDeleteAsync(url);
+    }
+
+    public async Task DeleteInterestSubmissionsByUserAsync(Guid userId)
+    {
+        var filter = Uri.EscapeDataString($"(owner_id.eq.{userId},renter_id.eq.{userId})");
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?or={filter}";
+        await SendDeleteAsync(url);
+    }
+
+    public async Task DeleteToolsByOwnerAsync(Guid userId)
+    {
+        var url = $"{_opt.Url}/rest/v1/Tools?owner_id=eq.{userId}";
+        await SendDeleteAsync(url);
+    }
+
+    public async Task DeletePublicUserAsync(Guid userId)
+    {
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}";
+        await SendDeleteAsync(url);
+    }
+
+    public async Task DeleteAuthUserAsync(Guid userId)
+    {
+        var authUrl = $"{_opt.Url.TrimEnd('/')}/auth/v1";
+        var options = new Supabase.Gotrue.ClientOptions
+        {
+            Url = authUrl,
+            Headers = new Dictionary<string, string>
+            {
+                ["apikey"] = _opt.ServiceRoleKey
+            }
+        };
+
+        var adminClient = new Supabase.Gotrue.AdminClient(_opt.ServiceRoleKey, options);
+        await adminClient.DeleteUser(userId.ToString());
+    }
+
+    private async Task SendDeleteAsync(string url)
+    {
+        var client = _httpClientFactory.CreateClient();
+
+        using var req = new HttpRequestMessage(HttpMethod.Delete, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
     }
 }
 

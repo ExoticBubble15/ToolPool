@@ -37,7 +37,7 @@
             </div>
             <div class="info-row">
                 <span class="label">Joined</span>
-                <span class="value">@Account.JoinedAt.ToString("MMM dd, yyyy")</span>
+                <span class="value">@(Account.JoinedAt.ToString("MMM dd, yyyy")?? "Unknown")</span>
             </div>
             <div class="info-row">
                 <span class="label">Stripe</span>
@@ -78,9 +78,24 @@
             {
                 <div class="danger-box">
                     <p>This will permanently remove your account. This action cannot be undone.</p>
+                    @if (!string.IsNullOrWhiteSpace(DeleteError))
+                    {
+                        <p class="error">@DeleteError</p>
+                    }
+                    @if (IsDeleting)
+                    {
+                        <div class="delete-progress">
+                            <div class="delete-progress-bar">
+                                <div class="delete-progress-fill" style="width:@DeleteProgressPercent%"></div>
+                            </div>
+                            <p class="delete-progress-text">@DeleteProgressMessage</p>
+                        </div>
+                    }
                     <div class="actions">
-                        <button class="btn btn-danger" @onclick="OnDeleteAccountConfirmed">Confirm Delete</button>
-                        <button class="btn btn-secondary" @onclick="HideDeleteConfirmation">Cancel</button>
+                        <button class="btn btn-danger" @onclick="OnDeleteAccountConfirmed" disabled="@IsDeleting">
+                            @(IsDeleting ? "Deleting..." : "Confirm Delete")
+                        </button>
+                        <button class="btn btn-secondary" @onclick="HideDeleteConfirmation" disabled="@IsDeleting">Cancel</button>
                     </div>
                 </div>
             }
@@ -152,6 +167,10 @@
     private bool ShowDeleteConfirm;
     private bool IsLoading = true;
     private string? LoadError;
+    private string? DeleteError;
+    private bool IsDeleting;
+    private string DeleteProgressMessage = "";
+    private int DeleteProgressPercent;
 
     private AccountInfo Account { get; set; } = new();
     private List<ListingItem> MyListings { get; set; } = new();
@@ -197,10 +216,54 @@
         Navigation.NavigateTo("/api/auth/logout", forceLoad: true);
     }
 
-    private void OnDeleteAccountConfirmed()
+    private async Task OnDeleteAccountConfirmed()
     {
-        // Placeholder only until delete-account endpoint is implemented.
-        ShowDeleteConfirm = false;
+        DeleteError = null;
+        IsDeleting = true;
+        DeleteProgressMessage = "Deleting ratings...";
+        DeleteProgressPercent = 20;
+
+        try
+        {
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting rental requests...";
+            DeleteProgressPercent = 45;
+
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting uploaded tools...";
+            DeleteProgressPercent = 70;
+
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting user account...";
+            DeleteProgressPercent = 90;
+
+            var response = await Http.DeleteAsync(Navigation.ToAbsoluteUri("/api/profile/me"));
+            if (!response.IsSuccessStatusCode)
+            {
+                DeleteError = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(DeleteError))
+                {
+                    DeleteError = $"Delete account failed ({(int)response.StatusCode})";
+                }
+                return;
+            }
+
+            DeleteProgressMessage = "Account deleted.";
+            DeleteProgressPercent = 100;
+            await Task.Delay(300);
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            DeleteError = ex.Message;
+        }
+        finally
+        {
+            IsDeleting = false;
+            ShowDeleteConfirm = false;
+            DeleteProgressMessage = "";
+            DeleteProgressPercent = 0;
+        }
     }
 
     private static string GetStatusBadgeClass(string status) => status switch
@@ -225,7 +288,7 @@
         public string? SendbirdUserId { get; set; }
         public string? StripeCustomerId { get; set; }
 
-        public DateTimeOffset JoinedAt => CreatedAt ?? DateTimeOffset.MinValue;
+        public DateTimeOffset JoinedAt => CreatedAt?.ToLocalTime() ?? DateTimeOffset.Now;
     }
 
     private sealed class ListingItem
@@ -330,6 +393,30 @@
     .danger-box p {
         margin: 0 0 0.6rem;
         color: #b91c1c;
+    }
+
+    .delete-progress {
+        margin: 0.75rem 0;
+    }
+
+    .delete-progress-bar {
+        width: 100%;
+        height: 0.6rem;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .delete-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444, #f97316);
+        transition: width 0.25s ease;
+    }
+
+    .delete-progress-text {
+        margin: 0.5rem 0 0;
+        font-size: 0.9rem;
+        color: #7f1d1d;
     }
 
     .section-head {

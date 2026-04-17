@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using ToolPool.Services;
 
@@ -9,11 +11,13 @@ public class ProfileController : ControllerBase
 {
     private readonly Supabase.Client _supabase;
     private readonly SupabaseDemoService _supabaseDemoService;
+    private readonly UserService _userService;
 
-    public ProfileController(Supabase.Client supabase, SupabaseDemoService supabaseDemoService)
+    public ProfileController(Supabase.Client supabase, SupabaseDemoService supabaseDemoService, UserService userService)
     {
         _supabase = supabase;
         _supabaseDemoService = supabaseDemoService;
+        _userService = userService;
     }
 
     [HttpGet("me")]
@@ -58,6 +62,27 @@ public class ProfileController : ControllerBase
 
         var activities = await _supabaseDemoService.GetActivitiesByUserAsync(userId.Value);
         return Ok(activities);
+    }
+
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteMe()
+    {
+        var userId = TryGetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized(new { error = "No active user session." });
+        }
+
+        try
+        {
+            await _userService.DeleteAccountAsync(userId.Value);
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Ok(new { success = true, message = "Account deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     private Guid? TryGetCurrentUserId()
