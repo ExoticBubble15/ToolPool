@@ -7,6 +7,7 @@
 @inject CartService Cart
 @inject HttpClient Http
 @inject NavigationManager Nav
+@using System.Net.Http.Json
 
 <div class="page-wrap">
     <div class="page-hero">
@@ -117,16 +118,32 @@
     private bool SubmitOk = false;
 
     private bool HasStripeOnboarded = false;
-
-    private string OwnerId = "2365d6d0-28f9-4ada-b061-0b5339e95909";
-    private string OwnerName = "yc3146";
+    private Guid CurrentUserId;
+    private string OwnerId = "";
+    private string OwnerName = "";
+    private string? StripeAccountId;
 
     protected override async Task OnInitializedAsync()
     {
         Items = await ItemService.GetDemoItemsAsync();
         Cart.OnChange += StateHasChanged;
 
+        await LoadCurrentUserAsync();
         HasStripeOnboarded = await CheckStripeAsync();
+    }
+
+    private async Task LoadCurrentUserAsync()
+    {
+        var me = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
+        if (me is null)
+        {
+            throw new InvalidOperationException("Failed to load current user profile.");
+        }
+
+        CurrentUserId = me.Id;
+        OwnerId = me.Id.ToString();
+        OwnerName = me.Username ?? "";
+        StripeAccountId = me.StripeAccountId;
     }
 
     private async Task GoToStripeOnboarding()
@@ -135,10 +152,15 @@
         {
             Console.WriteLine("CLICKED STRIPE BUTTON");
 
-            var accountId = "acct_1TMcZcRpqfBSKA4N";
+            if (string.IsNullOrWhiteSpace(StripeAccountId))
+            {
+                SubmitMessage = "No Stripe account found for the current user.";
+                SubmitOk = false;
+                return;
+            }
 
             var response = await Http.PostAsync(
-                $"/api/stripe/create-onboarding-link/{accountId}",
+                Nav.ToAbsoluteUri($"/api/stripe/create-onboarding-link/{StripeAccountId}"),
                 null
             );
 
@@ -154,10 +176,13 @@
 
     private async Task<bool> CheckStripeAsync()
     {
-        var accountId = "acct_1TMcZcRpqfBSKA4N"; // later replace with variable user id
+        if (string.IsNullOrWhiteSpace(StripeAccountId))
+        {
+            return false;
+        }
 
         return await Http.GetFromJsonAsync<bool>(
-            $"/api/stripe/onboarding-status/{accountId}"
+            Nav.ToAbsoluteUri($"/api/stripe/onboarding-status/{StripeAccountId}")
         );
     }
 
@@ -264,5 +289,14 @@
     public void Dispose()
     {
         Cart.OnChange -= StateHasChanged;
+    }
+
+    private class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string? Username { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set; }
     }
 }

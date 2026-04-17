@@ -66,7 +66,7 @@ public class StripePaymentService
     }
 
     // async method to create a stripe checkout session
-    public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems, decimal total)
+    public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems, decimal total, string destinationAccountId)
     {
         
         // request obj
@@ -109,7 +109,7 @@ public class StripePaymentService
                 // TransferData to send money to another account
                 TransferData = new SessionPaymentIntentDataTransferDataOptions
                 {
-                    Destination = "acct_1TDv6d2OWxbeQ4IJ" // hardcoded test account
+                    Destination = destinationAccountId
                 }
             },
         };

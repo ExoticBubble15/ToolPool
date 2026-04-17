@@ -10,10 +10,12 @@ namespace ToolPool.Controllers;
 public class StripeController : ControllerBase
 {
     private readonly StripePaymentService _stripe;
+    private readonly SupabaseDemoService _supabase;
 
-    public StripeController(StripePaymentService stripe)
+    public StripeController(StripePaymentService stripe, SupabaseDemoService supabase)
     {
         _stripe = stripe;
+        _supabase = supabase;
     }
 
     // =========================
@@ -22,9 +24,16 @@ public class StripeController : ControllerBase
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout([FromBody] List<CartItem> items)
     {
-        var total = items.Sum(i => i.Price);
+        if (items.Count == 0)
+            return BadRequest("Cart is empty.");
 
-        var url = await _stripe.CreateCheckoutSessionAsync(items, total);
+        var total = items.Sum(i => i.Price);
+        var destinationAccountId = await _supabase.GetStripeDestinationForToolAsync(items[0].DemoItemId);
+
+        if (string.IsNullOrWhiteSpace(destinationAccountId))
+            return BadRequest("Tool owner does not have a Stripe account.");
+
+        var url = await _stripe.CreateCheckoutSessionAsync(items, total, destinationAccountId);
 
         return Ok(url);
     }
@@ -69,11 +78,12 @@ public class StripeController : ControllerBase
     [HttpPost("create-onboarding-link/{accountId}")]
     public IActionResult CreateOnboardingLink(string accountId)
     {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
         var options = new AccountLinkCreateOptions
         {
             Account = accountId,
-            RefreshUrl = "https://localhost:7040/stripe/onboarding", // change for prod
-            ReturnUrl = "https://localhost:7040/stripe",
+            RefreshUrl = $"{baseUrl}/stripe",
+            ReturnUrl = $"{baseUrl}/stripe",
             Type = "account_onboarding"
         };
 

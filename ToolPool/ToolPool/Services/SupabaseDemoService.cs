@@ -214,6 +214,46 @@ public class SupabaseDemoService
         return users?.FirstOrDefault();
     }
 
+    public async Task<string?> GetStripeDestinationForToolAsync(Guid toolId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{toolId}&select=owner_id&limit=1";
+
+        using var toolReq = new HttpRequestMessage(HttpMethod.Get, url);
+        toolReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        toolReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var toolResp = await client.SendAsync(toolReq);
+        toolResp.EnsureSuccessStatusCode();
+
+        var tools = await toolResp.Content.ReadFromJsonAsync<List<ToolOwnerLookupDto>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        var ownerId = tools?.FirstOrDefault()?.OwnerId;
+        if (ownerId is null)
+        {
+            return null;
+        }
+
+        var ownerUrl = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=stripe_account_id&limit=1";
+
+        using var ownerReq = new HttpRequestMessage(HttpMethod.Get, ownerUrl);
+        ownerReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        ownerReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var ownerResp = await client.SendAsync(ownerReq);
+        ownerResp.EnsureSuccessStatusCode();
+
+        var owners = await ownerResp.Content.ReadFromJsonAsync<List<StripeAccountLookupDto>>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return owners?.FirstOrDefault()?.StripeAccountId;
+    }
+
     public async Task<List<ProfileListingDto>> GetListingsByOwnerAsync(Guid ownerId)
     {
         var client = _httpClientFactory.CreateClient();
@@ -385,4 +425,16 @@ public class ProfileActivityDto
 
     [JsonPropertyName("created_at")]
     public DateTimeOffset? CreatedAt { get; set; }
+}
+
+public class ToolOwnerLookupDto
+{
+    [JsonPropertyName("owner_id")]
+    public Guid? OwnerId { get; set; }
+}
+
+public class StripeAccountLookupDto
+{
+    [JsonPropertyName("stripe_account_id")]
+    public string? StripeAccountId { get; set; }
 }
