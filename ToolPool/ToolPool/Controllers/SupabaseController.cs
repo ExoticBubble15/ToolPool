@@ -203,29 +203,70 @@ namespace ToolPool.Controllers
         [HttpPost("interests")]
         public async Task<ActionResult<InterestResponse>> SubmitInterest([FromBody] InterestRequest request)
         {
+            // #region agent log
+            var _dbgLogPath = "/Users/yitaowang/Downloads/ToolPool/.cursor/debug-dbdcbc.log";
+            void _dbgLog(string msg, object? data = null) { try { System.IO.File.AppendAllText(_dbgLogPath, System.Text.Json.JsonSerializer.Serialize(new { sessionId = "dbdcbc", location = "SupabaseController:SubmitInterest", message = msg, data, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { } }
+            // #endregion
+            // #region agent log
+            _dbgLog("entry", new { requestToolId = request.ToolId, requestToolName = request.ToolName, hasUser = User.Identity?.IsAuthenticated });
+            // #endregion
+
             // Resolve renter from authenticated session
             var renterIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // #region agent log
+            _dbgLog("auth-check", new { renterIdClaim, isAuthenticated = User.Identity?.IsAuthenticated });
+            // #endregion
             if (string.IsNullOrEmpty(renterIdClaim) || !Guid.TryParse(renterIdClaim, out var renterId))
+            {
+                // #region agent log
+                _dbgLog("H1-rejected-unauth", new { renterIdClaim });
+                // #endregion
                 return Unauthorized(new { error = "Not authenticated" });
+            }
 
             var renter = await _supabase.GetUserByIdAsync(renterId);
             if (renter is null)
+            {
+                // #region agent log
+                _dbgLog("renter-not-found", new { renterId });
+                // #endregion
                 return Unauthorized(new { error = "User account not found" });
+            }
 
             // Resolve tool and owner
             var tool = await _supabase.GetToolByIdAsync(request.ToolId);
             if (tool is null)
+            {
+                // #region agent log
+                _dbgLog("H5-tool-not-found", new { requestToolId = request.ToolId });
+                // #endregion
                 return NotFound(new { error = "Tool not found" });
+            }
 
             if (tool.OwnerId is null)
+            {
+                // #region agent log
+                _dbgLog("H2-no-owner", new { toolId = tool.Id, toolName = tool.Name });
+                // #endregion
                 return BadRequest(new { error = "This tool has no owner and cannot accept interest" });
+            }
 
             if (tool.OwnerId == renter.Id)
+            {
+                // #region agent log
+                _dbgLog("H3-self-rent", new { renterId = renter.Id, ownerId = tool.OwnerId, toolName = tool.Name });
+                // #endregion
                 return BadRequest(new { error = "You cannot rent your own tool" });
+            }
 
             var owner = await _supabase.GetUserByIdAsync(tool.OwnerId.Value);
             if (owner is null)
+            {
+                // #region agent log
+                _dbgLog("H4-owner-not-found", new { ownerId = tool.OwnerId });
+                // #endregion
                 return BadRequest(new { error = "Tool owner account not found" });
+            }
 
             // Ensure both users have sendbird_user_id (backfill from Users.id if null)
             if (string.IsNullOrEmpty(renter.SendbirdUserId))
@@ -293,48 +334,64 @@ namespace ToolPool.Controllers
             var asRenter = await _supabase.GetInterestsByRenterAsync(userId.ToString());
             var asOwner = await _supabase.GetInterestsByOwnerAsync(userId);
 
-            var results = new List<MyInterestItem>();
+            var allItems = new List<(InterestSubmission Sub, string Role)>();
 
             foreach (var i in asRenter)
-            {
-                string counterpartName = "Owner";
-                if (i.OwnerId.HasValue)
-                {
-                    var owner = await _supabase.GetUserByIdAsync(i.OwnerId.Value);
-                    counterpartName = owner?.Username ?? owner?.Email ?? "Owner";
-                }
-                results.Add(new MyInterestItem
-                {
-                    Id = i.Id,
-                    ToolName = i.ToolName,
-                    ChannelUrl = i.ChannelUrl,
-                    Status = i.Status,
-                    CounterpartName = counterpartName,
-                    Role = "renter",
-                    CreatedAt = i.CreatedAt
-                });
-            }
+                allItems.Add((i, "renter"));
 
             foreach (var i in asOwner)
             {
-                // Skip duplicates (if user is both renter and owner — shouldn't happen but guard)
-                if (results.Any(r => r.Id == i.Id)) continue;
+                // Guard against same row appearing in both queries
+                if (allItems.Any(x => x.Sub.Id == i.Id)) continue;
+                allItems.Add((i, "owner"));
+            }
 
-                string counterpartName = "Renter";
-                if (Guid.TryParse(i.RenterId, out var renterGuid))
+            // Deduplicate by channel_url: keep the most recent row per channel.
+            // Rows without channel_url are kept individually.
+            var grouped = allItems
+                .GroupBy(x => string.IsNullOrEmpty(x.Sub.ChannelUrl) ? x.Sub.Id.ToString() : x.Sub.ChannelUrl)
+                .Select(g => g.OrderByDescending(x => x.Sub.CreatedAt).First())
+                .ToList();
+
+            // Resolve counterpart names (batch unique user IDs to reduce lookups)
+            var userCache = new Dictionary<Guid, AppUser?>();
+
+            var results = new List<MyInterestItem>();
+            foreach (var (sub, role) in grouped)
+            {
+                string counterpartName;
+                if (role == "renter" && sub.OwnerId.HasValue)
                 {
-                    var renter = await _supabase.GetUserByIdAsync(renterGuid);
+                    if (!userCache.TryGetValue(sub.OwnerId.Value, out var owner))
+                    {
+                        owner = await _supabase.GetUserByIdAsync(sub.OwnerId.Value);
+                        userCache[sub.OwnerId.Value] = owner;
+                    }
+                    counterpartName = owner?.Username ?? owner?.Email ?? "Owner";
+                }
+                else if (role == "owner" && Guid.TryParse(sub.RenterId, out var renterGuid))
+                {
+                    if (!userCache.TryGetValue(renterGuid, out var renter))
+                    {
+                        renter = await _supabase.GetUserByIdAsync(renterGuid);
+                        userCache[renterGuid] = renter;
+                    }
                     counterpartName = renter?.Username ?? renter?.Email ?? "Renter";
                 }
+                else
+                {
+                    counterpartName = role == "renter" ? "Owner" : "Renter";
+                }
+
                 results.Add(new MyInterestItem
                 {
-                    Id = i.Id,
-                    ToolName = i.ToolName,
-                    ChannelUrl = i.ChannelUrl,
-                    Status = i.Status,
+                    Id = sub.Id,
+                    ToolName = sub.ToolName,
+                    ChannelUrl = sub.ChannelUrl,
+                    Status = sub.Status,
                     CounterpartName = counterpartName,
-                    Role = "owner",
-                    CreatedAt = i.CreatedAt
+                    Role = role,
+                    CreatedAt = sub.CreatedAt
                 });
             }
 
