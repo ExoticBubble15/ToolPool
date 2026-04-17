@@ -15,7 +15,7 @@
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
 
 <div class="browse-location-card">
-    @* location enter *@
+    @* enter location *@
     <div style="display: flex; flex-direction: row; align-items: center">
         <h5 style="margin: 0">Choose a location:</h5>
         <div class="location-search">
@@ -29,12 +29,6 @@
         </div>
     </div>
 
-    @* hint *@
-    <div class="browse-location-hint">
-        @* 🔒 Exact address of tools are revealed after confirmation *@
-        Displayed locations are approximate. Exact address of tools are revealed after confirmation.
-    </div>
-
     @* filters *@
     <div class="browse-filters">
         @* type/category filter *@
@@ -43,7 +37,7 @@
             @if(categoriesLoaded)
             {
                 <span class="browse-filter-select">
-                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories">Categories ⌵</Button>
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories">Categories (@(selectedCategories.Count)) ⌵</Button>
                 </span>
             }
         </div>
@@ -54,7 +48,7 @@
             @if (neighborhoodsLoaded)
             {
                 <span class="browse-filter-select">
-                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleNeighborhoods">Neighborhoods ⌵</Button>
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleNeighborhoods">Neighborhoods (@(selectedNeighborhoods.Count)) ⌵</Button>
                 </span>
             }
         </div>
@@ -73,17 +67,20 @@
             <Collapse @ref="categories">
             <div class="filterOptions">
                 <div>
-                    <span style="display: flex; justify-content: center">
-                    <input type="checkbox" id="allCategories" checked="@(selectedCategories.Count == categoriesList.Count)" @onchange="OnAllCategoriesChanged" />
-                        <label for="allCategories" style="margin-left: 5px"><b><i>All Categories</i></b></label>
-                    </span>
-                    @foreach(var cat in categoriesList)
-                    {
-                        <div style="display: flex; align-items: center;">
-                            <input type="checkbox" id="@cat" checked="@selectedCategories.Contains(cat)" @onchange="(e) => OnCategoryChanged(cat, (bool)e.Value!)" />
-                            <label for="@cat" style="margin-left: 5px">@cat</label>
-                        </div>
-                    }
+                    <div class="filterAll">
+                        <input type="checkbox" id="allCategories" checked="@(selectedCategories.Count == categoriesList.Count)" @onchange="OnAllCategoriesChanged" />
+                        <label for="allCategories" style="margin-left: 5px"><b>All Categories</b></label>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0px 10px;">
+                        @foreach(var cat in categoriesList)
+                        {
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="@cat" checked="@selectedCategories.Contains(cat)" @onchange="(e) => OnCategoryChanged(cat, (bool)e.Value!)" />
+                                <label for="@cat" style="margin-left: 5px">@cat</label>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
             </Collapse>
@@ -94,7 +91,31 @@
             <div style="border: 1px solid var(--divide)"/>
         }
 
-        @if(neighborhoodsLoaded)
+        @if (neighborhoodsLoaded)
+        {
+            <Collapse @ref="neighborhoods">
+                <div class="filterOptions">
+                    <div>
+                        <div class="filterAll">
+                            <input type="checkbox" id="allNeighborhoods" checked="@(selectedNeighborhoods.Count == neighborhoodsList.Count)" @onchange="OnAllNeighborhoodsChanged" />
+                            <label for="allNeighborhoods" style="margin-left: 5px"><b>All Neighborhoods</b></label>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0px 10px;">
+                        @foreach (var n in neighborhoodsList)
+                            {
+                                <div style="display: flex; align-items: center;">
+                                    <input type="checkbox" id="@n" checked="@selectedNeighborhoods.Contains(n)" @onchange="(e) => OnNeighborhoodChanged(n, (bool)e.Value!)" />
+                                    <label for="@n" style="margin-left: 5px">@n</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </Collapse>
+        }
+
+        @* @if(neighborhoodsLoaded)
         {
             <Collapse @ref="neighborhoods">
             <div class="filterOptions">
@@ -116,24 +137,35 @@
                 }
             </div>
             </Collapse>
+        } *@
+    </div>
+
+    @* hint/map toggle *@
+    <div style="margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between">
+        <div class="browse-location-hint">
+            @* 🔒 Exact address of tools are revealed after confirmation *@
+            Displayed locations are approximate. Exact address of tools are revealed after confirmation.
+        </div>
+        <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" Size="ButtonSize.Small" @onclick="ToggleMap">@(mapVisible ? "Hide map" : "Show map")</Button>
+    </div>
+</div>
+
+<Collapse @ref="displayMap">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center">
+        @if (!mapLoaded)
+        {
+            <Spinner />
+            <i>loading map</i>
         }
-    </div>
-</div>
 
-<div style="display: flex; flex-direction: column; align-items: center; justify-content: center">
-    @if (!mapLoaded)
-    {
-        <Spinner />
-        <i>loading map</i>
-    }
-
-    <div class="map">
-        <GoogleMapsComponents.GoogleMap @ref="map"
-        Options="mapOptions"
-        OnAfterInit="mapRenderDone">
-        </GoogleMapsComponents.GoogleMap>
+        <div class="map">
+            <GoogleMapsComponents.GoogleMap @ref="map"
+            Options="mapOptions"
+            OnAfterInit="mapRenderDone">
+            </GoogleMapsComponents.GoogleMap>
+        </div>
     </div>
-</div>
+    </Collapse>
 
 <h3 class="browse-section-title">Available Tools</h3>
 
@@ -233,8 +265,6 @@ else
     private string? errorMessage;
     private string searchQuery = "";
 
-    private string selectedDistance = "All";
-
     private List<String> selectedCategories;
     private bool categoriesLoaded = false;
     Collapse categories = default!;
@@ -246,11 +276,14 @@ else
         categoriesExpanded = !categoriesExpanded;
     }
 
+    private List<String> selectedNeighborhoods;
     private bool neighborhoodsLoaded = false;
     Collapse neighborhoods = default!;
-    private Dictionary<String, List<String>> cityNeighborhoods;
+    private List<String> neighborhoodsList;
+    // private Dictionary<String, List<String>> cityNeighborhoods;
     private bool neighborhoodsExpanded = false;
-    private async Task ToggleNeighborhoods() {
+    private async Task ToggleNeighborhoods()
+    {
         await neighborhoods.ToggleAsync();
         neighborhoodsExpanded = !neighborhoodsExpanded;
     }
@@ -267,6 +300,13 @@ else
         MapTypeControl = false,
         StreetViewControl = false
     };
+    bool mapVisible = false;
+    Collapse displayMap = default!;
+    private async Task ToggleMap()
+    {
+        await displayMap.ToggleAsync();
+        mapVisible = !mapVisible;
+    }
 
     private void NavigateToTool(Guid id) => Nav.NavigateTo($"/express_interest/{id}");
 
@@ -306,7 +346,9 @@ else
             selectedCategories = new List<string>(categoriesList);
             categoriesLoaded = true;
 
-            cityNeighborhoods = await ToolService.GetCityNeighborhoodsAsync();
+            neighborhoodsList = await ToolService.GetNeighborhodsAsync();
+            // cityNeighborhoods = await ToolService.GetCityNeighborhoodsAsync();
+            selectedNeighborhoods = new List<string>(neighborhoodsList);
             neighborhoodsLoaded = true;
 
             allTools = await ToolService.GetToolsAsync();
@@ -343,6 +385,19 @@ else
     //     isLoading = false;
     // }
 
+    //all filter option
+    private void OnAllNeighborhoodsChanged(ChangeEventArgs e)
+    {
+        if ((bool)e.Value!)
+        {
+            selectedNeighborhoods = new List<string>(neighborhoodsList);
+        }
+        else
+        {
+            selectedNeighborhoods.Clear();
+        }
+    }
+
     private void OnAllCategoriesChanged(ChangeEventArgs e)
     {
         if ((bool)e.Value!)
@@ -352,6 +407,19 @@ else
         else
         {
             selectedCategories.Clear();
+        }
+    }
+
+    //individual filter option
+    private void OnNeighborhoodChanged(string neighborhood, bool isChecked)
+    {
+        if (isChecked)
+        {
+            selectedNeighborhoods.Add(neighborhood);
+        }
+        else
+        {
+            selectedNeighborhoods.Remove(neighborhood);
         }
     }
 
@@ -384,15 +452,10 @@ else
             if (selectedCategories.Any())
             {
                 result = result.Where(t => selectedCategories.Contains(t.Category));
+                result = result.Where(t => selectedNeighborhoods.Contains(t.Neighborhood));
             } else
             {
                 result = Enumerable.Empty<Tool>();
-            }
-
-            if (selectedDistance != "All")
-            {
-                result = result.Where(t =>
-                    t.Neighborhood.Equals(selectedDistance, StringComparison.OrdinalIgnoreCase));
             }
 
             return result;

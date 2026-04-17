@@ -19,6 +19,11 @@ namespace ToolPool.Models
         public string Category {  get; set; } = string.Empty;
     }
 
+    public class ToolNeighborhood
+    {
+        public string Neighborhood { get; set; } = string.Empty;
+    }
+
     public class NeighborhoodTuple
     {
         public string neighborhood { get; set; } = string.Empty;

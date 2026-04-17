@@ -129,31 +129,45 @@ namespace ToolPool.Controllers
             {
                 categories.Add(c.Category);
             }
-            Console.WriteLine(categories.Count > 0 ? "success: \"categories\"" : "failure: \"categories\"");
+            categories = categories.Distinct().ToList();
+            Console.WriteLine($"\"categories\": {categories.Count}");
             return categories;
         }
 
-        //key = city, value = list of neighborhoods
-        [HttpGet("cityNeighborhoods")]
-        public async Task<Dictionary<String, List<String>>> CityNeighborhoods()
+        [HttpGet("neighborhoods")]
+        public async Task<List<String>> Neighborhoods()
         {
-            Dictionary<String, List<String>> cityNeighborhoods = new Dictionary<String, List<String>>();
-            foreach(var t in (await _supabase.GetCityNeighborhoods()))
+            List<String> neighborhoods = new List<String>();
+            foreach (var c in (await _supabase.GetNeighborhoods()))
             {
-                var c = t.city;
-                var n = t.neighborhood;
-                if(cityNeighborhoods.ContainsKey(c))
-                {
-                    cityNeighborhoods[c].Add(n);
-                }
-                else
-                {
-                    cityNeighborhoods[c] = new List<String>{n};
-                }
+                neighborhoods.Add(c.Neighborhood);
             }
-            Console.WriteLine(cityNeighborhoods.Count > 0 ? "success: \"cityNeighborhoods\"" : "failure: \"cityNeighborhoods\"");
-            return cityNeighborhoods;
+            neighborhoods = neighborhoods.Distinct().ToList();
+            Console.WriteLine($"\"neighborhoods\": {neighborhoods.Count}");
+            return neighborhoods;
         }
+
+        ////key = city, value = list of neighborhoods
+        //[HttpGet("cityNeighborhoods")]
+        //public async Task<Dictionary<String, List<String>>> CityNeighborhoods()
+        //{
+        //    Dictionary<String, List<String>> cityNeighborhoods = new Dictionary<String, List<String>>();
+        //    foreach(var t in (await _supabase.GetCityNeighborhoods()))
+        //    {
+        //        var c = t.city;
+        //        var n = t.neighborhood;
+        //        if(cityNeighborhoods.ContainsKey(c))
+        //        {
+        //            cityNeighborhoods[c].Add(n);
+        //        }
+        //        else
+        //        {
+        //            cityNeighborhoods[c] = new List<String>{n};
+        //        }
+        //    }
+        //    Console.WriteLine(cityNeighborhoods.Count > 0 ? "success: \"cityNeighborhoods\"" : "failure: \"cityNeighborhoods\"");
+        //    return cityNeighborhoods;
+        //}
 
         [HttpGet("Tools")]
         public async Task<ActionResult<List<Tool>>> GetTools()
