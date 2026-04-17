@@ -41,9 +41,23 @@
                 Passwords do not match.
             </div>
         }
+        @if (passwordTooShort)
+        {
+            <div class="invalid-feedback">
+                Passwords must be at least 6 characters.
+            </div>
+        }
     </div>
     
-    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="TryRegister">Register</Button>
+    <Button
+        style="width: 200px;"
+        Type="ButtonType.Button"
+        Color="ButtonColor.Success"
+        disabled=@registerLoading
+        Loading="@registerLoading"
+        @onclick="TryRegister">
+        Register
+    </Button>
 </div>
 
 @code {
@@ -57,7 +71,10 @@
     private bool passwordEmpty;
     private bool passwordMismatch = false;
     private bool failedToRegister = false;
+    private bool registerLoading = false;
+    private bool passwordTooShort = false;
     public string? registerFailureMessage;
+    
 
     private async Task TryRegister()
     {
@@ -65,8 +82,9 @@
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
         passwordMismatch = PasswordPlain != PasswordPlainConfirm;
+        passwordTooShort = (PasswordPlain?.Length ?? 0) < 6;
 
-        if (emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch)
+        if (emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch || passwordTooShort)
             return;
 
         var request = new RegisterRequest
@@ -75,12 +93,16 @@
             Password = PasswordPlain!,
             Username = Username!
         };
-
-        var response = await Http.PostAsJsonAsync("/api/users/register", request);
+        
+        // TODO: Broken?
+        registerLoading = true;
+        var response = await Http.PostAsJsonAsync("api/users/register", request);
         if (response.IsSuccessStatusCode)
         {
             // redirect or success UI
+            registerLoading = false;
             Navigation.NavigateTo("/");
         }
+        
     }
 }

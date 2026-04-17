@@ -24,7 +24,10 @@ builder.Services.AddSingleton(sp =>
         AutoConnectRealtime = true
     };
 
-    var client = new Supabase.Client(builder.Configuration["Supabase:Url"], builder.Configuration["Supabase:AnonKey"], options);
+    var client = new Supabase.Client(
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXBhdnFtaGR2eGFvbWpkc3p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3ODQzNTUsImV4cCI6MjA4OTM2MDM1NX0.pXCCjvLHiZ_28LtJW35XQuTInqWOExUEzUQ-2hBpkYU", 
+        "https://zaepavqmhdvxaomjdszw.supabase.co/"
+        );
     client.InitializeAsync();
 
     return client;
