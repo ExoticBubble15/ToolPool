@@ -44,7 +44,7 @@
                     {
                         @if (!string.IsNullOrEmpty(item.ChannelUrl))
                         {
-                            <a href="/chat/@item.ChannelUrl" class="chat-channel-card">
+                            <a href="/chat/@item.ChannelUrl?interestId=@item.Id" class="chat-channel-card">
                                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                     <div>
                                         <span class="chat-channel-name">@item.ToolName</span>

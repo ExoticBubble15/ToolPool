@@ -148,9 +148,22 @@ else
                 }
                 else
                 {
-                    <button class="ei-submit-btn" @onclick="PayAndExpressInterest" disabled="@submitting">
-                        @(submitting ? "Submitting..." : "Express Interest & Start Chat")
-                    </button>
+                    <div class="ei-button-group">
+                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@submitting">
+                            @(submitting ? "Submitting..." : "Express Interest & Start Chat")
+                        </button>
+                        <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates)">
+                            @if (HasValidDates)
+                            {
+                                <span>Pay Now: $@CalculateTotal().ToString("F2")</span>
+                            }
+                            else
+                            {
+                                <span>Pay Now (select dates)</span>
+                            }
+                        </button>
+                    </div>
+                    <p class="ei-button-hint">Start a conversation first, or pay now to secure your rental.</p>
                 }
             </div>
         </div>
@@ -171,6 +184,17 @@ else
     private bool submitted = false;
     private string? errorMsg;
     private string? channelUrl;
+    private Guid? interestId;
+
+    private bool HasValidDates => startDate is not null && endDate is not null && endDate >= startDate;
+
+    private decimal CalculateTotal()
+    {
+        if (tool is null || startDate is null || endDate is null)
+            return 0;
+        var days = (endDate.Value - startDate.Value).Days + 1;
+        return tool.Price * Math.Max(1, days);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,6 +213,55 @@ else
         }
 
         isLoading = false;
+    }
+
+    private async Task ExpressInterestOnly()
+    {
+        errorMsg = null;
+
+        if (tool is null || currentUser is null)
+            return;
+
+        if (startDate is null || endDate is null)
+        {
+            errorMsg = "Please select rental dates.";
+            return;
+        }
+
+        submitting = true;
+
+        try
+        {
+            var request = new InterestRequest
+            {
+                ToolId = tool.Id,
+                ToolName = tool.Name,
+                StartDate = startDate.Value.ToString("yyyy-MM-dd"),
+                EndDate = endDate.Value.ToString("yyyy-MM-dd"),
+                Message = message
+            };
+
+            var response = await ToolService.SubmitInterestAsync(request);
+
+            if (response.Success && !string.IsNullOrEmpty(response.ChannelUrl))
+            {
+                channelUrl = response.ChannelUrl;
+                interestId = response.InterestId;
+                submitted = true;
+            }
+            else
+            {
+                errorMsg = "Failed to submit interest. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
     }
 
     private async Task PayAndExpressInterest()
@@ -249,7 +322,10 @@ else
     {
         if (!string.IsNullOrEmpty(channelUrl))
         {
-            Nav.NavigateTo($"/chat/{channelUrl}");
+            var url = $"/chat/{channelUrl}";
+            if (interestId.HasValue)
+                url += $"?interestId={interestId.Value}";
+            Nav.NavigateTo(url);
         }
     }
 

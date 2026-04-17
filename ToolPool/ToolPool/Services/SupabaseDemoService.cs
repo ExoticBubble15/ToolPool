@@ -165,6 +165,38 @@ public class SupabaseDemoService
         return await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts) ?? new();
     }
 
+    public async Task<InterestSubmission?> GetInterestByRenterAndToolAsync(string renterId, Guid toolId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&tool_id=eq.{toolId}&order=created_at.desc&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var results = await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts);
+        return results?.FirstOrDefault();
+    }
+
+    public async Task<InterestSubmission?> GetInterestByIdAsync(Guid interestId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var results = await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts);
+        return results?.FirstOrDefault();
+    }
+
     // ── Tool queries ──
 
     public async Task<List<Tool>> GetToolsAsync()

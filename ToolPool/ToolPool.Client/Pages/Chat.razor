@@ -4,6 +4,7 @@
 @using System.Text.Json
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
+@using Microsoft.AspNetCore.Components
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject ToolService ToolService
@@ -14,6 +15,12 @@
     <div class="chat-header">
         <a href="/chat" class="chat-back">&larr;</a>
         <h2>@ChannelName</h2>
+        @if (paymentContext?.CanPay == true)
+        {
+            <button class="chat-pay-btn" @onclick="StartPayment" disabled="@isStartingPayment">
+                @(isStartingPayment ? "..." : $"Pay Now: ${paymentContext.TotalAmount:F2}")
+            </button>
+        }
     </div>
 
     @if (!authChecked)
@@ -71,6 +78,9 @@
 @code {
     [Parameter] public string ChannelUrl { get; set; } = "";
 
+    [SupplyParameterFromQuery(Name = "interestId")]
+    public Guid? InterestId { get; set; }
+
     private AppUser? currentUser;
     private bool authChecked = false;
     private List<ChatMessage> Messages = new();
@@ -81,6 +91,8 @@
     private bool IsSending = false;
     private string Error = "";
     private DotNetObjectReference<Chat>? _dotnetRef;
+    private ChatPaymentContext? paymentContext;
+    private bool isStartingPayment = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -117,6 +129,12 @@
 
             _dotnetRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("sendbirdInterop.registerHandler", ChannelUrl, _dotnetRef);
+
+            // Load payment context if interestId is available
+            if (InterestId.HasValue)
+            {
+                paymentContext = await ToolService.GetChatPaymentContextAsync(InterestId.Value);
+            }
 
             IsLoading = false;
             StateHasChanged();
@@ -190,6 +208,29 @@
     {
         var dt = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
         return dt.ToString("h:mm tt");
+    }
+
+    private async Task StartPayment()
+    {
+        if (isStartingPayment || !InterestId.HasValue) return;
+        isStartingPayment = true;
+
+        try
+        {
+            var checkoutUrl = await ToolService.CheckoutFromChatAsync(InterestId.Value);
+            if (!string.IsNullOrEmpty(checkoutUrl))
+            {
+                Nav.NavigateTo(checkoutUrl, forceLoad: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = $"Payment failed: {ex.Message}";
+        }
+        finally
+        {
+            isStartingPayment = false;
+        }
     }
 
     public async ValueTask DisposeAsync()

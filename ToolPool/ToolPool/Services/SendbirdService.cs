@@ -117,3 +117,4 @@ public class ChannelListResponse
     [JsonPropertyName("channels")]
     public List<SendbirdChannel> Channels { get; set; } = new();
 }
+

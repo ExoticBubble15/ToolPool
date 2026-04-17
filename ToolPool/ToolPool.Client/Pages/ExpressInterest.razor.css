@@ -391,6 +391,46 @@
     cursor: not-allowed;
 }
 
+/* ── Button Group ── */
+.ei-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ei-pay-btn {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+}
+
+.ei-pay-btn:hover:not(:disabled) {
+    background: rgba(58, 125, 90, 0.06);
+    transform: translateY(-1px);
+}
+
+.ei-pay-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--muted);
+    color: var(--muted);
+}
+
+.ei-button-hint {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
 .ei-success {
     background: rgba(58, 158, 110, 0.1);
     color: #2a7a52;

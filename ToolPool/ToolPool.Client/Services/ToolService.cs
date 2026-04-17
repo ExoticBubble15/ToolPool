@@ -95,4 +95,25 @@ public class ToolService
         }
         catch { return new(); }
     }
+
+    // ── Chat Payment ──
+
+    public async Task<ChatPaymentContext?> GetChatPaymentContextAsync(Guid interestId)
+    {
+        try
+        {
+            var resp = await _http.GetAsync($"/api/stripe/chat-payment-context/{interestId}");
+            if (!resp.IsSuccessStatusCode) return null;
+            return await resp.Content.ReadFromJsonAsync<ChatPaymentContext>();
+        }
+        catch { return null; }
+    }
+
+    public async Task<string?> CheckoutFromChatAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/stripe/checkout-from-chat/{interestId}", null);
+        if (!resp.IsSuccessStatusCode) return null;
+        var result = await resp.Content.ReadFromJsonAsync<StripeResponse>();
+        return result?.Url;
+    }
 }

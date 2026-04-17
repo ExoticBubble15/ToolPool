@@ -108,3 +108,27 @@ public class MyInterestItem
     [JsonPropertyName("created_at")]
     public DateTimeOffset? CreatedAt { get; set; }
 }
+
+public class ChatPaymentContext
+{
+    [JsonPropertyName("can_pay")]
+    public bool CanPay { get; set; }
+
+    [JsonPropertyName("tool_name")]
+    public string ToolName { get; set; } = "";
+
+    [JsonPropertyName("price_per_day")]
+    public decimal PricePerDay { get; set; }
+
+    [JsonPropertyName("start_date")]
+    public string? StartDate { get; set; }
+
+    [JsonPropertyName("end_date")]
+    public string? EndDate { get; set; }
+
+    [JsonPropertyName("total_amount")]
+    public decimal TotalAmount { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}

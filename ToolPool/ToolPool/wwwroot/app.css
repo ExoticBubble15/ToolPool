@@ -702,6 +702,30 @@ body {
         color: var(--text);
     }
 
+.chat-pay-btn {
+    margin-left: auto;
+    padding: 0.5rem 1rem;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+
+    .chat-pay-btn:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+
+    .chat-pay-btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+
 .chat-loading {
     flex: 1;
     display: flex;

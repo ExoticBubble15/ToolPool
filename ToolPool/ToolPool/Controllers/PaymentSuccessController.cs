@@ -133,7 +133,25 @@ public class PaymentController : ControllerBase
             }
 
             // -----------------------------
-            // 7. Create interest record
+            // 7. Check for existing interest (avoid duplicates)
+            // -----------------------------
+            var existingInterest = await _supabase.GetInterestByRenterAndToolAsync(renter.Id.ToString(), toolId);
+
+            if (existingInterest != null)
+            {
+                Console.WriteLine($"FOUND EXISTING INTEREST: {existingInterest.Id}");
+                // Reuse existing interest and channel - payment just confirms it
+                var existingChannelUrl = existingInterest.ChannelUrl ?? channelUrl;
+                return Ok(new InterestResponse
+                {
+                    Success = true,
+                    ChannelUrl = existingChannelUrl,
+                    InterestId = existingInterest.Id
+                });
+            }
+
+            // -----------------------------
+            // 8. Create new interest record (only if none exists)
             // -----------------------------
             var interest = new InterestSubmission
             {
@@ -161,7 +179,7 @@ public class PaymentController : ControllerBase
             Console.WriteLine($"INTEREST CREATED: {saved.Id}");
 
             // -----------------------------
-            // 8. Return response
+            // 9. Return response
             // -----------------------------
             return Ok(new InterestResponse
             {
