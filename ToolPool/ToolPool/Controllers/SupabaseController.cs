@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Stripe.Forwarding;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using ToolPool.Models;
 using ToolPool.Services;
 using System.Text.Json;
@@ -344,28 +345,50 @@ namespace ToolPool.Controllers
 
         public class InterestRequest
         {
+            [JsonPropertyName("tool_id")]
             public Guid ToolId { get; set; }
+
+            [JsonPropertyName("tool_name")]
             public string ToolName { get; set; } = "";
+
             public string Message { get; set; } = "";
+
+            [JsonPropertyName("start_date")]
             public string? StartDate { get; set; }
+
+            [JsonPropertyName("end_date")]
             public string? EndDate { get; set; }
         }
 
         public class InterestResponse
         {
             public bool Success { get; set; }
+
+            [JsonPropertyName("channel_url")]
             public string? ChannelUrl { get; set; }
+
+            [JsonPropertyName("interest_id")]
             public Guid? InterestId { get; set; }
         }
 
         public class MyInterestItem
         {
             public Guid Id { get; set; }
+
+            [JsonPropertyName("tool_name")]
             public string ToolName { get; set; } = "";
+
+            [JsonPropertyName("channel_url")]
             public string? ChannelUrl { get; set; }
+
             public string Status { get; set; } = "pending";
+
+            [JsonPropertyName("counterpart_name")]
             public string CounterpartName { get; set; } = "";
+
             public string Role { get; set; } = "";
+
+            [JsonPropertyName("created_at")]
             public DateTimeOffset? CreatedAt { get; set; }
         }
     }
