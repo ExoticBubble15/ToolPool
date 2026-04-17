@@ -1,0 +1,40 @@
+﻿@page "/test"
+@rendermode InteractiveWebAssembly
+@using BlazorBootstrap
+@inject HttpClient Http
+
+<AutoComplete @bind-Value="locationSearch"
+                TItem="AddressPair"
+                DataProvider="GetSuggestions"
+                PropertyName="Address"
+                StringComparison="StringComparison.OrdinalIgnoreCase"
+                Placeholder="Enter a location"
+                OnChanged="AddressSelect" />
+@message
+
+@code {
+    public class AddressPair
+    {
+        public string Address { get; set; } = string.Empty;
+        public string PlaceId { get; set; } = string.Empty;
+    }
+
+    private string message;
+    private string locationSearch;
+    public IEnumerable<AddressPair>? locations;
+
+    private async Task<AutoCompleteDataProviderResult<AddressPair>> GetSuggestions(AutoCompleteDataProviderRequest<AddressPair> ap)
+    {
+        var results = await Http.GetFromJsonAsync<List<AddressPair>>($"api/suggestLocations/{ap.Filter.Value}");
+        return new AutoCompleteDataProviderResult<AddressPair>
+            {
+                Data = results,
+                TotalCount = results.Count
+            };
+    }
+
+    private void AddressSelect(AddressPair ap)
+    {
+        message = $"{ap.Address}, {ap.PlaceId}";
+    }
+}

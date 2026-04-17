@@ -168,40 +168,40 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task SeedToolsAsync()
-    {
-        var existing = await GetToolsAsync();
-        var hasSeeded = existing.Any(t => !string.IsNullOrEmpty(t.Category));
-        if (hasSeeded) return;
+    //public async Task SeedToolsAsync()
+    //{
+    //    var existing = await GetToolsAsync();
+    //    var hasSeeded = existing.Any(t => !string.IsNullOrEmpty(t.Category));
+    //    if (hasSeeded) return;
 
-        // Delete old tools that lack category data (pre-migration leftovers)
-        foreach (var old in existing.Where(t => string.IsNullOrEmpty(t.Category)))
-        {
-            await DeleteToolAsync(old.Id);
-        }
+    //    // Delete old tools that lack category data (pre-migration leftovers)
+    //    foreach (var old in existing.Where(t => string.IsNullOrEmpty(t.Category)))
+    //    {
+    //        await DeleteToolAsync(old.Id);
+    //    }
 
-        var seeds = new[]
-        {
-            new { name = "DeWalt Power Drill", description = "Cordless 20V drill with two batteries and charger", price = 12.00m, category = "Power Tools", owner_name = "Mike T.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&fit=crop" },
-            new { name = "Circular Saw", description = "7-1/4 inch blade, great for framing and decking", price = 18.00m, category = "Power Tools", owner_name = "Emma L.", neighborhood = "Westside", image_url = "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&fit=crop" },
-            new { name = "Hand Tool Set", description = "Complete 50-piece set with wrenches, pliers, and screwdrivers", price = 8.00m, category = "Hand Tools", owner_name = "James K.", neighborhood = "Midtown", image_url = "https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&fit=crop" },
-            new { name = "Ladder (20ft)", description = "Extension ladder, aluminum, supports up to 250 lbs", price = 15.00m, category = "Equipment", owner_name = "Mike T.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&fit=crop" },
-            new { name = "Pressure Washer", description = "2000 PSI electric pressure washer with hose and nozzles", price = 25.00m, category = "Cleaning", owner_name = "Sarah M.", neighborhood = "Eastside", image_url = "https://images.unsplash.com/photo-1622735620941-e8192a023a3f?w=400&fit=crop" },
-            new { name = "Hedge Trimmer", description = "24-inch cordless hedge trimmer, battery included", price = 10.00m, category = "Garden", owner_name = "Emma L.", neighborhood = "Uptown", image_url = "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&fit=crop" },
-            new { name = "Tile Cutter", description = "Manual tile cutter for ceramic and porcelain up to 24 inches", price = 14.00m, category = "Hand Tools", owner_name = "Chen W.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&fit=crop" },
-            new { name = "Shop Vacuum", description = "6-gallon wet/dry shop vac with attachments", price = 9.00m, category = "Cleaning", owner_name = "James K.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&fit=crop" },
-        };
+    //    var seeds = new[]
+    //    {
+    //        new { name = "DeWalt Power Drill", description = "Cordless 20V drill with two batteries and charger", price = 12.00m, category = "Power Tools", owner_name = "Mike T.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&fit=crop" },
+    //        new { name = "Circular Saw", description = "7-1/4 inch blade, great for framing and decking", price = 18.00m, category = "Power Tools", owner_name = "Emma L.", neighborhood = "Westside", image_url = "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&fit=crop" },
+    //        new { name = "Hand Tool Set", description = "Complete 50-piece set with wrenches, pliers, and screwdrivers", price = 8.00m, category = "Hand Tools", owner_name = "James K.", neighborhood = "Midtown", image_url = "https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&fit=crop" },
+    //        new { name = "Ladder (20ft)", description = "Extension ladder, aluminum, supports up to 250 lbs", price = 15.00m, category = "Equipment", owner_name = "Mike T.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&fit=crop" },
+    //        new { name = "Pressure Washer", description = "2000 PSI electric pressure washer with hose and nozzles", price = 25.00m, category = "Cleaning", owner_name = "Sarah M.", neighborhood = "Eastside", image_url = "https://images.unsplash.com/photo-1622735620941-e8192a023a3f?w=400&fit=crop" },
+    //        new { name = "Hedge Trimmer", description = "24-inch cordless hedge trimmer, battery included", price = 10.00m, category = "Garden", owner_name = "Emma L.", neighborhood = "Uptown", image_url = "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&fit=crop" },
+    //        new { name = "Tile Cutter", description = "Manual tile cutter for ceramic and porcelain up to 24 inches", price = 14.00m, category = "Hand Tools", owner_name = "Chen W.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&fit=crop" },
+    //        new { name = "Shop Vacuum", description = "6-gallon wet/dry shop vac with attachments", price = 9.00m, category = "Cleaning", owner_name = "James K.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&fit=crop" },
+    //    };
 
-        var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools";
+    //    var client = _httpClientFactory.CreateClient();
+    //    var url = $"{_opt.Url}/rest/v1/Tools";
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Headers.Add("apikey", _opt.ServiceRoleKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
-        req.Headers.Add("Prefer", "return=representation");
-        req.Content = JsonContent.Create(seeds);
+    //    using var req = new HttpRequestMessage(HttpMethod.Post, url);
+    //    req.Headers.Add("apikey", _opt.ServiceRoleKey);
+    //    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+    //    req.Headers.Add("Prefer", "return=representation");
+    //    req.Content = JsonContent.Create(seeds);
 
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
-    }
+    //    using var resp = await client.SendAsync(req);
+    //    resp.EnsureSuccessStatusCode();
+    //}
 }

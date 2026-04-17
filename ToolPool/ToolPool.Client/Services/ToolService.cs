@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using ToolPool.Client.Models;
+using ToolPool.Client.Pages;
 
 namespace ToolPool.Client.Services;
 
@@ -11,6 +12,9 @@ public class ToolService
     {
         _http = http;
     }
+
+    public async Task<String> ReverseGeocode(string latitude, string longitude)
+        => await _http.GetStringAsync($"/api/reverseGeocode/{latitude}/{longitude}");
 
     public async Task<List<String>> GetCategoriesAsync()
         => await _http.GetFromJsonAsync<List<String>>("/api/categories") ?? new();
@@ -53,9 +57,9 @@ public class ToolService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task SeedToolsAsync()
-    {
-        var resp = await _http.PostAsync("/api/Tools/seed", null);
-        resp.EnsureSuccessStatusCode();
-    }
+    //public async Task SeedToolsAsync()
+    //{
+    //    var resp = await _http.PostAsync("/api/Tools/seed", null);
+    //    resp.EnsureSuccessStatusCode();
+    //}
 }

@@ -9,30 +9,35 @@
 @inject NavigationManager Nav
 @using System.Text
 @inject IJSRuntime JS
+@inject HttpClient Http
 
 <h2 class="pageTitle">Discover Tools Near You</h2>
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
 
 <div class="browse-location-card">
-    <div class="browse-location-header">
-        <span class="browse-location-icon">📍 Location</span>
+    @* location enter *@
+    <div style="display: flex; flex-direction: row; align-items: center">
+        <h5 style="margin: 0">Choose a location:</h5>
+        <div class="location-search">
+            <AutoComplete @bind-Value="addressSearch"
+                            TItem="AddressPair"
+                            DataProvider="GetSuggestions"
+                            PropertyName="Address"
+                            StringComparison="StringComparison.OrdinalIgnoreCase"
+                            Placeholder=@locationPlaceholder
+                            OnChanged="AddressSelect" />
+        </div>
     </div>
-    <div class="browse-location-field">
-        <span>Downtown</span>
-    </div>
-    <div class="browse-location-field">
-        <span>2–5 km away</span>
-    </div>
-    <div class="browse-location-hint">
-        <span>🔒 Exact address revealed after booking confirmation</span>
-    </div>
-    @* <div class="browse-location-note">
-        Your location is shared progressively to protect your privacy while building trust.
-    </div> *@
-</div>
 
-<div>
+    @* hint *@
+    <div class="browse-location-hint">
+        @* 🔒 Exact address of tools are revealed after confirmation *@
+        Displayed locations are approximate. Exact address of tools are revealed after confirmation.
+    </div>
+
+    @* filters *@
     <div class="browse-filters">
+        @* type/category filter *@
         <div class="browse-filter-group">
             <span class="browse-filter-label">Tool Types</span>
             @if(categoriesLoaded)
@@ -42,7 +47,8 @@
                 </span>
             }
         </div>
-
+        
+        @* location/neighborhood filter *@
         <div class="browse-filter-group">
             <span class="browse-filter-label">Locations</span>
             @if (neighborhoodsLoaded)
@@ -53,63 +59,64 @@
             }
         </div>
 
+        @* filter search *@
         <div class="browse-search-group">
             <span class="browse-filter-label">Search</span>
             <input class="browse-search-input" type="text" placeholder="Enter tool title..." @bind="searchQuery" @bind:event="oninput" />
         </div>
     </div>
 
-
-    <div style="display: flex; justify-content:left; margin-bottom: 1.25rem">
-            @if(categoriesLoaded)
-            {
-                <Collapse @ref="categories">
-                <div class="filterOptions">
-                        <div>
-                            <span style="display: flex; justify-content: center">
-                            <input type="checkbox" id="allCategories" checked="@(selectedCategories.Count == categoriesList.Count)" @onchange="OnAllCategoriesChanged" />
-                                <label for="allCategories" style="margin-left: 5px"><b><i>All Categories</i></b></label>
-                            </span>
-                            @foreach(var cat in categoriesList)
-                            {
-                                <div style="display: flex; align-items: center;">
-                                    <input type="checkbox" id="@cat" checked="@selectedCategories.Contains(cat)" @onchange="(e) => OnCategoryChanged(cat, (bool)e.Value!)" />
-                                    <label for="@cat" style="margin-left: 5px">@cat</label>
-                                </div>
-                            }
+    @* filter menus *@
+    <div style="display: flex; justify-content:left">
+        @if(categoriesLoaded)
+        {
+            <Collapse @ref="categories">
+            <div class="filterOptions">
+                <div>
+                    <span style="display: flex; justify-content: center">
+                    <input type="checkbox" id="allCategories" checked="@(selectedCategories.Count == categoriesList.Count)" @onchange="OnAllCategoriesChanged" />
+                        <label for="allCategories" style="margin-left: 5px"><b><i>All Categories</i></b></label>
+                    </span>
+                    @foreach(var cat in categoriesList)
+                    {
+                        <div style="display: flex; align-items: center;">
+                            <input type="checkbox" id="@cat" checked="@selectedCategories.Contains(cat)" @onchange="(e) => OnCategoryChanged(cat, (bool)e.Value!)" />
+                            <label for="@cat" style="margin-left: 5px">@cat</label>
                         </div>
-                    </div>
-                </Collapse>
-            }
+                    }
+                </div>
+            </div>
+            </Collapse>
+        }
 
-            @if(categoriesExpanded && neighborhoodsExpanded)
-            {
-                <div style="border: 1px solid var(--divide)"/>
-            }
+        @if(categoriesExpanded && neighborhoodsExpanded)
+        {
+            <div style="border: 1px solid var(--divide)"/>
+        }
 
-            @if(neighborhoodsLoaded)
-            {
-                <Collapse @ref="neighborhoods">
-                <div class="filterOptions">
-                    @foreach (var city in cityNeighborhoods)
+        @if(neighborhoodsLoaded)
+        {
+            <Collapse @ref="neighborhoods">
+            <div class="filterOptions">
+                @foreach (var city in cityNeighborhoods)
+                {
+                    <div style="display: inline-block; vertical-align: top; margin: 0 10px">
+                        <div style="display: flex; align-items: center; border-bottom: 1px solid black">
+                            <input type="checkbox" id="@city.Key" />
+                            <label for="@city.Key" style="margin-left: 5px;"><b>@city.Key</b></label>
+                        </div>
+                        @foreach (var neighborhood in city.Value)
                         {
-                            <div style="display: inline-block; vertical-align: top; margin: 0 10px">
-                                <div style="display: flex; align-items: center; border-bottom: 1px solid black">
-                                    <input type="checkbox" id="@city.Key" />
-                                    <label for="@city.Key" style="margin-left: 5px;"><b>@city.Key</b></label>
-                                </div>
-                                @foreach (var neighborhood in city.Value)
-                                {
-                                    <div style="display: flex; align-items: center;">
-                                        <input type="checkbox" id="@neighborhood" />
-                                        <label for="@neighborhood" style="margin-left: 5px;">@neighborhood</label>
-                                    </div>
-                                }
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="@neighborhood" />
+                                <label for="@neighborhood" style="margin-left: 5px;">@neighborhood</label>
                             </div>
                         }
                     </div>
-                </Collapse>
-            }
+                }
+            </div>
+            </Collapse>
+        }
     </div>
 </div>
 
@@ -120,7 +127,6 @@
         <i>loading map</i>
     }
 
-    <i>@locationMessage</i>
     <div class="map">
         <GoogleMapsComponents.GoogleMap @ref="map"
         Options="mapOptions"
@@ -142,7 +148,7 @@ else if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="browse-empty">
         <p>@errorMessage</p>
-        <button class="browse-seed-btn" @onclick="SeedAndReload">Seed Sample Tools</button>
+        @* <button class="browse-seed-btn" @onclick="SeedAndReload">Seed Sample Tools</button> *@
     </div>
 }
 else if (!FilteredTools.Any())
@@ -195,6 +201,33 @@ else
 </div>
 
 @code {
+    public class AddressPair
+    {
+        public string Address { get; set; } = string.Empty;
+        public string PlaceId { get; set; } = string.Empty;
+    }
+
+    private string locationPlaceholder;
+    private string addressSearch;
+    public IEnumerable<AddressPair>? locations;
+
+    private async Task<AutoCompleteDataProviderResult<AddressPair>> GetSuggestions(AutoCompleteDataProviderRequest<AddressPair> ap)
+    {
+        var results = await Http.GetFromJsonAsync<List<AddressPair>>($"api/suggestLocations/{ap.Filter.Value}");
+        return new AutoCompleteDataProviderResult<AddressPair>
+        {
+            Data = results,
+            TotalCount = results.Count
+        };
+    }
+
+    private async Task AddressSelect(AddressPair ap)
+    {
+        var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
+        locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
+        await map.InteropObject.SetCenter(new LatLngLiteral(coords.Latitude, coords.Longitude));
+    }
+
     private List<Tool> allTools = new();
     private bool isLoading = true;
     private string? errorMessage;
@@ -222,13 +255,13 @@ else
         neighborhoodsExpanded = !neighborhoodsExpanded;
     }
 
-    private string locationMessage;
+    private static LatLngLiteral startingCenter = new LatLngLiteral(42.3604, -71.0580); //city hall
     private bool mapLoaded = false;
     private GoogleMapsComponents.GoogleMap? map;
     private MapOptions mapOptions = new MapOptions()
     {
-        Zoom = 13,
-        Center = new LatLngLiteral(42.3604, -71.0580), //city hall
+        Zoom = 16,
+        Center = startingCenter, //city hall
         MapId = "39cf637b3be049e5f469447c", //custom map and style
         MapTypeId = MapTypeId.Roadmap,
         MapTypeControl = false,
@@ -244,19 +277,15 @@ else
         mapLoaded = true;
 
         //request browser location and center map
-        locationMessage = "Please allow browser location to locate nearby tools";
         try
         {
             var browserLocation = await JS.InvokeAsync<Location>("getBrowserLocation");
             Console.WriteLine($"browser location successful: ({browserLocation.Latitude}, {browserLocation.Longitude})");
-            locationMessage = "Centering at your location...";
             await map.InteropObject.SetCenter(new LatLngLiteral(browserLocation.Latitude, browserLocation.Longitude));
+            locationPlaceholder = await ToolService.ReverseGeocode(browserLocation.Latitude.ToString(), browserLocation.Longitude.ToString());
         } catch (Exception ex)
         {
             Console.WriteLine($"browser location ERROR: {ex.Message}");
-        } finally
-        {
-            locationMessage = "";
         }
     }
 
@@ -271,6 +300,8 @@ else
     {
         try
         {
+            locationPlaceholder = await ToolService.ReverseGeocode(startingCenter.Lat.ToString(), startingCenter.Lng.ToString());
+
             categoriesList = await ToolService.GetCategoriesAsync();
             selectedCategories = new List<string>(categoriesList);
             categoriesLoaded = true;
@@ -281,7 +312,8 @@ else
             allTools = await ToolService.GetToolsAsync();
             if (!allTools.Any())
             {
-                errorMessage = "No tools listed yet. Seed sample tools to get started.";
+                // errorMessage = "No tools listed yet. Seed sample tools to get started.";
+                errorMessage = "No tools exist.";
             }
         }
         catch (Exception ex)
@@ -293,23 +325,23 @@ else
         isLoading = false;
     }
 
-    private async Task SeedAndReload()
-    {
-        errorMessage = null;
-        isLoading = true;
-        try
-        {
-            await ToolService.SeedToolsAsync();
-            allTools = await ToolService.GetToolsAsync();
-            if (!allTools.Any())
-                errorMessage = "Seeding completed but no tools returned. Check Supabase table schema.";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Seed failed: {ex.Message}";
-        }
-        isLoading = false;
-    }
+    // private async Task SeedAndReload()
+    // {
+    //     errorMessage = null;
+    //     isLoading = true;
+    //     try
+    //     {
+    //         await ToolService.SeedToolsAsync();
+    //         allTools = await ToolService.GetToolsAsync();
+    //         if (!allTools.Any())
+    //             errorMessage = "Seeding completed but no tools returned. Check Supabase table schema.";
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"Seed failed: {ex.Message}";
+    //     }
+    //     isLoading = false;
+    // }
 
     private void OnAllCategoriesChanged(ChangeEventArgs e)
     {

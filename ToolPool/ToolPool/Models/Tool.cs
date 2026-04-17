@@ -2,6 +2,18 @@
 
 namespace ToolPool.Models
 {
+    public class AddressPair
+    {
+        public string Address { get; set; } = string.Empty;
+        public string PlaceId { get; set; } = string.Empty;
+    }
+
+    public class Location
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
     public class ToolCategory
     {
         public string Category {  get; set; } = string.Empty;

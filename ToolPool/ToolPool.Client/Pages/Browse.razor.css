@@ -4,46 +4,36 @@
     border: 1.5px solid var(--divide);
     border-radius: var(--radius);
     padding: 0.75rem;
+/*    padding-bottom: 0;*/
     margin: 1.25rem 0;
-}
-
-.browse-location-header {
+    gap: 10px;
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    color: var(--text);
+    flex-direction: column;
+    gap: 10px;
+/*    background: red;*/
 }
 
-.browse-location-icon {
-    font-size: 1.1rem;
-}
-
-.browse-location-field {
+.location-search {
     background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 8px;
-    padding: 0.6rem 0.85rem;
-    margin-bottom: 0.5rem;
+/*    margin-bottom: 0.5rem;*/
     font-size: 0.9rem;
     color: var(--text);
+    margin-left: 10px;
+/*    width: 100%;*/
+    flex: 1;
 }
 
 .browse-location-hint {
     font-size: 0.82rem;
     color: var(--muted);
-    margin-top: 0.5rem;
+    /*    margin-top: 0.5rem;*/
     padding: 0.5rem 0.7rem;
+/*    padding-right: 0;*/
     background: rgba(58, 125, 90, 0.06);
+    width: fit-content;
     border-radius: 6px;
-}
-
-.browse-location-note {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 0.5rem;
-    font-style: italic;
 }
 
 /* ── Filters ── */
@@ -52,7 +42,7 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     align-items: flex-end;
-    margin-bottom: 1.25rem;
+/*    margin-bottom: 1.25rem;*/
 }
 
 .browse-filter-group {
@@ -114,7 +104,7 @@
 
 .browse-search-input::placeholder {
     color: var(--muted);
-    font-style: italic;
+/*    font-style: italic;*/
 }
 
 .filterOptions {
@@ -125,26 +115,6 @@
     padding-left: 10px;
     padding-right: 10px;
 }
-
-/* ── Map ── */
-/*.browse-map-placeholder {
-    margin-bottom: 1.5rem;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: var(--contentBackground);
-    min-height: 200px;
-}
-
-.browse-map-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    color: var(--muted);
-    gap: 0.5rem;
-}*/
 
 .map {
     margin-bottom: 0.75rem;
@@ -174,7 +144,7 @@
     gap: 0.75rem;
 }
 
-.browse-seed-btn {
+/*.browse-seed-btn {
     margin-top: 0.75rem;
     padding: 0.6rem 1.4rem;
     border: 1.5px solid var(--accent);
@@ -191,7 +161,7 @@
 .browse-seed-btn:hover {
     background: var(--accent-hover);
     transform: translateY(-1px);
-}
+}*/
 
 /* ── Tool Grid ── */
 .browse-grid {
