@@ -2,10 +2,12 @@
  * Backend Service for Stripe API
  */
 
+using GoogleMapsComponents.Maps.Coordinates;
+using Stripe;
 using Stripe.Checkout;
 using Stripe.Climate;
 using ToolPool.Client.Models;
-using Stripe;
+using ToolPool.Models;
 namespace ToolPool.Services;
 
 public class StripePaymentService
@@ -20,57 +22,54 @@ public class StripePaymentService
     }
 
     // async method to create a stripe checkout session
-    public async Task<string> CreateCheckoutSessionAsync(List<CartItem> cartItems, decimal total)
+    public async Task<string> CreateCheckoutSessionAsync(ToolPool.Models.StripeRentalRequest request)
     {
-        
-        // request obj
         var req = _http.HttpContext!.Request;
-
-        // url for toolpool
         var baseUrl = $"{req.Scheme}://{req.Host}";
 
-        // create line items from the items in the cart
-        var lineItems = cartItems.Select(item => new SessionLineItemOptions
+        var days = (request.EndDate.Date - request.StartDate.Date).Days + 1;
+        if (days <= 0) throw new Exception("Invalid date range");
+
+        var total = request.PricePerDay * days;
+
+        var options = new SessionCreateOptions
         {
-            // pricing data for each item
+            Mode = "payment",
+
+            Metadata = new Dictionary<string, string>
+{
+    { "UserId", request.UserId.ToString() },
+    { "ToolId", request.ToolId.ToString() },
+    { "ToolName", request.ToolName },
+    { "Message", request.Message ?? "" },
+    { "StartDate", request.StartDate.ToString("yyyy-MM-dd") },
+    { "EndDate", request.EndDate.ToString("yyyy-MM-dd") }
+},
+
+            LineItems = new List<SessionLineItemOptions>
+    {
+        new SessionLineItemOptions
+        {
             PriceData = new SessionLineItemPriceDataOptions
             {
                 Currency = "usd",
-                UnitAmountDecimal = (long) (item.Price * 100),
-                // meta info for each item
+                UnitAmount = (long)(request.PricePerDay * 100),
                 ProductData = new SessionLineItemPriceDataProductDataOptions
                 {
-                    Name = item.Name,
-                },
-            },
-            Quantity = 1,
-        }).ToList();
-
-        // customiziation for the session
-        var options = new SessionCreateOptions
-        {   
-            LineItems = lineItems,
-            Mode = "payment",
-            BillingAddressCollection = "auto",
-            SuccessUrl = $"{baseUrl}/success",
-            CancelUrl = $"{baseUrl}/stripe",
-
-            // payment intent tracks payment flow
-            PaymentIntentData = new SessionPaymentIntentDataOptions
-            {
-                ApplicationFeeAmount = (long)(total * 0.10m * 100), // 10% to ToolPool
-
-                // TransferData to send money to another account
-                TransferData = new SessionPaymentIntentDataTransferDataOptions
-                {
-                    Destination = "acct_1TDv6d2OWxbeQ4IJ" // hardcoded test account
+                    Name = $"{request.ToolName} ({days} days)"
                 }
             },
+            Quantity = days
+        }
+    },
+
+            SuccessUrl = $"{baseUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+            CancelUrl = $"{baseUrl}/express_interest/{request.ToolId}"
         };
 
-        // start the new session
-        var session = await new SessionService().CreateAsync(options);
+        var service = new SessionService();
+        var session = await service.CreateAsync(options);
 
-        return session.Url; 
+        return session.Url;
     }
 }

@@ -22,6 +22,7 @@ builder.Services.Configure<SendbirdOptions>(builder.Configuration.GetSection("Se
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<SupabaseDemoService>();
 builder.Services.AddScoped<SendbirdService>();
+builder.Services.AddScoped<InterestService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 

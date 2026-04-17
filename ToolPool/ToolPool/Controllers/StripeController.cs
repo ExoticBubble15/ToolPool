@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ToolPool.Client.Models;
+using ToolPool.Models;
 using ToolPool.Services;
 /**
  * Controller for Stripe Service
@@ -26,13 +27,21 @@ public class StripeController : ControllerBase
      * Gets cart from request.
      * Returns url for stripe session
      */
-    [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout([FromBody] List<CartItem> items)
+    [HttpPost("checkout-rental")]
+    public async Task<IActionResult> CheckoutRental([FromBody] ToolPool.Models.StripeRentalRequest request)
     {
-        var total = items.Sum(i => i.Price); // total price of cart
+        var serverRequest = new ToolPool.Models.StripeRentalRequest
+        {
+            ToolId = request.ToolId,
+            ToolName = request.ToolName,
+            PricePerDay = request.PricePerDay,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            UserId = request.UserId,
+            Message = request.Message
+        };
 
-        var url = await _stripe.CreateCheckoutSessionAsync(items, total); // call create session method from service
-
-        return Ok(url);
+        var url = await _stripe.CreateCheckoutSessionAsync(serverRequest);
+        return Ok(new { url });
     }
 }

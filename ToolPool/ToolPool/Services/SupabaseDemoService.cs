@@ -70,7 +70,7 @@ public class SupabaseDemoService
     public async Task<AppUser?> GetUserByIdAsync(Guid id)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{id}&select=id,email,username,sendbird_user_id,created_at";
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{id.ToString().ToLower()}&select=id,email,username,sendbird_user_id,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);

@@ -30,8 +30,28 @@ public class CartItem
     public string Name { get; set; } = string.Empty;
 }
 
+public class StripeRentalRequest
+{
+    public Guid ToolId { get; set; }
+    public string ToolName { get; set; } = "";
+    public decimal PricePerDay { get; set; }
+
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public string? Message { get; set; }
+}
+
+public class StripeResponse
+{
+    public string Url { get; set; } = "";
+}
+
 public class AppUser
 {
+    [JsonPropertyName("id")]
     public Guid Id { get; set; }
     public string Email { get; set; } = "";
     public string Username { get; set; } = "";

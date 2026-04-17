@@ -6,6 +6,7 @@
 @using ToolPool.Client.Services
 @inject ToolService ToolService
 @inject NavigationManager Nav
+@inject HttpClient Http
 
 @if (!authChecked)
 {
@@ -147,7 +148,7 @@ else
                 }
                 else
                 {
-                    <button class="ei-submit-btn" @onclick="SubmitInterest" disabled="@submitting">
+                    <button class="ei-submit-btn" @onclick="PayAndExpressInterest" disabled="@submitting">
                         @(submitting ? "Submitting..." : "Express Interest & Start Chat")
                     </button>
                 }
@@ -190,31 +191,53 @@ else
         isLoading = false;
     }
 
-    private async Task SubmitInterest()
+    private async Task PayAndExpressInterest()
     {
+
         errorMsg = null;
 
-        if (tool is null || currentUser is null) return;
+        if (tool is null || currentUser is null)
+            return;
+
+        if (startDate is null || endDate is null)
+        {
+            errorMsg = "Please select rental dates.";
+            return;
+        }
 
         submitting = true;
+
         try
         {
-            var request = new InterestRequest
+
+            Console.WriteLine("=== STRIPE DEBUG ===");
+            Console.WriteLine("CurrentUser Id: " + currentUser?.Id);
+            Console.WriteLine("Is Empty: " + (currentUser?.Id == Guid.Empty));
+
+            var request = new StripeRentalRequest
             {
                 ToolId = tool.Id,
                 ToolName = tool.Name,
-                Message = message,
-                StartDate = startDate?.ToString("yyyy-MM-dd"),
-                EndDate = endDate?.ToString("yyyy-MM-dd")
+                PricePerDay = tool.Price,
+                StartDate = startDate.Value,
+                EndDate = endDate.Value,
+                UserId = currentUser.Id,
+                Message = message
             };
 
-            var response = await ToolService.SubmitInterestAsync(request);
-            channelUrl = response.ChannelUrl;
-            submitted = true;
+            Console.WriteLine("REQUEST USER ID (RAW): " + request.UserId);
+            Console.WriteLine("REQUEST JSON: " + System.Text.Json.JsonSerializer.Serialize(request));
+            var response = await Http.PostAsJsonAsync("api/stripe/checkout-rental", request);
+            var result = await response.Content.ReadFromJsonAsync<StripeResponse>();
+
+            if (result?.Url is null)
+                throw new Exception("Failed to start Stripe checkout.");
+            await Task.Delay(2000);
+            Nav.NavigateTo(result.Url, forceLoad: true);
         }
         catch (Exception ex)
         {
-            errorMsg = $"Failed to submit: {ex.Message}";
+            errorMsg = $"Payment failed: {ex.Message}";
         }
         finally
         {

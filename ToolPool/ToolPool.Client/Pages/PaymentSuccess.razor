@@ -1,0 +1,40 @@
+﻿@page "/payment/success"
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<h3>Processing payment...</h3>
+
+@code {
+    [Parameter, SupplyParameterFromQuery]
+    public string session_id { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await Http.GetAsync($"api/payment/success?session_id={session_id}");
+
+        var text = await response.Content.ReadAsStringAsync();
+
+        Console.WriteLine(text);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Payment error: " + text);
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<PaymentResult>();
+
+        if (result == null)
+        {
+            Console.WriteLine("Failed to parse response");
+            return;
+        }
+
+        Nav.NavigateTo($"/chat/{result.ChannelUrl}", forceLoad: true);
+    }
+
+    class PaymentResult
+    {
+        public string ChannelUrl { get; set; } = "";
+    }
+}
