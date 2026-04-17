@@ -2,8 +2,12 @@
 @rendermode InteractiveWebAssembly
 @using Microsoft.JSInterop
 @using System.Text.Json
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject ToolService ToolService
+@inject NavigationManager Nav
 @implements IAsyncDisposable
 
 <div class="chat-container">
@@ -12,7 +16,20 @@
         <h2>@ChannelName</h2>
     </div>
 
-    @if (IsLoading)
+    @if (!authChecked)
+    {
+        <div class="chat-loading">
+            <p>Checking login...</p>
+        </div>
+    }
+    else if (currentUser is null)
+    {
+        <div class="chat-loading">
+            <p>Please log in to access chat.</p>
+            <a href="/login" style="color: #4CAF50; text-decoration: underline;">Log In</a>
+        </div>
+    }
+    else if (IsLoading)
     {
         <div class="chat-loading">
             <p>Connecting...</p>
@@ -54,12 +71,11 @@
 @code {
     [Parameter] public string ChannelUrl { get; set; } = "";
 
-    [SupplyParameterFromQuery(Name = "userId")]
-    public string? UserIdParam { get; set; }
-
+    private AppUser? currentUser;
+    private bool authChecked = false;
     private List<ChatMessage> Messages = new();
     private string MessageText = "";
-    private string CurrentUserId = "renter-1";
+    private string CurrentUserId = "";
     private string ChannelName = "Chat";
     private bool IsLoading = true;
     private bool IsSending = false;
@@ -72,8 +88,19 @@
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(UserIdParam))
-                CurrentUserId = UserIdParam;
+            // Resolve identity from authenticated session
+            currentUser = await ToolService.GetCurrentUserAsync();
+            authChecked = true;
+
+            if (currentUser is null)
+            {
+                IsLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Use sendbird_user_id for Sendbird connection
+            CurrentUserId = currentUser.SendbirdUserId ?? currentUser.Id.ToString();
 
             var appId = await Http.GetStringAsync("/api/sendbird/app-id");
             appId = appId.Trim('"');

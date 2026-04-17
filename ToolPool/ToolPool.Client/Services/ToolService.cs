@@ -60,9 +60,39 @@ public class ToolService
         resp.EnsureSuccessStatusCode();
     }
 
-    //public async Task SeedToolsAsync()
-    //{
-    //    var resp = await _http.PostAsync("/api/Tools/seed", null);
-    //    resp.EnsureSuccessStatusCode();
-    //}
+    // ── Auth ──
+
+    public async Task<AppUser?> GetCurrentUserAsync()
+    {
+        try
+        {
+            var resp = await _http.GetAsync("/api/auth/me");
+            if (!resp.IsSuccessStatusCode) return null;
+            return await resp.Content.ReadFromJsonAsync<AppUser>();
+        }
+        catch { return null; }
+    }
+
+    public async Task<AppUser?> DevLoginAsync(string identifier)
+    {
+        var resp = await _http.PostAsJsonAsync("/api/auth/dev-login", new { identifier });
+        if (!resp.IsSuccessStatusCode) return null;
+        return await resp.Content.ReadFromJsonAsync<AppUser>();
+    }
+
+    public async Task LogoutAsync()
+    {
+        await _http.PostAsync("/api/auth/logout", null);
+    }
+
+    // ── Interests ──
+
+    public async Task<List<MyInterestItem>> GetMyInterestsAsync()
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<List<MyInterestItem>>("/api/my-interests") ?? new();
+        }
+        catch { return new(); }
+    }
 }

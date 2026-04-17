@@ -34,18 +34,13 @@ builder.Services.AddScoped<HttpClient>(sp =>
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
 });
 
-// builder.Services.AddAuthentication(o =>
-// {
-//     o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-//     o.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-// })
-// .AddCookie()
-// .AddGoogle(googleo =>
-// {
-//     googleo.ClientId = "";
-//     googleo.ClientSecret = "";
-//     googleo.CallbackPath = "/signin-google";
-// });
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    });
 
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
@@ -64,6 +59,9 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

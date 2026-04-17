@@ -1,14 +1,17 @@
-﻿@using BlazorBootstrap
+@rendermode InteractiveWebAssembly
+@using BlazorBootstrap
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
 @inject NavigationManager Navigation
-@* NEED TO FIX OAUTH STUFF *@
-@* @inject AuthenticationStateProvider AuthStateProvider
-@using Microsoft.AspNetCore.Components.Authorization *@
+@inject ToolService ToolService
 
 <span style="display: flex; align-items: center; gap: 5px">
     @if(authenticated)
     {
+        <span style="margin-right: 5px; font-size: 0.9em;">@username</span>
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/logout">Logout</Button>
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/chat">Messages</Button>
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" @onclick="DoLogout">Logout</Button>
     } else
     {
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/login">Login</Button>
@@ -17,23 +20,21 @@
 
 @code {
     private bool authenticated;
+    private string username = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        authenticated = false;
+        var user = await ToolService.GetCurrentUserAsync();
+        if (user is not null)
+        {
+            authenticated = true;
+            username = !string.IsNullOrEmpty(user.Username) ? user.Username : user.Email;
+        }
     }
 
-    // FIX THIS TOO
-    // switch login to users page if authenticated
-    // protected override async Task OnInitializedAsync()
-    // {   
-    //     var authStatus = await AuthStateProvider.GetAuthenticationStateAsync();
-    //     var user = authStatus.User;
-
-    //     if user.Identity not null, check isAuthed, else coalesce to false
-    //     if (user.Identity?.IsAuthenticated ?? false)
-    //     {
-    //         authenticated = true;
-    //     }
-    // }
-} 
+    private async Task DoLogout()
+    {
+        await ToolService.LogoutAsync();
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

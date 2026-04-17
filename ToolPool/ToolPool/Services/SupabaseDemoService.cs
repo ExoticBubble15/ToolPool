@@ -65,6 +65,108 @@ public class SupabaseDemoService
     //    return items ?? new List<NeighborhoodTuple>();
     //}
 
+    // ── User queries ──
+
+    public async Task<AppUser?> GetUserByIdAsync(Guid id)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{id}&select=id,email,username,sendbird_user_id,created_at";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var items = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
+        return items?.FirstOrDefault();
+    }
+
+    public async Task<AppUser?> GetUserByEmailAsync(string email)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?email=eq.{Uri.EscapeDataString(email)}&select=id,email,username,sendbird_user_id,created_at";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var items = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
+        return items?.FirstOrDefault();
+    }
+
+    public async Task<AppUser> CreateUserAsync(Guid id, string email, string username)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users";
+
+        var payload = new { id, email, username, sendbird_user_id = id.ToString() };
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Headers.Add("Prefer", "return=representation");
+        req.Content = JsonContent.Create(payload);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var inserted = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
+        return inserted?.FirstOrDefault() ?? new AppUser { Id = id, Email = email, Username = username, SendbirdUserId = id.ToString() };
+    }
+
+    public async Task UpdateUserSendbirdIdAsync(Guid userId, string sendbirdUserId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}";
+
+        using var req = new HttpRequestMessage(HttpMethod.Patch, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Content = JsonContent.Create(new { sendbird_user_id = sendbirdUserId });
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+    }
+
+    // ── Interest queries ──
+
+    public async Task<List<InterestSubmission>> GetInterestsByRenterAsync(string renterId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&order=created_at.desc";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        return await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts) ?? new();
+    }
+
+    public async Task<List<InterestSubmission>> GetInterestsByOwnerAsync(Guid ownerId)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?owner_id=eq.{ownerId}&order=created_at.desc";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        return await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts) ?? new();
+    }
+
+    // ── Tool queries ──
+
     public async Task<List<Tool>> GetToolsAsync()
     {
         var client = _httpClientFactory.CreateClient();

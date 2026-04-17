@@ -1,4 +1,4 @@
-﻿@page "/express_interest"
+@page "/express_interest"
 @page "/express_interest/{ToolId:guid}"
 @rendermode InteractiveWebAssembly
 @using BlazorBootstrap
@@ -7,7 +7,22 @@
 @inject ToolService ToolService
 @inject NavigationManager Nav
 
-@if (ToolId is null)
+@if (!authChecked)
+{
+    <div class="ei-loading">
+        <Spinner />
+        <p>Checking login...</p>
+    </div>
+}
+else if (currentUser is null)
+{
+    <h2 class="pageTitle">Express Interest</h2>
+    <div class="ei-empty">
+        <p>Please log in to express interest in a tool.</p>
+        <button class="ei-browse-btn" @onclick='() => Nav.NavigateTo("/login")'>Log In</button>
+    </div>
+}
+else if (ToolId is null)
 {
     <h2 class="pageTitle">Express Interest</h2>
     <span class="pageSubtitle">Select a tool from the Browse page to express interest.</span>
@@ -53,7 +68,6 @@ else
                     <div class="ei-owner-avatar">@(string.IsNullOrEmpty(tool.OwnerName) ? "?" : tool.OwnerName[0].ToString())</div>
                     <div>
                         <span class="ei-owner-name">@(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)</span>
-                        <span class="ei-owner-id">ID: @(tool.OwnerId?.ToString() ?? "unknown")</span>
                     </div>
                 </div>
                 <div class="ei-owner-location">
@@ -104,11 +118,6 @@ else
                 <h4>Express Your Interest</h4>
 
                 <div class="ei-form-group">
-                    <label class="ei-label">Your User ID</label>
-                    <input type="text" class="ei-input ei-input-full" placeholder="e.g. renter-1" @bind="renterId" />
-                </div>
-
-                <div class="ei-form-group">
                     <label class="ei-label">Preferred rental dates</label>
                     <div class="ei-date-row">
                         <input type="date" class="ei-input" @bind="startDate" />
@@ -151,8 +160,9 @@ else
     [Parameter] public Guid? ToolId { get; set; }
 
     private Tool? tool;
+    private AppUser? currentUser;
+    private bool authChecked = false;
     private bool isLoading = true;
-    private string renterId = "renter-1";
     private string message = "";
     private DateTime? startDate;
     private DateTime? endDate;
@@ -163,7 +173,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        if (ToolId is null) { isLoading = false; return; }
+        currentUser = await ToolService.GetCurrentUserAsync();
+        authChecked = true;
+
+        if (currentUser is null || ToolId is null) { isLoading = false; return; }
 
         try
         {
@@ -181,13 +194,7 @@ else
     {
         errorMsg = null;
 
-        if (string.IsNullOrWhiteSpace(renterId))
-        {
-            errorMsg = "Please enter your user ID.";
-            return;
-        }
-
-        if (tool is null) return;
+        if (tool is null || currentUser is null) return;
 
         submitting = true;
         try
@@ -196,8 +203,6 @@ else
             {
                 ToolId = tool.Id,
                 ToolName = tool.Name,
-                RenterId = renterId.Trim(),
-                OwnerId = tool.OwnerId,
                 Message = message,
                 StartDate = startDate?.ToString("yyyy-MM-dd"),
                 EndDate = endDate?.ToString("yyyy-MM-dd")
@@ -221,7 +226,7 @@ else
     {
         if (!string.IsNullOrEmpty(channelUrl))
         {
-            Nav.NavigateTo($"/chat/{channelUrl}?userId={Uri.EscapeDataString(renterId.Trim())}");
+            Nav.NavigateTo($"/chat/{channelUrl}");
         }
     }
 

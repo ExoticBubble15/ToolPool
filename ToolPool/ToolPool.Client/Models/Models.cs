@@ -30,6 +30,16 @@ public class CartItem
     public string Name { get; set; } = string.Empty;
 }
 
+public class AppUser
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = "";
+    public string Username { get; set; } = "";
+
+    [JsonPropertyName("sendbird_user_id")]
+    public string? SendbirdUserId { get; set; }
+}
+
 public class InterestRequest
 {
     [JsonPropertyName("tool_id")]
@@ -37,12 +47,6 @@ public class InterestRequest
 
     [JsonPropertyName("tool_name")]
     public string ToolName { get; set; } = string.Empty;
-
-    [JsonPropertyName("renter_id")]
-    public string RenterId { get; set; } = string.Empty;
-
-    [JsonPropertyName("owner_id")]
-    public Guid? OwnerId { get; set; }
 
     public string Message { get; set; } = string.Empty;
 
@@ -62,4 +66,25 @@ public class InterestResponse
 
     [JsonPropertyName("interest_id")]
     public Guid? InterestId { get; set; }
+}
+
+public class MyInterestItem
+{
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("tool_name")]
+    public string ToolName { get; set; } = "";
+
+    [JsonPropertyName("channel_url")]
+    public string? ChannelUrl { get; set; }
+
+    public string Status { get; set; } = "pending";
+
+    [JsonPropertyName("counterpart_name")]
+    public string CounterpartName { get; set; } = "";
+
+    public string Role { get; set; } = "";
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
 }

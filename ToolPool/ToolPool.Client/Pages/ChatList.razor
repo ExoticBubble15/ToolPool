@@ -1,7 +1,9 @@
 @page "/chat"
 @rendermode InteractiveWebAssembly
 @using System.Text.Json.Serialization
-@inject HttpClient Http
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
+@inject ToolService ToolService
 @inject NavigationManager Nav
 
 <div class="chat-list-container">
@@ -9,64 +11,90 @@
         <h1>Messages</h1>
     </div>
 
-    <div class="chat-start-section">
-        <h3>Start a Conversation</h3>
-        <p>Enter user IDs to open a 1:1 chat about a tool.</p>
-
-        <div class="chat-start-form">
-            <input class="chat-form-input" placeholder="Your user ID (e.g. renter-1)" @bind="RenterId" />
-            <input class="chat-form-input" placeholder="Owner user ID (e.g. owner-1)" @bind="OwnerId" />
-            <input class="chat-form-input" placeholder="Tool name (e.g. Drill)" @bind="ItemName" />
-            <button class="chat-start-btn" @onclick="StartChat" disabled="@IsCreating">
-                @(IsCreating ? "Creating..." : "Start Chat")
-            </button>
+    @if (!authChecked)
+    {
+        <p class="chat-loading-text">Loading...</p>
+    }
+    else if (currentUser is null)
+    {
+        <div class="chat-start-section">
+            <h3>Please Log In</h3>
+            <p>You need to be logged in to view your messages.</p>
+            <button class="chat-start-btn" @onclick='() => Nav.NavigateTo("/login")'>Log In</button>
         </div>
+    }
+    else
+    {
+        <div class="chat-channels-section">
+            <h3>Your Conversations</h3>
 
-        @if (!string.IsNullOrEmpty(ErrorMsg))
-        {
-            <p class="chat-error-msg">@ErrorMsg</p>
-        }
-    </div>
+            @if (isLoadingInterests)
+            {
+                <p class="chat-loading-text">Loading conversations...</p>
+            }
+            else if (!interests.Any())
+            {
+                <p class="chat-empty-text">No conversations yet. Browse tools and express interest to start chatting.</p>
+                <button class="chat-start-btn" @onclick='() => Nav.NavigateTo("/browse")'>Browse Tools</button>
+            }
+            else
+            {
+                <div class="chat-channel-list">
+                    @foreach (var item in interests)
+                    {
+                        @if (!string.IsNullOrEmpty(item.ChannelUrl))
+                        {
+                            <a href="/chat/@item.ChannelUrl" class="chat-channel-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <div>
+                                        <span class="chat-channel-name">@item.ToolName</span>
+                                        <span class="chat-channel-meta">
+                                            @(item.Role == "renter" ? "Owner" : "Renter"): @item.CounterpartName
+                                        </span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span class="chat-channel-meta" style="text-transform: capitalize;">@item.Status</span>
+                                        @if (item.CreatedAt.HasValue)
+                                        {
+                                            <br />
+                                            <span class="chat-channel-meta" style="font-size: 0.75em;">@item.CreatedAt.Value.LocalDateTime.ToString("MMM d")</span>
+                                        }
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="chat-channel-card" style="opacity: 0.6; cursor: default;">
+                                <div>
+                                    <span class="chat-channel-name">@item.ToolName</span>
+                                    <span class="chat-channel-meta">
+                                        @(item.Role == "renter" ? "Owner" : "Renter"): @item.CounterpartName
+                                    </span>
+                                </div>
+                                <span class="chat-channel-meta">Chat pending</span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
 
-    <div class="chat-channels-section">
-        <h3>Your Conversations</h3>
+            <button class="chat-refresh-btn" @onclick="LoadInterests">Refresh</button>
+        </div>
+    }
 
-        @if (IsLoadingChannels)
-        {
-            <p class="chat-loading-text">Loading...</p>
-        }
-        else if (!Channels.Any())
-        {
-            <p class="chat-empty-text">No conversations yet. Start one above.</p>
-        }
-        else
-        {
-            <div class="chat-channel-list">
-                @foreach (var ch in Channels)
-                {
-                    <a href="/chat/@ch.ChannelUrl?userId=@Uri.EscapeDataString(RenterId)" class="chat-channel-card">
-                        <span class="chat-channel-name">@ch.Name</span>
-                        <span class="chat-channel-meta">@ch.MemberCount members</span>
-                    </a>
-                }
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(RenterId))
-        {
-            <button class="chat-refresh-btn" @onclick="LoadChannels">Refresh</button>
-        }
-    </div>
+    @if (!string.IsNullOrEmpty(errorMsg))
+    {
+        <p class="chat-error-msg">@errorMsg</p>
+    }
 </div>
 
 @code {
-    private string RenterId = "renter-1";
-    private string OwnerId = "owner-1";
-    private string ItemName = "Drill";
-    private bool IsCreating = false;
-    private bool IsLoadingChannels = false;
-    private string ErrorMsg = "";
-    private List<ChannelInfo> Channels = new();
+    private AppUser? currentUser;
+    private bool authChecked = false;
+    private bool isLoadingInterests = false;
+    private string errorMsg = "";
+    private List<MyInterestItem> interests = new();
 
     private bool _loaded = false;
 
@@ -74,73 +102,31 @@
     {
         if (!firstRender || _loaded) return;
         _loaded = true;
-        await LoadChannels();
+
+        currentUser = await ToolService.GetCurrentUserAsync();
+        authChecked = true;
+
+        if (currentUser is not null)
+            await LoadInterests();
+
         StateHasChanged();
     }
 
-    private async Task LoadChannels()
+    private async Task LoadInterests()
     {
-        if (string.IsNullOrWhiteSpace(RenterId)) return;
-        IsLoadingChannels = true;
-        ErrorMsg = "";
+        isLoadingInterests = true;
+        errorMsg = "";
         try
         {
-            Channels = await Http.GetFromJsonAsync<List<ChannelInfo>>(
-                $"/api/sendbird/channels/{RenterId}") ?? new();
+            interests = await ToolService.GetMyInterestsAsync();
         }
         catch (Exception ex)
         {
-            ErrorMsg = $"Failed to load channels: {ex.Message}";
+            errorMsg = $"Failed to load conversations: {ex.Message}";
         }
         finally
         {
-            IsLoadingChannels = false;
+            isLoadingInterests = false;
         }
-    }
-
-    private async Task StartChat()
-    {
-        ErrorMsg = "";
-        if (string.IsNullOrWhiteSpace(RenterId) || string.IsNullOrWhiteSpace(OwnerId))
-        {
-            ErrorMsg = "Both user IDs are required.";
-            return;
-        }
-
-        IsCreating = true;
-        try
-        {
-            var resp = await Http.PostAsJsonAsync("/api/sendbird/channel", new
-            {
-                renterId = RenterId.Trim(),
-                ownerId = OwnerId.Trim(),
-                itemName = string.IsNullOrWhiteSpace(ItemName) ? "Tool" : ItemName.Trim()
-            });
-            resp.EnsureSuccessStatusCode();
-
-            var channel = await resp.Content.ReadFromJsonAsync<ChannelInfo>();
-            if (channel is not null)
-                Nav.NavigateTo($"/chat/{channel.ChannelUrl}?userId={Uri.EscapeDataString(RenterId.Trim())}");
-        }
-        catch (Exception ex)
-        {
-            ErrorMsg = $"Failed: {ex.Message}";
-        }
-        finally
-        {
-            IsCreating = false;
-        }
-    }
-
-    private class ChannelInfo
-    {
-        [JsonPropertyName("channel_url")]
-        public string ChannelUrl { get; set; } = "";
-
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = "";
-
-        [JsonPropertyName("member_count")]
-        public int MemberCount { get; set; }
     }
 }

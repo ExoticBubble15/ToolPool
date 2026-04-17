@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Stripe.Forwarding;
 using System.Net.Http;
+using System.Security.Claims;
 using ToolPool.Models;
 using ToolPool.Services;
 using System.Text.Json;
@@ -201,13 +202,48 @@ namespace ToolPool.Controllers
         [HttpPost("interests")]
         public async Task<ActionResult<InterestResponse>> SubmitInterest([FromBody] InterestRequest request)
         {
-            string? channelUrl = null;
+            // Resolve renter from authenticated session
+            var renterIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(renterIdClaim) || !Guid.TryParse(renterIdClaim, out var renterId))
+                return Unauthorized(new { error = "Not authenticated" });
 
+            var renter = await _supabase.GetUserByIdAsync(renterId);
+            if (renter is null)
+                return Unauthorized(new { error = "User account not found" });
+
+            // Resolve tool and owner
+            var tool = await _supabase.GetToolByIdAsync(request.ToolId);
+            if (tool is null)
+                return NotFound(new { error = "Tool not found" });
+
+            if (tool.OwnerId is null)
+                return BadRequest(new { error = "This tool has no owner and cannot accept interest" });
+
+            if (tool.OwnerId == renter.Id)
+                return BadRequest(new { error = "You cannot rent your own tool" });
+
+            var owner = await _supabase.GetUserByIdAsync(tool.OwnerId.Value);
+            if (owner is null)
+                return BadRequest(new { error = "Tool owner account not found" });
+
+            // Ensure both users have sendbird_user_id (backfill from Users.id if null)
+            if (string.IsNullOrEmpty(renter.SendbirdUserId))
+            {
+                renter.SendbirdUserId = renter.Id.ToString();
+                await _supabase.UpdateUserSendbirdIdAsync(renter.Id, renter.SendbirdUserId);
+            }
+            if (string.IsNullOrEmpty(owner.SendbirdUserId))
+            {
+                owner.SendbirdUserId = owner.Id.ToString();
+                await _supabase.UpdateUserSendbirdIdAsync(owner.Id, owner.SendbirdUserId);
+            }
+
+            // Create or reuse Sendbird channel using sendbird_user_id values
+            string? channelUrl = null;
             try
             {
-                var ownerId = request.OwnerId?.ToString() ?? "owner-unknown";
                 var channel = await _sendbird.CreateGroupChannelAsync(
-                    request.RenterId, ownerId, request.ToolName);
+                    renter.SendbirdUserId, owner.SendbirdUserId, request.ToolName);
                 channelUrl = channel.ChannelUrl;
             }
             catch (Exception ex)
@@ -215,12 +251,13 @@ namespace ToolPool.Controllers
                 Console.WriteLine($"Sendbird error (non-fatal): {ex.Message}");
             }
 
+            // renter_id stored as Users.id.ToString() for schema compatibility (column is text)
             var interest = new InterestSubmission
             {
                 ToolId = request.ToolId,
                 ToolName = request.ToolName,
-                RenterId = request.RenterId,
-                OwnerId = request.OwnerId,
+                RenterId = renter.Id.ToString(),
+                OwnerId = tool.OwnerId,
                 Message = request.Message,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
@@ -245,12 +282,63 @@ namespace ToolPool.Controllers
             }
         }
 
-        //[HttpPost("Tools/seed")]
-        //public async Task<IActionResult> SeedTools()
-        //{
-        //    await _supabase.SeedToolsAsync();
-        //    return Ok("Seeded");
-        //}
+        [HttpGet("my-interests")]
+        public async Task<ActionResult<List<MyInterestItem>>> GetMyInterests()
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(idClaim) || !Guid.TryParse(idClaim, out var userId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var asRenter = await _supabase.GetInterestsByRenterAsync(userId.ToString());
+            var asOwner = await _supabase.GetInterestsByOwnerAsync(userId);
+
+            var results = new List<MyInterestItem>();
+
+            foreach (var i in asRenter)
+            {
+                string counterpartName = "Owner";
+                if (i.OwnerId.HasValue)
+                {
+                    var owner = await _supabase.GetUserByIdAsync(i.OwnerId.Value);
+                    counterpartName = owner?.Username ?? owner?.Email ?? "Owner";
+                }
+                results.Add(new MyInterestItem
+                {
+                    Id = i.Id,
+                    ToolName = i.ToolName,
+                    ChannelUrl = i.ChannelUrl,
+                    Status = i.Status,
+                    CounterpartName = counterpartName,
+                    Role = "renter",
+                    CreatedAt = i.CreatedAt
+                });
+            }
+
+            foreach (var i in asOwner)
+            {
+                // Skip duplicates (if user is both renter and owner — shouldn't happen but guard)
+                if (results.Any(r => r.Id == i.Id)) continue;
+
+                string counterpartName = "Renter";
+                if (Guid.TryParse(i.RenterId, out var renterGuid))
+                {
+                    var renter = await _supabase.GetUserByIdAsync(renterGuid);
+                    counterpartName = renter?.Username ?? renter?.Email ?? "Renter";
+                }
+                results.Add(new MyInterestItem
+                {
+                    Id = i.Id,
+                    ToolName = i.ToolName,
+                    ChannelUrl = i.ChannelUrl,
+                    Status = i.Status,
+                    CounterpartName = counterpartName,
+                    Role = "owner",
+                    CreatedAt = i.CreatedAt
+                });
+            }
+
+            return Ok(results.OrderByDescending(r => r.CreatedAt).ToList());
+        }
 
         public record CreateToolRequest(string Name, string Description, decimal Price);
 
@@ -258,8 +346,6 @@ namespace ToolPool.Controllers
         {
             public Guid ToolId { get; set; }
             public string ToolName { get; set; } = "";
-            public string RenterId { get; set; } = "";
-            public Guid? OwnerId { get; set; }
             public string Message { get; set; } = "";
             public string? StartDate { get; set; }
             public string? EndDate { get; set; }
@@ -270,6 +356,17 @@ namespace ToolPool.Controllers
             public bool Success { get; set; }
             public string? ChannelUrl { get; set; }
             public Guid? InterestId { get; set; }
+        }
+
+        public class MyInterestItem
+        {
+            public Guid Id { get; set; }
+            public string ToolName { get; set; } = "";
+            public string? ChannelUrl { get; set; }
+            public string Status { get; set; } = "pending";
+            public string CounterpartName { get; set; } = "";
+            public string Role { get; set; } = "";
+            public DateTimeOffset? CreatedAt { get; set; }
         }
     }
 }

@@ -60,6 +60,19 @@ namespace ToolPool.Models
         public string Name { get; set; } = string.Empty;
     }
 
+    public class AppUser
+    {
+        public Guid Id { get; set; }
+        public string Email { get; set; } = "";
+        public string Username { get; set; } = "";
+
+        [JsonPropertyName("sendbird_user_id")]
+        public string? SendbirdUserId { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
+
     public class InterestSubmission
     {
         public Guid Id { get; set; } = Guid.NewGuid();
