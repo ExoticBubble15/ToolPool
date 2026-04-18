@@ -132,6 +132,13 @@ namespace ToolPool.Controllers
                 categories.Add(c.Category);
             }
             categories = categories.Distinct().ToList();
+            //sort alphabetically with 'other' at the end
+            categories.Sort();
+            if(categories.Contains("Other"))
+            {
+                categories.Remove("Other");
+                categories.Add("Other");
+            }
             Console.WriteLine($"\"categories\": {categories.Count}");
             return categories;
         }

@@ -16,7 +16,7 @@
 
 <div class="browse-location-card">
     @* enter location *@
-    <div style="display: flex; flex-direction: row; align-items: center">
+    <div style="display: flex; flex-direction: row; align-items: center; gap: 10px">
         <h5 style="margin: 0">Choose a location:</h5>
         <div class="location-search">
             <AutoComplete @bind-Value="addressSearch"
@@ -56,7 +56,7 @@
         @* filter search *@
         <div class="browse-search-group">
             <span class="browse-filter-label">Search</span>
-            <input class="browse-search-input" type="text" placeholder="Enter tool title..." @bind="searchQuery" @bind:event="oninput" />
+            <input class="browse-filter-input" type="text" placeholder="Enter tool title..." @bind="searchQuery" @bind:event="oninput" />
         </div>
     </div>
 
@@ -233,12 +233,6 @@ else
 </div>
 
 @code {
-    public class AddressPair
-    {
-        public string Address { get; set; } = string.Empty;
-        public string PlaceId { get; set; } = string.Empty;
-    }
-
     private string locationPlaceholder;
     private string addressSearch;
     public IEnumerable<AddressPair>? locations;
@@ -327,13 +321,6 @@ else
         {
             Console.WriteLine($"browser location ERROR: {ex.Message}");
         }
-    }
-
-    //object for browser location
-    public class Location
-    {
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
