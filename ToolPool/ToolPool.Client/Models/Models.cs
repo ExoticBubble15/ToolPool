@@ -28,6 +28,13 @@ public class Tool
     [JsonPropertyName("image_url")]
     public string ImageUrl { get; set; } = string.Empty;
 }
+
+public class NeighborhoodTriple
+{
+    public string Neighborhood { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+}
 public class AddressPair
 {
     public string Address { get; set; } = string.Empty;

@@ -10,13 +10,14 @@ public class SendbirdService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SendbirdOptions _opt;
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true };
-
+    HttpClient client;
     private string BaseUrl => $"https://api-{_opt.AppId}.sendbird.com/v3";
 
     public SendbirdService(IHttpClientFactory httpClientFactory, IConfiguration config)
     {
         _httpClientFactory = httpClientFactory;
         _opt = config.GetSection("Sendbird").Get<SendbirdOptions>() ?? new SendbirdOptions();
+        client = _httpClientFactory.CreateClient();
     }
 
     private HttpRequestMessage BuildRequest(HttpMethod method, string path, object? body = null)
@@ -33,7 +34,7 @@ public class SendbirdService
     /// </summary>
     public async Task<string> CreateOrGetUserAsync(string userId, string nickname)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
 
         using var getReq = BuildRequest(HttpMethod.Get, $"/users/{userId}");
         using var getResp = await client.SendAsync(getReq);
@@ -58,7 +59,7 @@ public class SendbirdService
     /// </summary>
     public async Task<SendbirdChannel> CreateGroupChannelAsync(string renterId, string ownerId, string itemName)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
 
         await CreateOrGetUserAsync(renterId, renterId);
         await CreateOrGetUserAsync(ownerId, ownerId);
@@ -83,7 +84,7 @@ public class SendbirdService
     /// </summary>
     public async Task<List<SendbirdChannel>> ListUserChannelsAsync(string userId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
 
         using var req = BuildRequest(HttpMethod.Get,
             $"/users/{userId}/my_group_channels?limit=20&order=latest_last_message");

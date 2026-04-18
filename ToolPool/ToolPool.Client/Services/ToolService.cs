@@ -13,6 +13,9 @@ public class ToolService
         _http = http;
     }
 
+    public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
+        => await _http.GetFromJsonAsync<List<NeighborhoodTriple>>("/api/neighborhoodTriples") ?? new();
+
     public async Task<String> ReverseGeocode(string latitude, string longitude)
         => await _http.GetStringAsync($"/api/reverseGeocode/{latitude}/{longitude}");
 

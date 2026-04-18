@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using ToolPool.Client.Models;
 using ToolPool.Models;
 
 namespace ToolPool.Services;
@@ -10,16 +11,33 @@ public class SupabaseDemoService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SupabaseOptions _opt;
     private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
+    private HttpClient client;
 
     public SupabaseDemoService(IHttpClientFactory httpClientFactory, IConfiguration config)
     {
         _httpClientFactory = httpClientFactory;
         _opt = config.GetSection("Supabase").Get<SupabaseOptions>() ?? new SupabaseOptions();
+        client = _httpClientFactory.CreateClient(); //remove this if everything breaks
+    }
+
+    public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
+    {
+        var url = $"{_opt.Url}rest/v1/Neighborhoods?select=neighborhood,latitude,longitude";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var triples = await resp.Content.ReadFromJsonAsync<List<NeighborhoodTriple>>(_jsonOpts);
+        return triples ?? new List<NeighborhoodTriple>();
     }
 
     public async Task<List<ToolCategory>> GetCategories()
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?select=category";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -35,7 +53,7 @@ public class SupabaseDemoService
 
     public async Task<List<ToolNeighborhood>> GetNeighborhoods()
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?select=neighborhood";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -67,9 +85,9 @@ public class SupabaseDemoService
 
     // ── User queries ──
 
-    public async Task<AppUser?> GetUserByIdAsync(Guid id)
+    public async Task<Models.AppUser?> GetUserByIdAsync(Guid id)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{id.ToString().ToLower()}&select=id,email,username,sendbird_user_id,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -79,13 +97,13 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var items = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
+        var items = await resp.Content.ReadFromJsonAsync<List<Models.AppUser>>(_jsonOpts);
         return items?.FirstOrDefault();
     }
 
-    public async Task<AppUser?> GetUserByEmailAsync(string email)
+    public async Task<Models.AppUser?> GetUserByEmailAsync(string email)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?email=eq.{Uri.EscapeDataString(email)}&select=id,email,username,sendbird_user_id,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -95,13 +113,13 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var items = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
+        var items = await resp.Content.ReadFromJsonAsync<List<Models.AppUser>>(_jsonOpts);
         return items?.FirstOrDefault();
     }
 
-    public async Task<AppUser> CreateUserAsync(Guid id, string email, string username)
+    public async Task<Models.AppUser> CreateUserAsync(Guid id, string email, string username)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users";
 
         var payload = new { id, email, username, sendbird_user_id = id.ToString() };
@@ -115,13 +133,13 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var inserted = await resp.Content.ReadFromJsonAsync<List<AppUser>>(_jsonOpts);
-        return inserted?.FirstOrDefault() ?? new AppUser { Id = id, Email = email, Username = username, SendbirdUserId = id.ToString() };
+        var inserted = await resp.Content.ReadFromJsonAsync<List<Models.AppUser>>(_jsonOpts);
+        return inserted?.FirstOrDefault() ?? new Models.AppUser { Id = id, Email = email, Username = username, SendbirdUserId = id.ToString() };
     }
 
     public async Task UpdateUserSendbirdIdAsync(Guid userId, string sendbirdUserId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}";
 
         using var req = new HttpRequestMessage(HttpMethod.Patch, url);
@@ -137,7 +155,7 @@ public class SupabaseDemoService
 
     public async Task<List<InterestSubmission>> GetInterestsByRenterAsync(string renterId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -152,7 +170,7 @@ public class SupabaseDemoService
 
     public async Task<List<InterestSubmission>> GetInterestsByOwnerAsync(Guid ownerId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?owner_id=eq.{ownerId}&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -167,7 +185,7 @@ public class SupabaseDemoService
 
     public async Task<InterestSubmission?> GetInterestByRenterAndToolAsync(string renterId, Guid toolId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&tool_id=eq.{toolId}&order=created_at.desc&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -183,7 +201,7 @@ public class SupabaseDemoService
 
     public async Task<InterestSubmission?> GetInterestByIdAsync(Guid interestId)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -199,9 +217,9 @@ public class SupabaseDemoService
 
     // ── Tool queries ──
 
-    public async Task<List<Tool>> GetToolsAsync()
+    public async Task<List<Models.Tool>> GetToolsAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -220,15 +238,15 @@ public class SupabaseDemoService
 
             using var fallbackResp = await client.SendAsync(fallbackReq);
             fallbackResp.EnsureSuccessStatusCode();
-            return await fallbackResp.Content.ReadFromJsonAsync<List<Tool>>(_jsonOpts) ?? new List<Tool>();
+            return await fallbackResp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts) ?? new List<Models.Tool>();
         }
 
-        return await resp.Content.ReadFromJsonAsync<List<Tool>>(_jsonOpts) ?? new List<Tool>();
+        return await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts) ?? new List<Models.Tool>();
     }
 
-    public async Task<Tool?> GetToolByIdAsync(Guid id)
+    public async Task<Models.Tool?> GetToolByIdAsync(Guid id)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -238,13 +256,13 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var items = await resp.Content.ReadFromJsonAsync<List<Tool>>(_jsonOpts);
+        var items = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
         return items?.FirstOrDefault();
     }
 
     public async Task<InterestSubmission> InsertInterestAsync(InterestSubmission interest)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions";
 
         var payload = new
@@ -274,10 +292,10 @@ public class SupabaseDemoService
     }
 
 
-    public async Task<Tool> InsertToolAsync(string name, string description, decimal price,
+    public async Task<Models.Tool> InsertToolAsync(string name, string description, decimal price,
         string category = "", Guid? ownerId = null, string ownerName = "", string neighborhood = "", string imageUrl = "")
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
@@ -301,14 +319,14 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var inserted = await resp.Content.ReadFromJsonAsync<List<Tool>>(_jsonOpts);
-        return inserted?.FirstOrDefault() ?? new Tool { Name = name, Description = description, Price = price };
+        var inserted = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
+        return inserted?.FirstOrDefault() ?? new Models.Tool { Name = name, Description = description, Price = price };
     }
 
 
     public async Task DeleteToolAsync(Guid id)
     {
-        var client = _httpClientFactory.CreateClient();
+        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
@@ -343,7 +361,7 @@ public class SupabaseDemoService
     //        new { name = "Shop Vacuum", description = "6-gallon wet/dry shop vac with attachments", price = 9.00m, category = "Cleaning", owner_name = "James K.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&fit=crop" },
     //    };
 
-    //    var client = _httpClientFactory.CreateClient();
+    //var client = _httpClientFactory.CreateClient();
     //    var url = $"{_opt.Url}/rest/v1/Tools";
 
     //    using var req = new HttpRequestMessage(HttpMethod.Post, url);

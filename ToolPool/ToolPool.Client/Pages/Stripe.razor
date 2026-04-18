@@ -8,6 +8,7 @@
 @inject CartService Cart
 @inject HttpClient Http
 @inject ToolService ToolService
+@using Philiprehberger.Geolocation;
 
 <h2 class="pageTitle">Upload a Tool</h2>
 <span class="pageSubtitle">Post a tool for others to view.</span>
@@ -135,7 +136,18 @@
     private string submitMessage;
     private async Task SubmitTool()
     {
-        //TODO: set neighborhood as closest lat/long https://libraries.io/nuget/Philiprehberger.Geolocation
+        //set neighborhood as closest to address coords
+        var neighborhoodTriples = await ToolService.GetNeighborhoodTriples();
+        GeoCoordinate addressCord = new GeoCoordinate(toolSubmission.AddressLat, toolSubmission.AddressLng);
+        var sorted = neighborhoodTriples.OrderBy(trip => Geo.Distance(new GeoCoordinate(trip.Latitude, trip.Longitude), addressCord, DistanceUnit.Miles));
+        toolSubmission.Neighborhood = sorted.First().Neighborhood;
+
+        //print neighborhoods, closest first
+        Console.WriteLine(addressCord);
+        var sortedNeighborhoods = sorted.Select(i => i.Neighborhood).ToList();
+        Console.WriteLine(string.Join(", ", sortedNeighborhoods));
+        Console.WriteLine();
+
         submitMessage = "check browser console for tool object details, just pass the object directly to api to post";
         foreach (var prop in toolSubmission.GetType().GetProperties())
         {
