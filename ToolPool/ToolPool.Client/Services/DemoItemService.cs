@@ -30,8 +30,8 @@ public class DemoItemService
 
     // Fetches all demo items from the API
     // Returns an empty list if the response is null
-    public async Task<List<DemoItem>> GetDemoItemsAsync()
-        => await _http.GetFromJsonAsync<List<DemoItem>>("/api/demo-items/") ?? new();
+    public async Task<List<Tool>> GetDemoItemsAsync()
+        => await _http.GetFromJsonAsync<List<Tool>>("/api/demo-items/") ?? new();
 
     // Submits a new item suggestion/submission to the API (does not return the created item)
     public async Task InsertSubmissionAsync(string name, string description, decimal price, string imageUrl, string ownerId, string category, string owner_name, string neighborhood)

@@ -20,13 +20,15 @@ namespace ToolPool.Controllers
         private readonly SupabaseDemoService _supabase;
         private readonly SendbirdService _sendbird;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly UserService _userService;
 
-        public SupabaseController(IConfiguration config, SupabaseDemoService supabase, SendbirdService sendbird, IHttpClientFactory httpClientFactory)
+        public SupabaseController(IConfiguration config, SupabaseDemoService supabase, SendbirdService sendbird, IHttpClientFactory httpClientFactory, UserService userService)
         {
             _config = config;
             _supabase = supabase;
             _sendbird = sendbird;
             _httpClientFactory = httpClientFactory;
+            _userService = userService;
         }
 
         [HttpGet]

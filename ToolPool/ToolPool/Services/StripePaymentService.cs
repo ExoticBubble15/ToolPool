@@ -70,25 +70,17 @@ public class StripePaymentService
     // async method to create a stripe checkout session
     public async Task<string> CreateCheckoutSessionAsync(ToolPool.Models.StripeRentalRequest request)
     {
-        
-        // request obj
         var req = _http.HttpContext!.Request;
-
-        // url for toolpool
         var baseUrl = $"{req.Scheme}://{req.Host}";
 
         var days = (request.EndDate.Date - request.StartDate.Date).Days + 1;
         if (days <= 0) throw new Exception("Invalid date range");
 
-        var days = (request.EndDate.Date - request.StartDate.Date).Days + 1;
-        if (days <= 0) throw new Exception("Invalid date range");
         var total = request.PricePerDay * days;
+
         var options = new SessionCreateOptions
         {
             Mode = "payment",
-            BillingAddressCollection = "auto",
-            SuccessUrl = $"{baseUrl}/success",
-            CancelUrl = $"{baseUrl}/stripe",
 
             Metadata = new Dictionary<string, string>
 {

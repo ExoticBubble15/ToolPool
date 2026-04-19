@@ -6,6 +6,7 @@
 @inject ToolService ItemService
 @inject CartService Cart
 @inject HttpClient Http
+@inject DemoItemService DemoItemService
 @inject NavigationManager Nav
 @using System.Net.Http.Json
 
@@ -104,7 +105,6 @@
 </div>
 
 @code {
-    private List<DemoItem> Items = new();
 
     private List<Tool> Items = new();
     private string FormName = "";
@@ -224,7 +224,7 @@
 
         try
         {
-            await ItemService.InsertSubmissionAsync(
+            await DemoItemService.InsertSubmissionAsync(
                 FormName.Trim(),
                 FormDescription.Trim(),
                 price,
@@ -237,7 +237,7 @@
 
 
 
-            Items = await ItemService.GetDemoItemsAsync();
+            Items = await DemoItemService.GetDemoItemsAsync();
 
             SubmitOk = true;
             SubmitMessage = "Submitted successfully.";
@@ -289,10 +289,6 @@
         Items = await ItemService.GetToolsAsync();
     }
 
-    public void Dispose()
-    {
-        Cart.OnChange -= StateHasChanged;
-    }
 
     private class AccountInfo
     {
