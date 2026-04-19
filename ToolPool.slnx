@@ -1,7 +1,4 @@
 <Solution>
-  <Folder Name="/misc/">
-    <File Path="packages.txt" />
-  </Folder>
   <Project Path="ToolPool/ToolPool.Client/ToolPool.Client.csproj" />
   <Project Path="ToolPool/ToolPool/ToolPool.csproj" />
 </Solution>

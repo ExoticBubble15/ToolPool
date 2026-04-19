@@ -34,8 +34,6 @@ builder.Services.AddSingleton(sp =>
     return client;
 });
 
-builder.Services.AddBlazorGoogleMaps("");
-
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<DemoItemService>(); 
 builder.Services.AddScoped<AuthService>();

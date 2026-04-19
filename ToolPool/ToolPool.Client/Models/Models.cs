@@ -15,21 +15,45 @@ public class DemoItem
 public class Tool
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
-    public string Category { get; set; } = string.Empty;
 
     [JsonPropertyName("owner_id")]
     public Guid? OwnerId { get; set; }
 
     [JsonPropertyName("owner_name")]
     public string OwnerName { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+
+    public double AddressLat { get; set; }
+
+    public double AddressLng { get; set; }
 
     public string Neighborhood { get; set; } = string.Empty;
 
     [JsonPropertyName("image_url")]
     public string ImageUrl { get; set; } = string.Empty;
+}
+
+public class NeighborhoodTriple
+{
+    public string Neighborhood { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+}
+public class AddressPair
+{
+    public string Address { get; set; } = string.Empty;
+    public string PlaceId { get; set; } = string.Empty;
+}
+public class Location
+{
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
 }
 
 public class CartItem
@@ -61,13 +85,15 @@ public class StripeResponse
 
 public class AppUser
 {
-    [JsonPropertyName("id")]
     public Guid Id { get; set; }
     public string Email { get; set; } = "";
     public string Username { get; set; } = "";
 
     [JsonPropertyName("sendbird_user_id")]
     public string? SendbirdUserId { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
 }
 
 public class InterestRequest

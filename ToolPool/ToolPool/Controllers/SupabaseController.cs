@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using ToolPool.Models;
 using ToolPool.Services;
 using System.Text.Json;
+using ToolPool.Client.Models;
 
 namespace ToolPool.Controllers
 {
@@ -21,6 +22,7 @@ namespace ToolPool.Controllers
         private readonly SendbirdService _sendbird;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly UserService _userService;
+        HttpClient client;
 
         public SupabaseController(IConfiguration config, SupabaseDemoService supabase, SendbirdService sendbird, IHttpClientFactory httpClientFactory, UserService userService)
         {
@@ -29,6 +31,7 @@ namespace ToolPool.Controllers
             _sendbird = sendbird;
             _httpClientFactory = httpClientFactory;
             _userService = userService;
+            client = _httpClientFactory.CreateClient();
         }
 
         [HttpGet]
@@ -37,11 +40,19 @@ namespace ToolPool.Controllers
             Console.WriteLine("success: \"test\"");
             return "good";
         }
+
+        [HttpGet("neighborhoodTriples")]
+        public async Task<List<NeighborhoodTriple>> neighborhoodTriples()
+        {
+            var res = await _supabase.GetNeighborhoodTriples();
+            Console.WriteLine($"\"neighborhoodCoords\": {res.Count}");
+            return res;
+        }
         
         [HttpGet("reverseGeocode/{lat}/{lng}")]
         public async Task<String> ReverseGeocode(string lat, string lng)
         {
-            var client = _httpClientFactory.CreateClient();
+            //var client = _httpClientFactory.CreateClient();
 
             //geocode api: gets detailed location info from latitude, longitude
             var geocodeUrl = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={_config["Google:Maps"]}";
@@ -58,10 +69,10 @@ namespace ToolPool.Controllers
         }
 
         [HttpGet("suggestLocations/{location}")]
-        public async Task<List<AddressPair>> GetLocation(string location)
+        public async Task<List<Models.AddressPair>> GetLocation(string location)
         {
-            var client = _httpClientFactory.CreateClient();
-            List<AddressPair> tuples = new List<AddressPair>();
+            //var client = _httpClientFactory.CreateClient();
+            List<Models.AddressPair> tuples = new List<Models.AddressPair>();
 
             //'places:autocomplete' api: gets placeId and text suggestions from input
             var autocompleteUrl = $"https://places.googleapis.com/v1/places:autocomplete?input={location}";
@@ -82,7 +93,7 @@ namespace ToolPool.Controllers
                     var placePrediction = p.GetProperty("placePrediction");
                     //Console.WriteLine(placePrediction.GetProperty("text").GetProperty("text").GetString());
                     //Console.WriteLine(placePrediction.GetProperty("placeId").GetString());
-                    tuples.Add(new AddressPair
+                    tuples.Add(new Models.AddressPair
                     {
                         Address = placePrediction.GetProperty("text").GetProperty("text").GetString(),
                         PlaceId = placePrediction.GetProperty("placeId").GetString()
@@ -97,9 +108,9 @@ namespace ToolPool.Controllers
         }
 
         [HttpGet("getCoordinates/{placeId}")]
-        public async Task<Location> GetCoordinates(string placeId)
+        public async Task<Models.Location> GetCoordinates(string placeId)
         {
-            var client = _httpClientFactory.CreateClient();
+            //var client = _httpClientFactory.CreateClient();
 
             //places api: gets latitude, longitude from placeId
             var placesUrl = $"https://places.googleapis.com/v1/places/{placeId}";
@@ -112,7 +123,7 @@ namespace ToolPool.Controllers
             var placesContent = await placesResp.Content.ReadAsStringAsync();
             var placesJson = JsonDocument.Parse(placesContent);
             var locationCoords = placesJson.RootElement.GetProperty("location");
-            return new Location
+            return new Models.Location
             {
                 Latitude = locationCoords.GetProperty("latitude").GetDouble(),
                 Longitude = locationCoords.GetProperty("longitude").GetDouble(),
@@ -136,6 +147,12 @@ namespace ToolPool.Controllers
                 categories.Add(c.Category);
             }
             categories = categories.Distinct().ToList();
+            //always put 'other' at the end
+            if(categories.Contains("Other"))
+            {
+                categories.Remove("Other");
+                categories.Add("Other");
+            }
             Console.WriteLine($"\"categories\": {categories.Count}");
             return categories;
         }
@@ -176,14 +193,14 @@ namespace ToolPool.Controllers
         //}
 
         [HttpGet("Tools")]
-        public async Task<ActionResult<List<Tool>>> GetTools()
+        public async Task<ActionResult<List<Models.Tool>>> GetTools()
         {
             var items = await _supabase.GetToolsAsync();
             return Ok(items);
         }
 
         [HttpGet("Tools/{id}")]
-        public async Task<ActionResult<Tool>> GetToolById(Guid id)
+        public async Task<ActionResult<Models.Tool>> GetToolById(Guid id)
         {
             var tool = await _supabase.GetToolByIdAsync(id);
             if (tool is null) return NotFound();
@@ -191,7 +208,7 @@ namespace ToolPool.Controllers
         }
 
         [HttpPost("Tools")]
-        public async Task<ActionResult<Tool>> InsertTool([FromBody] CreateToolRequest request)
+        public async Task<ActionResult<Models.Tool>> InsertTool([FromBody] CreateToolRequest request)
         {
             var item = await _supabase.InsertToolAsync(request.Name, request.Description, request.Price);
             return Ok(item);
@@ -360,7 +377,7 @@ namespace ToolPool.Controllers
                 .ToList();
 
             // Cache users to avoid repeated DB calls
-            var userCache = new Dictionary<Guid, AppUser?>();
+            var userCache = new Dictionary<Guid, Models.AppUser?>();
 
             var results = new List<MyInterestItem>();
 
@@ -460,7 +477,7 @@ namespace ToolPool.Controllers
         }
 
         [HttpPost("users/register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] Models.RegisterRequest request)
         {
             var result = await _userService.RegisterUserAsync(request);
 
