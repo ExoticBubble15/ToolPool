@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Stripe;
+using Supabase;
+using System.Text;
+using ToolPool.Client.Services;
 using ToolPool.Components;
 using ToolPool.Models;
 using ToolPool.Services;
@@ -17,33 +21,63 @@ builder.Services.AddRazorComponents()
 builder.Services.AddControllers();
 builder.Configuration.AddUserSecrets<Program>();
 
-builder.Services.Configure<SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
+builder.Services.Configure<ToolPool.Models.SupabaseOptions>(builder.Configuration.GetSection("Supabase"));
 builder.Services.Configure<SendbirdOptions>(builder.Configuration.GetSection("Sendbird"));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<SupabaseDemoService>();
 builder.Services.AddScoped<SendbirdService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<InterestService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToolPool.Client.Services.CartService>(); 
 builder.Services.AddScoped<ToolPool.Client.Services.ToolService>();
 builder.Services.AddScoped<StripePaymentService>();
+builder.Services.AddScoped<UserService>();
 
-builder.Services.AddScoped<HttpClient>(sp =>
-{
-    var nav = sp.GetRequiredService<NavigationManager>();
-    return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
-});
-
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddScoped(sp =>
+    new HttpClient
     {
-        options.LoginPath = "/login";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
+        BaseAddress = new Uri("https://localhost:7040")
     });
 
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies", options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
+
+builder.Services.AddHttpClient("Sendbird", client =>
+{
+    var config = builder.Configuration;
+    var apiToken = config["Sendbird:ApiToken"];
+
+    client.BaseAddress = new Uri("https://api-cbf5c234-570d-4862-bfbb-63e59b75ccfa.sendbird.com");
+    client.DefaultRequestHeaders.Add("Api-Token", apiToken);
+});
+
+// supabase client setup
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var options = new Supabase.SupabaseOptions
+    {
+        AutoConnectRealtime = true
+    };
+
+    var client = new Supabase.Client(builder.Configuration["Supabase:Url"], builder.Configuration["Supabase:AnonKey"], options);
+    client.InitializeAsync();
+
+    return client;
+});
+
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
+// singleton cache for logged in users
+builder.Services.AddSingleton<Dictionary<string, User>>();
 
 var app = builder.Build();
 

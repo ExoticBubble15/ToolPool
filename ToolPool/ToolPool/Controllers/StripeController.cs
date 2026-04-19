@@ -3,10 +3,7 @@ using System.Security.Claims;
 using ToolPool.Client.Models;
 using ToolPool.Models;
 using ToolPool.Services;
-/**
- * Controller for Stripe Service
- */
-
+using Stripe;
 
 namespace ToolPool.Controllers;
 
@@ -132,5 +129,60 @@ public class StripeController : ControllerBase
 
         var url = await _stripe.CreateCheckoutSessionAsync(request);
         return Ok(new { url });
+    }
+
+    // =========================
+    // STRIPE ONBOARDING STATUS
+    // =========================
+    [HttpGet("onboarding-status/{accountId}")]
+    public async Task<IActionResult> GetOnboardingStatus(string accountId)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            return BadRequest("Missing Stripe account id");
+
+        var service = new AccountService();
+
+        try
+        {
+            var account = await service.GetAsync(accountId);
+
+            var hasNoPendingRequirements =
+                account.Requirements?.CurrentlyDue == null ||
+                account.Requirements.CurrentlyDue.Count == 0;
+
+            var isNotDisabled =
+                string.IsNullOrEmpty(account.Requirements?.DisabledReason);
+
+            var isOnboarded =
+                account.DetailsSubmitted &&
+                account.ChargesEnabled &&
+                account.PayoutsEnabled &&
+                hasNoPendingRequirements &&
+                isNotDisabled;
+
+            return Ok(isOnboarded);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Stripe error: {ex.Message}");
+        }
+    }
+
+    [HttpPost("create-onboarding-link/{accountId}")]
+    public IActionResult CreateOnboardingLink(string accountId)
+    {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var options = new AccountLinkCreateOptions
+        {
+            Account = accountId,
+            RefreshUrl = $"{baseUrl}/stripe",
+            ReturnUrl = $"{baseUrl}/stripe",
+            Type = "account_onboarding"
+        };
+
+        var service = new AccountLinkService();
+        var link = service.Create(options);
+
+        return Ok(link.Url);
     }
 }

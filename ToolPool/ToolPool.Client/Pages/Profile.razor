@@ -1,160 +1,530 @@
 ﻿@page "/profile"
-
-my bad nathan its broken can you fix it
-
-@* @page "/profile"
 @rendermode InteractiveWebAssembly
-@inject AuthenticationStateProvider AuthStateProvider
-@inject IHttpClientFactory HttpClientFactory
-@using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http.Headers
-@using System.Text.Json
+@using BlazorBootstrap
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
-<style>
-    .profile-container {
-        max-width: 800px;
-        margin: 40px auto;
-        padding: 20px;
-        background: #000000;
-        border-radius: 10px;
-        font-family: Arial, sans-serif;
-    }
-
-    .field-group {
-        margin-bottom: 15px;
-    }
-
-    .field-group label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    .field-group input {
-        width: 100%;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    .calendar-events {
-        margin-top: 30px;
-    }
-
-    .calendar-events h3 {
-        margin-bottom: 15px;
-    }
-
-    .calendar-event {
-        background: #fff;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-</style>
-
-<div class="profile-container">
-    <h2>Profile</h2>
-
-    <div class="field-group">
-        <label>Username</label>
-        <input readonly value="@userName" />
+<div class="profile-page">
+    <div class="profile-header">
+        <h1>Profile</h1>
+        <p>Manage your account and track your listing activity.</p>
     </div>
 
-    <div class="field-group">
-        <label>Email</label>
-        <input readonly value="@userEmail" />
+    @if (IsLoading)
+    {
+        <section class="profile-card">
+            <p class="empty">Loading profile...</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(LoadError))
+    {
+        <section class="profile-card">
+            <p class="error">@LoadError</p>
+        </section>
+    }
+
+    <div class="profile-grid" style="display:@(IsLoading || !string.IsNullOrWhiteSpace(LoadError) ? "none" : "grid")">
+        <section class="profile-card">
+            <h2>Account Info</h2>
+            <div class="info-row">
+                <span class="label">Username</span>
+                <span class="value">@Account.Username</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Email</span>
+                <span class="value">@Account.Email</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Joined</span>
+                <span class="value">@(Account.JoinedAt.ToString("MMM dd, yyyy")?? "Unknown")</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Stripe</span>
+                <span class="value">
+                    @if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
+                    {
+                        <span class="badge text-bg-secondary">Not connected</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-success">Connected</span>
+                    }
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="label">Sendbird</span>
+                <span class="value">
+                    @if (string.IsNullOrWhiteSpace(Account.SendbirdUserId))
+                    {
+                        <span class="badge text-bg-secondary">Not linked</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-success">Linked</span>
+                    }
+                </span>
+            </div>
+        </section>
+
+        <section class="profile-card">
+            <h2>Account Actions</h2>
+            <div class="actions">
+                <button class="btn btn-outline-primary" @onclick="OnLogoutClicked">Logout</button>
+                <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirmation">Delete Account</button>
+            </div>
+
+            @if (ShowDeleteConfirm)
+            {
+                <div class="danger-box">
+                    <p>This will permanently remove your account. This action cannot be undone.</p>
+                    @if (!string.IsNullOrWhiteSpace(DeleteError))
+                    {
+                        <p class="error">@DeleteError</p>
+                    }
+                    @if (IsDeleting)
+                    {
+                        <div class="delete-progress">
+                            <div class="delete-progress-bar">
+                                <div class="delete-progress-fill" style="width:@DeleteProgressPercent%"></div>
+                            </div>
+                            <p class="delete-progress-text">@DeleteProgressMessage</p>
+                        </div>
+                    }
+                    <div class="actions">
+                        <button class="btn btn-danger" @onclick="OnDeleteAccountConfirmed" disabled="@IsDeleting">
+                            @(IsDeleting ? "Deleting..." : "Confirm Delete")
+                        </button>
+                        <button class="btn btn-secondary" @onclick="HideDeleteConfirmation" disabled="@IsDeleting">Cancel</button>
+                    </div>
+                </div>
+            }
+        </section>
     </div>
 
-    <div class="calendar-events">
-        <h3>Google Calendar Events</h3>
-        @if (events is null)
+    <section class="profile-card">
+        <div class="section-head">
+            <h2>My Listings</h2>
+            <span class="meta">@MyListings.Count item(s)</span>
+        </div>
+        @if (!MyListings.Any())
         {
-            <p>Loading...</p>
-        }
-        else if (!events.Any())
-        {
-            <p>No upcoming events found.</p>
+            <p class="empty">No listings yet.</p>
         }
         else
         {
-            @foreach (var e in events)
-            {
-                <div class="calendar-event">
-                    <strong>@e.Summary</strong><br />
-                    @e.Start.ToLocalTime(): @e.End.ToLocalTime()
-                </div>
-            }
+            <div class="items-grid">
+                @foreach (var listing in MyListings)
+                {
+                    <article class="item-card">
+                        <div class="item-top">
+                            <h3>@listing.Name</h3>
+                            <span class="badge text-bg-light">@listing.Category</span>
+                        </div>
+                        <p class="item-text">@listing.Description</p>
+                        <div class="item-bottom">
+                            <span>$@listing.Price.ToString("0.00")</span>
+                            <span>@listing.Neighborhood</span>
+                        </div>
+                    </article>
+                }
+            </div>
         }
-    </div>
+    </section>
+
+    <section class="profile-card">
+        <div class="section-head">
+            <h2>My Activities</h2>
+            <span class="meta">@MyActivities.Count activity item(s)</span>
+        </div>
+        @if (!MyActivities.Any())
+        {
+            <p class="empty">No activity yet.</p>
+        }
+        else
+        {
+            <div class="activities-list">
+                @foreach (var activity in MyActivities)
+                {
+                    <article class="activity-card">
+                        <div class="activity-main">
+                            <h3>@activity.ToolName</h3>
+                            <p>@activity.Message</p>
+                        </div>
+                        <div class="activity-side">
+                            <span class="badge @GetStatusBadgeClass(activity.Status)">@activity.Status</span>
+                            <small>@FormatActivityDate(activity.CreatedAt)</small>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
 </div>
 
+
 @code {
-    private string? userName = "";
-    private string? userEmail = "";
-    private List<CalendarEvent> events;
+    private bool ShowDeleteConfirm;
+    private bool IsLoading = true;
+    private string? LoadError;
+    private string? DeleteError;
+    private bool IsDeleting;
+    private string DeleteProgressMessage = "";
+    private int DeleteProgressPercent;
+
+    private AccountInfo Account { get; set; } = new();
+    private List<ListingItem> MyListings { get; set; } = new();
+    private List<ActivityItem> MyActivities { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user.Identity?.IsAuthenticated ?? false)
+        try
         {
-            userName = user.FindFirst(c => c.Type == "name")?.Value ?? user.Identity.Name;
-            userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
-            if (userEmail.Equals(""))
-            {
-                userEmail = user.FindFirst(c => c.Type == "email")?.Value;
-            }
+            var me = await Http.GetFromJsonAsync<AccountInfo>(Navigation.ToAbsoluteUri("/api/profile/me"));
+            var listings = await Http.GetFromJsonAsync<List<ListingItem>>(Navigation.ToAbsoluteUri("/api/profile/my-listings"));
+            var activities = await Http.GetFromJsonAsync<List<ActivityItem>>(Navigation.ToAbsoluteUri("/api/profile/my-activities"));
 
-            // Pull Google Calendar events
-            // var accessToken = await HttpContextAccessor.HttpContext.GetTokenAsync("access_token");
-            // if (!string.IsNullOrEmpty(accessToken))
-            // {
-            //     await LoadGoogleCalendarEvents(accessToken);
-            // }
+            Account = me ?? new AccountInfo();
+            MyListings = listings ?? new List<ListingItem>();
+            MyActivities = activities ?? new List<ActivityItem>();
+        }
+        catch (Exception ex)
+        {
+            LoadError = $"Failed to load profile data: {ex.Message}";
+            Account = new AccountInfo();
+            MyListings = new List<ListingItem>();
+            MyActivities = new List<ActivityItem>();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
-    // [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; }
-
-    // private async Task LoadGoogleCalendarEvents(string token)
-    // {
-    //     try
-    //     {
-    //         var client = HttpClientFactory.CreateClient();
-    //         client.DefaultRequestHeaders.Authorization =
-    //             new AuthenticationHeaderValue("Bearer", token);
-
-    //         Get upcoming 5 events
-    //         var url = "https:www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true";
-    //         var response = await client.GetStringAsync(url);
-
-    //         using var doc = JsonDocument.Parse(response);
-    //         events = new List<CalendarEvent>();
-
-    //         foreach (var item in doc.RootElement.GetProperty("items").EnumerateArray())
-    //         {
-    //             events.Add(new CalendarEvent
-    //             {
-    //                 Summary = item.GetProperty("summary").GetString(),
-    //                 Start = DateTime.Parse(item.GetProperty("start").GetProperty("dateTime").GetString()),
-    //                 End = DateTime.Parse(item.GetProperty("end").GetProperty("dateTime").GetString())
-    //             });
-    //         }
-    //     }
-    //     catch
-    //     {
-    //         events = new List<CalendarEvent>();
-    //     }
-    // }
-
-    private class CalendarEvent
+    private void ShowDeleteConfirmation()
     {
-        public string Summary { get; set; }
-        public DateTime Start { get; set; }
-        public DateTime End { get; set; }
+        ShowDeleteConfirm = true;
     }
-} *@
+
+    private void HideDeleteConfirmation()
+    {
+        ShowDeleteConfirm = false;
+    }
+
+    private void OnLogoutClicked()
+    {
+        Navigation.NavigateTo("/api/auth/logout", forceLoad: true);
+    }
+
+    private async Task OnDeleteAccountConfirmed()
+    {
+        DeleteError = null;
+        IsDeleting = true;
+        DeleteProgressMessage = "Deleting ratings...";
+        DeleteProgressPercent = 20;
+
+        try
+        {
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting rental requests...";
+            DeleteProgressPercent = 45;
+
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting uploaded tools...";
+            DeleteProgressPercent = 70;
+
+            await Task.Delay(250);
+            DeleteProgressMessage = "Deleting user account...";
+            DeleteProgressPercent = 90;
+
+            var response = await Http.DeleteAsync(Navigation.ToAbsoluteUri("/api/profile/me"));
+            if (!response.IsSuccessStatusCode)
+            {
+                DeleteError = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(DeleteError))
+                {
+                    DeleteError = $"Delete account failed ({(int)response.StatusCode})";
+                }
+                return;
+            }
+
+            DeleteProgressMessage = "Account deleted.";
+            DeleteProgressPercent = 100;
+            await Task.Delay(300);
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            DeleteError = ex.Message;
+        }
+        finally
+        {
+            IsDeleting = false;
+            ShowDeleteConfirm = false;
+            DeleteProgressMessage = "";
+            DeleteProgressPercent = 0;
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "In Chat" => "text-bg-primary",
+        "Interested" => "text-bg-warning",
+        "Booked" => "text-bg-success",
+        _ => "text-bg-secondary"
+    };
+
+    private static string FormatActivityDate(DateTimeOffset? value) =>
+        value?.ToString("MMM dd, HH:mm") ?? "--";
+
+    private sealed class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
+        public DateTimeOffset? UpdatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sendbird_user_id")]
+        public string? SendbirdUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_customer_id")]
+        public string? StripeCustomerId { get; set; }
+
+        public DateTimeOffset JoinedAt => CreatedAt?.ToLocalTime() ?? DateTimeOffset.Now;
+    }
+
+    private sealed class ListingItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Neighborhood { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
+
+    private sealed class ActivityItem
+    {
+        public Guid Id { get; set; }
+        public Guid? ToolId { get; set; }
+        public string ToolName { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string? RenterId { get; set; }
+        public Guid? OwnerId { get; set; }
+        public string? ChannelUrl { get; set; }
+        public string? StartDate { get; set; }
+        public string? EndDate { get; set; }
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
+}
+
+<style>
+    .profile-page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .profile-header h1 {
+        margin: 0;
+    }
+
+    .profile-header p {
+        margin: 0.25rem 0 0;
+        color: #6b7280;
+    }
+
+    .profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .profile-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: #fff;
+    }
+
+    .profile-card h2 {
+        font-size: 1.1rem;
+        margin: 0 0 0.8rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .label {
+        color: #6b7280;
+    }
+
+    .value {
+        font-weight: 600;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .danger-box {
+        margin-top: 0.9rem;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        border-radius: 0.6rem;
+        padding: 0.8rem;
+    }
+
+    .danger-box p {
+        margin: 0 0 0.6rem;
+        color: #b91c1c;
+    }
+
+    .delete-progress {
+        margin: 0.75rem 0;
+    }
+
+    .delete-progress-bar {
+        width: 100%;
+        height: 0.6rem;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .delete-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444, #f97316);
+        transition: width 0.25s ease;
+    }
+
+    .delete-progress-text {
+        margin: 0.5rem 0 0;
+        font-size: 0.9rem;
+        color: #7f1d1d;
+    }
+
+    .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+
+    .meta {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .item-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 0.8rem;
+        background: #fafafa;
+    }
+
+    .item-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .item-top h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .item-text {
+        color: #4b5563;
+        margin: 0 0 0.7rem;
+        font-size: 0.92rem;
+    }
+
+    .item-bottom {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+    }
+
+    .activities-list {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .activity-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: #fafafa;
+    }
+
+    .activity-main h3 {
+        margin: 0 0 0.25rem;
+        font-size: 1rem;
+    }
+
+    .activity-main p {
+        margin: 0;
+        color: #4b5563;
+    }
+
+    .activity-side {
+        display: grid;
+        gap: 0.35rem;
+        justify-items: end;
+        align-content: start;
+    }
+
+    .empty {
+        margin: 0;
+        color: #6b7280;
+    }
+
+    .error {
+        margin: 0;
+        color: #b91c1c;
+        font-weight: 600;
+    }
+
+    @@media (max-width: 900px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

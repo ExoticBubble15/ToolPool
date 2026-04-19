@@ -33,7 +33,7 @@ public class SendbirdService
     /// </summary>
     public async Task<string> CreateOrGetUserAsync(string userId, string nickname)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("Sendbird");
 
         using var getReq = BuildRequest(HttpMethod.Get, $"/users/{userId}");
         using var getResp = await client.SendAsync(getReq);
@@ -44,11 +44,13 @@ public class SendbirdService
         using var createReq = BuildRequest(HttpMethod.Post, "/users", new
         {
             user_id = userId,
-            nickname,
-            profile_url = ""
+            nickname = nickname
         });
+
         using var createResp = await client.SendAsync(createReq);
-        createResp.EnsureSuccessStatusCode();
+
+        var body = await createResp.Content.ReadAsStringAsync();
+
         return userId;
     }
 

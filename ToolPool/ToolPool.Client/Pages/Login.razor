@@ -1,43 +1,85 @@
 ﻿@page "/login"
 @rendermode InteractiveServer
+@using BlazorBootstrap
+@using ToolPool.Client.Models
+@inject HttpClient Http
 @inject NavigationManager Navigation
 @* server rendermode for security *@
 
-<style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        background: linear-gradient(to right, #d9d9d9, #000000);
-    }
-
-    .login-button {
-        padding: 15px 30px;
-        font-size: 1.2rem;
-        background-color: #000000;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-        .login-button:hover {
-            background-color: #d9d9d9;
-            transform: scale(1.05);
+<div style="display: flex; flex-direction: column; align-items: center; row-gap: 10px; justify-content: space-between;">
+    <div class="mb-3">
+        <input class="form-control @(usernameEmpty ? "is-invalid" : "")" @bind="Username" @bind:event="oninput" placeholder="Enter Email" style="width: 300px;" />
+        @if (usernameEmpty)
+        {
+            <div class="invalid-feedback">
+                Email cannot be empty
+            </div>
         }
-</style>
-
-<div class="login-container">
-    <button class="login-button" @onclick="RedirectToGoogle">
-        Login with Google
-    </button>
-</div>
+    </div>
+    <div class="mb-3">
+        <input type="password" class="form-control @(passwordEmpty ? "is-invalid" : "")" @bind="PasswordPlain" @bind:event="oninput" placeholder="Enter Password" style="width: 300px;" />
+        @if (passwordEmpty)
+        {
+            <div class="invalid-feedback">
+                Pasword cannot be empty
+            </div>
+        }
+    </div>
+    @if (loginFailed)
+    {
+        <div class="text-danger mt-2" style="width: 300px; text-align: center;">
+            @errorText
+        </div>
+    }
+    
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Sign In</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="api/auth/google">Login With Google</Button>
+</div> 
 
 @code {
-    void RedirectToGoogle()
+    private string? Username { get; set; }
+    private string? PasswordPlain { get; set; }
+
+    private bool usernameEmpty;
+    private bool passwordEmpty;
+    private bool loginFailed;
+    private string errorText = "";
+
+    private async Task tryLogin()
     {
-        Navigation.NavigateTo("auth/google", forceLoad: true);
+        usernameEmpty = string.IsNullOrEmpty(Username);
+        passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
+
+        if (!(usernameEmpty || passwordEmpty))
+        {
+            var request = new LoginRequest
+            {
+                Email = Username,
+                Password = PasswordPlain
+            };
+            var response = await Http.PostAsJsonAsync("api/auth/signin", request);
+            try
+            {
+                response.EnsureSuccessStatusCode();
+                var result = await response.Content.ReadFromJsonAsync<LoginStatus>();
+
+                if ((!result?.success) ?? true)
+                {
+                    errorText = result?.failureMessage ?? "Unknown Error";
+                    loginFailed = true;
+                }
+                else
+                {
+                    loginFailed = false;
+                    Navigation.NavigateTo("/");
+                }
+            }
+            catch (Exception ex)
+            {
+                errorText = ex.Message;
+                loginFailed = true;
+            }
+        }
     }
 }

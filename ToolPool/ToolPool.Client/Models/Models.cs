@@ -2,6 +2,16 @@
 
 namespace ToolPool.Client.Models;
 
+// item in catalog
+public class DemoItem
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string ImageUrl {get; set; } = string.Empty;
+    public decimal Price { get; set; }
+}
+
 public class Tool
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -76,7 +86,38 @@ public class InterestRequest
     [JsonPropertyName("end_date")]
     public string? EndDate { get; set; }
 }
+// user registration status
+public class RegistrationStatus
+{
+    public string? username { get; set; }
+    public bool? isAuthed { get; set; }
+}
 
+public class LoginStatus
+{
+    public bool success { get; set; }
+    public string? failureMessage { get; set; }
+}
+
+public class RegisterRequest
+{
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Username { get; set; } = "";
+}
+
+public class LoginRequest
+{
+    public required string Email { get; set; }
+    public required string Password { get; set; }
+}
+
+public class userIDs
+{
+    public string? StripeCustomerId { get; set; }
+    public string? StripeAccountId { get; set; }
+    public string? SendBirdId { get; set; }
+}
 public class InterestResponse
 {
     public bool Success { get; set; }

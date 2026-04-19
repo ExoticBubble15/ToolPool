@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Stripe.Forwarding;
 using System.Net.Http;
@@ -447,6 +449,36 @@ namespace ToolPool.Controllers
 
             [JsonPropertyName("created_at")]
             public DateTimeOffset? CreatedAt { get; set; }
+        }
+
+        [HttpPost("users/register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            var result = await _userService.RegisterUserAsync(request);
+
+            if (!result.IsValid)
+            {
+                return BadRequest(new
+                {
+                    error = result.ErrorMessage
+                });
+            }
+
+            // issue auth cookie on success
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Email, request.Email)
+            };
+            var identity = new ClaimsIdentity(claims, "cookies");
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("Cookies", principal, new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
+            return Ok(result);
         }
     }
 }

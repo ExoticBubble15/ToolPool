@@ -1,8 +1,13 @@
-@rendermode InteractiveWebAssembly
+@using System.Net
 @using BlazorBootstrap
+@using ToolPool.Client.Services
+@rendermode InteractiveServer
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
 @inject NavigationManager Navigation
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject Supabase.Client supabase
 @inject ToolService ToolService
 
 <span style="display: flex; align-items: center; gap: 5px">
@@ -11,7 +16,7 @@
         <span style="margin-right: 5px; font-size: 0.9em;">@username</span>
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/chat">Messages</Button>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" @onclick="DoLogout">Logout</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="SignOutAsync">Sign Out</Button>
     } else
     {
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/login">Login</Button>
@@ -24,17 +29,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await ToolService.GetCurrentUserAsync();
-        if (user is not null)
+        try
         {
-            authenticated = true;
-            username = !string.IsNullOrEmpty(user.Username) ? user.Username : user.Email;
+            var response = await Http.GetAsync("api/auth/status");
+            if (response.IsSuccessStatusCode)
+            {
+                authenticated = true;
+            }
+            else
+            {
+                authenticated = false;
+            }
+        }
+        catch
+        {
+            authenticated = false;
         }
     }
 
-    private async Task DoLogout()
+    protected async Task SignOutAsync()
     {
-        await ToolService.LogoutAsync();
-        Navigation.NavigateTo("/", forceLoad: true);
+        var response = await Http.GetAsync("api/auth/logout");
+        // log user out of supabase auth
+        await supabase.Auth.SignOut();
+        if (response.IsSuccessStatusCode)
+        {
+            // redirect or success UI
+            Navigation.NavigateTo("/");
+            authenticated = false;
+        }
     }
-}
+} 
