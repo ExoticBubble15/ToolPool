@@ -75,7 +75,7 @@ namespace ToolPool.Controllers
         }
 
         [HttpPost("signin")]
-        public async Task<IActionResult> TrySignIn([FromBody] ToolPool.Client.Models.LoginRequest request)
+        public async Task<IActionResult> TrySignIn([FromBody] Client.Models.LoginRequest request)
         {
             var loginStatus = await _userService.LoginUserAsync(request);
             if (!loginStatus.success) return Ok(loginStatus);
