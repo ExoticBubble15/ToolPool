@@ -174,7 +174,7 @@ else
     [Parameter] public Guid? ToolId { get; set; }
 
     private Tool? tool;
-    private AppUser? currentUser;
+    private AccountInfo? currentUser;
     private bool authChecked = false;
     private bool isLoading = true;
     private string message = "";
@@ -185,6 +185,7 @@ else
     private string? errorMsg;
     private string? channelUrl;
     private Guid? interestId;
+
 
     private bool HasValidDates => startDate is not null && endDate is not null && endDate >= startDate;
 
@@ -198,7 +199,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        currentUser = await ToolService.GetCurrentUserAsync();
+        currentUser = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
         authChecked = true;
 
         if (currentUser is null || ToolId is null) { isLoading = false; return; }
@@ -338,4 +339,28 @@ else
         "Cleaning" => "#dde5e8",
         _ => "#e8e4de"
     };
+
+    private sealed class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
+        public DateTimeOffset? UpdatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sendbird_user_id")]
+        public string? SendbirdUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_customer_id")]
+        public string? StripeCustomerId { get; set; }
+
+        public DateTimeOffset JoinedAt => CreatedAt?.ToLocalTime() ?? DateTimeOffset.Now;
+    }
 }

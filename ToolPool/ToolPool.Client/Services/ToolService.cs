@@ -87,15 +87,12 @@ public class ToolService
 
     // ── Interests ──
 
-    public async Task<List<MyInterestItem>> GetMyInterestsAsync()
+    public async Task<List<MyInterestItem>> GetMyInterestsAsync(Guid userId)
     {
-        try
-        {
-            return await _http.GetFromJsonAsync<List<MyInterestItem>>("/api/my-interests") ?? new();
-        }
-        catch { return new(); }
+        return await _http.GetFromJsonAsync<List<MyInterestItem>>(
+            $"/api/my-interests?userId={userId}"
+        ) ?? new();
     }
-
     // ── Chat Payment ──
 
     public async Task<ChatPaymentContext?> GetChatPaymentContextAsync(Guid interestId)

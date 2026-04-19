@@ -5,6 +5,8 @@
 @using ToolPool.Client.Services
 @inject ToolService ToolService
 @inject NavigationManager Nav
+@inject HttpClient Http
+
 
 <div class="chat-list-container">
     <div class="chat-list-header">
@@ -90,7 +92,7 @@
 </div>
 
 @code {
-    private AppUser? currentUser;
+    private AccountInfo? currentUser;
     private bool authChecked = false;
     private bool isLoadingInterests = false;
     private string errorMsg = "";
@@ -103,7 +105,7 @@
         if (!firstRender || _loaded) return;
         _loaded = true;
 
-        currentUser = await ToolService.GetCurrentUserAsync();
+        currentUser = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
         authChecked = true;
 
         if (currentUser is not null)
@@ -118,7 +120,7 @@
         errorMsg = "";
         try
         {
-            interests = await ToolService.GetMyInterestsAsync();
+            interests = await ToolService.GetMyInterestsAsync(currentUser.Id);
         }
         catch (Exception ex)
         {
@@ -128,5 +130,29 @@
         {
             isLoadingInterests = false;
         }
+    }
+
+    private sealed class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
+        public DateTimeOffset? UpdatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sendbird_user_id")]
+        public string? SendbirdUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_customer_id")]
+        public string? StripeCustomerId { get; set; }
+
+        public DateTimeOffset JoinedAt => CreatedAt?.ToLocalTime() ?? DateTimeOffset.Now;
     }
 }

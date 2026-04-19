@@ -329,12 +329,13 @@ namespace ToolPool.Controllers
         }
 
         [HttpGet("my-interests")]
-        public async Task<ActionResult<List<MyInterestItem>>> GetMyInterests()
+        public async Task<ActionResult<List<MyInterestItem>>> GetMyInterests([FromQuery] Guid userId)
         {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(idClaim) || !Guid.TryParse(idClaim, out var userId))
-                return Unauthorized(new { error = "Not authenticated" });
+            // Validate input
+            if (userId == Guid.Empty)
+                return BadRequest(new { error = "Missing userId" });
 
+            // Fetch interests
             var asRenter = await _supabase.GetInterestsByRenterAsync(userId.ToString());
             var asOwner = await _supabase.GetInterestsByOwnerAsync(userId);
 
@@ -345,25 +346,28 @@ namespace ToolPool.Controllers
 
             foreach (var i in asOwner)
             {
-                // Guard against same row appearing in both queries
+                // Guard against duplicates
                 if (allItems.Any(x => x.Sub.Id == i.Id)) continue;
                 allItems.Add((i, "owner"));
             }
 
-            // Deduplicate by channel_url: keep the most recent row per channel.
-            // Rows without channel_url are kept individually.
+            // Deduplicate by channel_url (or fallback to Id)
             var grouped = allItems
-                .GroupBy(x => string.IsNullOrEmpty(x.Sub.ChannelUrl) ? x.Sub.Id.ToString() : x.Sub.ChannelUrl)
+                .GroupBy(x => string.IsNullOrEmpty(x.Sub.ChannelUrl)
+                    ? x.Sub.Id.ToString()
+                    : x.Sub.ChannelUrl)
                 .Select(g => g.OrderByDescending(x => x.Sub.CreatedAt).First())
                 .ToList();
 
-            // Resolve counterpart names (batch unique user IDs to reduce lookups)
+            // Cache users to avoid repeated DB calls
             var userCache = new Dictionary<Guid, AppUser?>();
 
             var results = new List<MyInterestItem>();
+
             foreach (var (sub, role) in grouped)
             {
                 string counterpartName;
+
                 if (role == "renter" && sub.OwnerId.HasValue)
                 {
                     if (!userCache.TryGetValue(sub.OwnerId.Value, out var owner))
@@ -371,6 +375,7 @@ namespace ToolPool.Controllers
                         owner = await _supabase.GetUserByIdAsync(sub.OwnerId.Value);
                         userCache[sub.OwnerId.Value] = owner;
                     }
+
                     counterpartName = owner?.Username ?? owner?.Email ?? "Owner";
                 }
                 else if (role == "owner" && Guid.TryParse(sub.RenterId, out var renterGuid))
@@ -380,6 +385,7 @@ namespace ToolPool.Controllers
                         renter = await _supabase.GetUserByIdAsync(renterGuid);
                         userCache[renterGuid] = renter;
                     }
+
                     counterpartName = renter?.Username ?? renter?.Email ?? "Renter";
                 }
                 else
