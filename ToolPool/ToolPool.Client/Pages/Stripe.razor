@@ -6,14 +6,13 @@
 @inject ToolService ItemService
 @inject CartService Cart
 @inject HttpClient Http
-@inject DemoItemService DemoItemService
 @inject NavigationManager Nav
 @using System.Net.Http.Json
 
 <div class="page-wrap">
     <div class="page-hero">
         <h1>Tool Pool</h1>
-        <p>Add a Tool.</p>
+        <p>Your Listings</p>
     </div>
 
     @* STRIPE ONBOARDING BLOCK *@
@@ -31,11 +30,12 @@
         </div>
     }
 
+    @* ADD TOOL FORM *@
     <div class="suggest-wrap">
         <div class="item-card suggest-card">
             <div class="item-info">
                 <h3>Add a Tool</h3>
-                <p>Add a tool you want to share or rent out.</p>
+                <p>Create a new listing.</p>
             </div>
 
             <div class="submit-grid">
@@ -51,7 +51,7 @@
 
             <div class="submit-actions">
                 <button class="btn-submit"
-                        @onclick="SubmitDemoItem"
+                        @onclick="SubmitTool"
                         disabled="@(IsSubmitting || !HasStripeOnboarded)">
                     @(IsSubmitting ? "Submitting..." : "Submit Tool")
                 </button>
@@ -64,36 +64,41 @@
         </div>
     </div>
 
-    @*
+    @* USER'S TOOL LISTINGS *@
     <div class="item-grid">
-        @foreach (var item in Items)
+        @if (Items.Count == 0)
         {
-            var inCart = Cart.IsInCart(item.Id);
+            <p>No tools listed yet.</p>
+        }
+        else
+        {
+            @foreach (var item in Items)
+            {
+                var inCart = Cart.IsInCart(item.Id);
 
-            <div class="item-card @(inCart ? "in-cart" : "")">
-                <div class="item-info">
-                    <h3>@item.Name</h3>
-                    <p>@item.Description</p>
+                <div class="item-card @(inCart ? "in-cart" : "")">
+                    <div class="item-info">
+                        <h3>@item.Name</h3>
+                        <p>@item.Description</p>
+                    </div>
+
+                    <div class="item-footer">
+                        <span class="item-price">$@item.Price.ToString("F2")</span>
+
+                        @* <button class="@(inCart ? "btn-remove" : "btn-add")"
+                                @onclick="() => Toggle(item)">
+                            @(inCart ? "Added" : "+ Add")
+                        </button> *@
+
+                        <button class="btn-delete"
+                                @onclick="() => DeleteItem(item)">
+                            Delete Item
+                        </button>
+                    </div>
                 </div>
-
-                <div class="item-footer">
-                    <span class="item-price">$@item.Price.ToString("F2")</span>
-
-                    <button class="@(inCart ? "btn-remove" : "btn-add")"
-                            @onclick="() => Toggle(item)">
-                        @(inCart ? "Added" : "+ Add")
-                    </button>
-
-                    <button class="btn-delete"
-                            @onclick="() => DeleteItem(item)"
-                            title="Delete item">
-                        Delete Item
-                    </button>
-                </div>
-            </div>
+            }
         }
     </div>
-    *@
 
     @if (Cart.Count > 0)
     {
@@ -107,6 +112,7 @@
 @code {
 
     private List<Tool> Items = new();
+
     private string FormName = "";
     private string FormDescription = "";
     private string FormImageUrl = "";
@@ -119,30 +125,40 @@
     private bool SubmitOk = false;
 
     private bool HasStripeOnboarded = false;
+
     private Guid CurrentUserId;
-    private string OwnerId = "";
+    private Guid OwnerId;
     private string OwnerName = "";
     private string? StripeAccountId;
 
     protected override async Task OnInitializedAsync()
     {
-        Items = await ItemService.GetToolsAsync();
         Cart.OnChange += StateHasChanged;
 
         await LoadCurrentUserAsync();
         HasStripeOnboarded = await CheckStripeAsync();
+
+        await LoadUserToolsAsync();
+    }
+
+    private async Task LoadUserToolsAsync()
+    {
+        var allTools = await ItemService.GetToolsAsync();
+
+        Items = allTools
+            .Where(t => t.OwnerId == OwnerId)
+            .ToList();
     }
 
     private async Task LoadCurrentUserAsync()
     {
         var me = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
+
         if (me is null)
-        {
             throw new InvalidOperationException("Failed to load current user profile.");
-        }
 
         CurrentUserId = me.Id;
-        OwnerId = me.Id.ToString();
+        OwnerId = me.Id;
         OwnerName = me.Username ?? "";
         StripeAccountId = me.StripeAccountId;
     }
@@ -151,11 +167,9 @@
     {
         try
         {
-            Console.WriteLine("CLICKED STRIPE BUTTON");
-
             if (string.IsNullOrWhiteSpace(StripeAccountId))
             {
-                SubmitMessage = "No Stripe account found for the current user.";
+                SubmitMessage = "No Stripe account found.";
                 SubmitOk = false;
                 return;
             }
@@ -166,45 +180,32 @@
             );
 
             var url = await response.Content.ReadAsStringAsync();
-
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("STRIPE ERROR: " + ex.Message);
+            SubmitMessage = $"Stripe error: {ex.Message}";
         }
     }
 
     private async Task<bool> CheckStripeAsync()
     {
         if (string.IsNullOrWhiteSpace(StripeAccountId))
-        {
             return false;
-        }
 
         return await Http.GetFromJsonAsync<bool>(
             Nav.ToAbsoluteUri($"/api/stripe/onboarding-status/{StripeAccountId}")
         );
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await Cart.LoadAsync();
-            StateHasChanged();
-        }
-
-    }
-
-    private async Task SubmitDemoItem()
+    private async Task SubmitTool()
     {
         SubmitMessage = "";
         SubmitOk = false;
 
         if (!HasStripeOnboarded)
         {
-            SubmitMessage = "You must complete Stripe onboarding first.";
+            SubmitMessage = "Complete Stripe onboarding first.";
             return;
         }
 
@@ -216,7 +217,7 @@
 
         if (!decimal.TryParse(FormPriceText, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) || price < 0)
         {
-            SubmitMessage = "Enter a valid non-negative price (e.g. 12.34).";
+            SubmitMessage = "Invalid price.";
             return;
         }
 
@@ -224,23 +225,16 @@
 
         try
         {
-            await DemoItemService.InsertSubmissionAsync(
+            await ItemService.InsertToolAsync(
                 FormName.Trim(),
                 FormDescription.Trim(),
-                price,
-                FormImageUrl.Trim(),
-                OwnerId,
-                FormCategory.Trim(),
-                OwnerName,
-                FormNeighborhood.Trim()
+                price
             );
 
-
-
-            Items = await DemoItemService.GetDemoItemsAsync();
+            await LoadUserToolsAsync();
 
             SubmitOk = true;
-            SubmitMessage = "Submitted successfully.";
+            SubmitMessage = "Tool added successfully.";
 
             FormName = "";
             FormDescription = "";
@@ -259,7 +253,7 @@
         }
     }
 
-    private async void Toggle(Tool item)
+    private async Task Toggle(Tool item)
     {
         if (Cart.IsInCart(item.Id))
         {
@@ -274,8 +268,6 @@
         Cart.NotifyChanged();
     }
 
-    public void Dispose() => Cart.OnChange -= StateHasChanged;
-
     private async Task DeleteItem(Tool item)
     {
         if (Cart.IsInCart(item.Id))
@@ -286,9 +278,13 @@
         }
 
         await ItemService.DeleteToolAsync(item.Id);
-        Items = await ItemService.GetToolsAsync();
+        await LoadUserToolsAsync();
     }
 
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
 
     private class AccountInfo
     {
