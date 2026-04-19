@@ -625,23 +625,10 @@ public class SupabaseDemoService
     }
 
 
-    public async Task<Models.Tool> InsertToolAsync(string name, string description, decimal price,
-        string category = "", Guid? ownerId = null, string ownerName = "", string neighborhood = "", string imageUrl = "")
+    public async Task<Models.Tool> InsertToolAsync(Models.Tool payload) 
     {
         //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools";
-
-        var payload = new
-        {
-            name,
-            description,
-            price,
-            category,
-            owner_id = ownerId,
-            owner_name = ownerName,
-            neighborhood,
-            image_url = imageUrl
-        };
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
         req.Headers.Add("apikey", _opt.ServiceRoleKey);
@@ -650,10 +637,16 @@ public class SupabaseDemoService
         req.Content = JsonContent.Create(payload);
 
         using var resp = await client.SendAsync(req);
+        //if (!resp.IsSuccessStatusCode)
+        //{
+        //    var errorContent = await resp.Content.ReadAsStringAsync();
+        //    Console.WriteLine($"Status: {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        //    Console.WriteLine($"Error: {errorContent}");
+        //}
         resp.EnsureSuccessStatusCode();
 
         var inserted = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
-        return inserted?.FirstOrDefault() ?? new Models.Tool { Name = name, Description = description, Price = price };
+        return inserted?.FirstOrDefault() ?? new Models.Tool();
     }
 
 

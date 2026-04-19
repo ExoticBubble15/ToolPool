@@ -39,7 +39,7 @@
     </div>
 
     <div class="browse-filter-group">
-        <span class="browse-filter-label">Price*</span>
+        <span class="browse-filter-label">Price</span>
         <CurrencyInput @bind-Value="@toolSubmission.Price" TValue="decimal" />
     </div>
 
@@ -144,8 +144,7 @@
 }
 
 @code {
-    private Tool toolSubmission = new();
-
+    private Tool toolSubmission = new Tool();
     Collapse categoriesMenu = default!;
     private List<String> categoriesList;
     private bool categoriesLoaded = false;
@@ -184,7 +183,6 @@
 
     private bool HasStripeOnboarded = false;
 
-    private Guid CurrentUserId;
     private Guid OwnerId;
     private string OwnerName = "";
     private string? StripeAccountId;
@@ -195,6 +193,7 @@
 
         await LoadCurrentUserAsync();
         HasStripeOnboarded = await CheckStripeAsync();
+        // HasStripeOnboarded = true;
 
         await LoadUserToolsAsync();
 
@@ -218,10 +217,12 @@
         if (me is null)
             throw new InvalidOperationException("Failed to load current user profile.");
 
-        CurrentUserId = me.Id;
         OwnerId = me.Id;
         OwnerName = me.Username ?? "";
         StripeAccountId = me.StripeAccountId;
+
+        toolSubmission.OwnerId = OwnerId;
+        toolSubmission.OwnerName = OwnerName;
     }
 
     private async Task GoToStripeOnboarding()
@@ -264,7 +265,7 @@
     {
         return toolSubmission.Name == String.Empty ||
                 toolSubmission.Description == String.Empty ||
-                toolSubmission.Price <= 0 ||
+                toolSubmission.Price < 0 ||
                 toolSubmission.Category == String.Empty ||
                 toolSubmission.AddressLat == 0 ||
                 toolSubmission.AddressLng == 0;
@@ -281,6 +282,8 @@
         var sorted = neighborhoodTriples.OrderBy(trip => Geo.Distance(new GeoCoordinate(trip.Latitude, trip.Longitude), addressCord, DistanceUnit.Miles));
         toolSubmission.Neighborhood = sorted.First().Neighborhood;
 
+        toolSubmission.CreatedAt = DateTime.UtcNow;
+
         if (!HasStripeOnboarded)
         {
             SubmitMessage = "Complete Stripe onboarding first.";
@@ -290,15 +293,20 @@
         IsSubmitting = true;
         try
         {
+            foreach (var prop in toolSubmission.GetType().GetProperties())
+            {
+                Console.WriteLine($"{prop.Name}: {prop.GetValue(toolSubmission)}");
+            }
             // NEED TO FIX SUBMITTING TOOL TO DB - RN ALL THE FORM DATA IS STORED IN A TOOL OBJECT, SO MAYBE JUST PASS IT TO THE APIS AND CONTROLLERS?
-            // await ItemService.InsertToolAsync(toolSubmission);
-            await ItemService.InsertToolAsync(toolSubmission.Name, toolSubmission.Description, toolSubmission.Price);
+            await ItemService.InsertToolAsync(toolSubmission);
 
             await LoadUserToolsAsync();
 
             SubmitOk = true;
             SubmitMessage = "Tool added successfully.";
-            toolSubmission = new();
+            toolSubmission = new Tool();
+            toolSubmission.OwnerId = OwnerId;
+            toolSubmission.OwnerName = OwnerName;
         }
         catch (Exception ex)
         {

@@ -45,16 +45,11 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<InterestResponse>() ?? new InterestResponse();
     }
 
-    public async Task<Tool> InsertToolAsync(string name, string description, decimal price)
+    public async Task<Tool> InsertToolAsync(Tool t)
     {
-        var resp = await _http.PostAsJsonAsync("/api/Tools", new { name, description, price });
+        var resp = await _http.PostAsJsonAsync("/api/Tools", t);
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadFromJsonAsync<Tool>() ?? new Tool
-        {
-            Name = name,
-            Description = description,
-            Price = price
-        };
+        return await resp.Content.ReadFromJsonAsync<Tool>() ?? new Tool();
     }
 
     public async Task DeleteToolAsync(Guid id)

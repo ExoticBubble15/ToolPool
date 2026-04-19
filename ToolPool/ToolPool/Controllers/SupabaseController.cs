@@ -208,9 +208,9 @@ namespace ToolPool.Controllers
         }
 
         [HttpPost("Tools")]
-        public async Task<ActionResult<Models.Tool>> InsertTool([FromBody] CreateToolRequest request)
+        public async Task<ActionResult<Models.Tool>> InsertTool([FromBody] Models.Tool t)
         {
-            var item = await _supabase.InsertToolAsync(request.Name, request.Description, request.Price);
+            var item = await _supabase.InsertToolAsync(t);
             return Ok(item);
         }
 
