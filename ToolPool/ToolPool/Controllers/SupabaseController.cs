@@ -521,5 +521,21 @@ namespace ToolPool.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("check-availability")]
+        public async Task<IActionResult> CheckAvailability(CheckAvailabilityRequest req)
+        {
+            var conflict = await _supabase.HasBookingConflictAsync(
+                req.ToolId,
+                DateTime.Parse(req.StartDate),
+                DateTime.Parse(req.EndDate)
+            );
+
+            return Ok(new
+            {
+                hasConflict = conflict,
+                message = conflict ? "Tool is already booked for these dates" : null
+            });
+        }
     }
 }

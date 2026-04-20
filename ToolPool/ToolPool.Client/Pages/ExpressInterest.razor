@@ -122,10 +122,20 @@ else
                 <div class="ei-form-group">
                     <label class="ei-label">Preferred rental dates</label>
                     <div class="ei-date-row">
-                        <input type="date" class="ei-input" @bind="startDate" />
+                        <input type="date" class="ei-input"
+                               @bind="startDate"
+                               @bind:after="CheckAvailability" />
                         <span class="ei-date-sep">to</span>
-                        <input type="date" class="ei-input" @bind="endDate" />
+                        <input type="date" class="ei-input"
+                               @bind="endDate"
+                               @bind:after="CheckAvailability" />
                     </div>
+                    @if (hasConflict)
+                    {
+                        <div class="ei-error">
+                            @conflictMessage
+                        </div>
+                    }
                 </div>
 
                 <div class="ei-form-group">
@@ -150,10 +160,10 @@ else
                 else
                 {
                     <div class="ei-button-group">
-                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@submitting">
+                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@(submitting || !HasValidDates || hasConflict)">
                             @(submitting ? "Submitting..." : "Express Interest & Start Chat")
                         </button>
-                        <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates)">
+                        <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates || hasConflict)">
                             @if (HasValidDates)
                             {
                                 <span>Pay Now: $@CalculateTotal().ToString("F2")</span>
@@ -186,6 +196,8 @@ else
     private string? errorMsg;
     private string? channelUrl;
     private Guid? interestId;
+    private bool hasConflict = false;
+    private string? conflictMessage;
 
 
     private bool HasValidDates => startDate is not null && endDate is not null && endDate >= startDate;
@@ -197,7 +209,7 @@ else
         var days = (endDate.Value - startDate.Value).Days + 1;
         return tool.Price * Math.Max(1, days);
     }
-
+    
     protected override async Task OnInitializedAsync()
     {
         var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
@@ -347,6 +359,37 @@ else
         }
     }
 
+    private async Task CheckAvailability()
+    {
+        hasConflict = false;
+        conflictMessage = null;
+
+        if (tool is null || startDate is null || endDate is null)
+            return;
+
+        if (endDate < startDate)
+            return;
+
+        try
+        {
+            var request = new
+            {
+                ToolId = tool.Id,
+                StartDate = startDate.Value.ToString("yyyy-MM-dd"),
+                EndDate = endDate.Value.ToString("yyyy-MM-dd")
+            };
+
+            var response = await Http.PostAsJsonAsync("api/check-availability", request);
+            var result = await response.Content.ReadFromJsonAsync<AvailabilityResponse>();
+
+            hasConflict = result?.HasConflict ?? false;
+            conflictMessage = result?.Message;
+        }
+        catch
+        {
+            // ignore for UX (or log)
+        }
+    }
     private static string GetBgColor(string category) => category switch
     {
         "Power Tools" => "#e8e4de",
