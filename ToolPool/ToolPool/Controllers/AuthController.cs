@@ -119,11 +119,9 @@ namespace ToolPool.Controllers
             User? user = await _supabaseService.GetUserAsync(email ?? "");
             if (user?.Session == null) return Ok();
 
-            Supabase.Gotrue.Session session = user.Session;
-
             try
             {
-                await supabase.Auth.SetSession(session.AccessToken, session.RefreshToken);
+                await supabase.Auth.SetSession(user.access_token ?? "", user.refresh_token ?? "");
             }
             catch (Exception ex) 
             { 
