@@ -11,7 +11,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var response = await Http.GetAsync($"api/payment/success?session_id={session_id}");
+        var callbackUrl = Nav.ToAbsoluteUri($"/api/payment/success?session_id={Uri.EscapeDataString(session_id)}");
+        var response = await Http.GetAsync(callbackUrl);
 
         var text = await response.Content.ReadAsStringAsync();
 
