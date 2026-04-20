@@ -701,6 +701,39 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
+    public async Task<bool> HasBookingConflictAsync(Guid toolId, DateTime start, DateTime end)
+    {
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?" +
+                  $"tool_id=eq.{toolId}" +
+                  $"&select=start_date,end_date";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var bookings = await resp.Content
+            .ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts)
+            ?? new();
+
+        foreach (var b in bookings)
+        {
+            if (!DateTime.TryParse(b.StartDate, out var bStart)) continue;
+            if (!DateTime.TryParse(b.EndDate, out var bEnd)) continue;
+
+            // overlap check
+            bool overlap = start <= bEnd && end >= bStart;
+
+            if (overlap)
+                return true;
+        }
+
+        return false;
+    }
+
     //public async Task SeedToolsAsync()
     //{
     //    var existing = await GetToolsAsync();
@@ -760,6 +793,7 @@ public class ProfileUserDto
     [JsonPropertyName("sendbird_user_id")]
     public string? SendbirdUserId { get; set; }
 }
+
 
 public class ProfileListingDto
 {

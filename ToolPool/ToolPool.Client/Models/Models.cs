@@ -94,7 +94,11 @@ public class StripeRentalRequest
     public string? Message { get; set; }
     public string? UserEmail { get; set; }
 }
-
+public class AvailabilityResponse
+{
+    public bool HasConflict { get; set; }
+    public string? Message { get; set; }
+}
 public class StripeResponse
 {
     public string Url { get; set; } = "";
