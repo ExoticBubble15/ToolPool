@@ -11,7 +11,7 @@ public class SupabaseDemoService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SupabaseOptions _opt;
-    private Dictionary<String, User> _users;
+    private Dictionary<String, ToolPool.Models.User> _users;
     private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
     private HttpClient client;
 

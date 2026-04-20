@@ -104,7 +104,7 @@ public class UserService
             else
             {
                 var user = await _db.GetUserAsync(request.Email);
-                user?.UserSession = response;
+                user?.Session = response;
                 await _db.UpdateUserSessionAsync(request.Email, response);
                 return new LoginStatus { success = true, };
             }

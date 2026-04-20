@@ -51,7 +51,7 @@
         @if (passwordTooShort)
         {
             <div class="invalid-feedback">
-                Passwords must be at least 6 characters.
+                Password must be at least 6 characters.
             </div>
         }
     </div>
@@ -104,10 +104,11 @@
 
         if (emailEmpty || emailInvalidFormat || usernameEmpty || passwordEmpty || passwordMismatch || passwordTooShort)
         {
-            if (emailInvalidFormat)
-            {
-                registerFailureMessage = "Please enter a valid format and try again.";
-            }
+            // validation for this later.
+            // if (emailInvalidFormat)
+            // {
+            //     registerFailureMessage = "Please enter a valid email format and try again.";
+            // }
             return;
         }
 
