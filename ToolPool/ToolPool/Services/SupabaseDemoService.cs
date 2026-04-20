@@ -354,7 +354,8 @@ public class SupabaseDemoService
 
     public async Task<List<MarkerDetails>> GetMarkerDetails()
     {
-        var url = $"{_opt.Url}rest/v1/Tools?select=id,name,description,owner_name,price,addressLat,addressLng";
+        var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
+        var url = $"{baseUrl}/rest/v1/Tools?select=id,name,description,owner_name,price,addressLat,addressLng";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
