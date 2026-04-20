@@ -182,7 +182,7 @@ public class SupabaseDemoService
     public async Task UpdateUserSessionAsync(string email, Session newSession)
     {
         var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Users?email={email}";
+        var url = $"{_opt.Url}/rest/v1/Users?email=eq.{Uri.EscapeDataString(email)}";
 
         using var req = new HttpRequestMessage(HttpMethod.Patch, url);
 

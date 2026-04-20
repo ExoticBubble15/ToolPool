@@ -78,7 +78,8 @@ public class SendbirdService
         using (var createReq = BuildRequest(HttpMethod.Post, "/users", new
         {
             user_id = userId,
-            nickname = string.IsNullOrWhiteSpace(nickname) ? userId : nickname
+            nickname = string.IsNullOrWhiteSpace(nickname) ? userId : nickname,
+            profile_url = BuildDefaultProfileUrl(userId, nickname)
         }))
         using (var createResp = await client.SendAsync(createReq))
         {
@@ -218,6 +219,12 @@ public class SendbirdService
             return body.Length > 512 ? body.Substring(0, 512) + "…" : body;
         }
         catch { return ""; }
+    }
+
+    private static string BuildDefaultProfileUrl(string userId, string? nickname)
+    {
+        var seed = string.IsNullOrWhiteSpace(nickname) ? userId : nickname;
+        return $"https://api.dicebear.com/9.x/initials/svg?seed={Uri.EscapeDataString(seed)}";
     }
 
     private static bool IsMissingUserResponse(HttpStatusCode status, string body)
