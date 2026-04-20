@@ -163,8 +163,12 @@
                 @if (mapLoaded && markersLoaded) {
 	                @foreach (var m in markers)
 	                {
-                        <MarkerComponent @key="m.Id" Lat="@Math.Round(m.AddressLat, 2, MidpointRounding.ToZero)" Lng="@Math.Round(m.AddressLng, 2, MidpointRounding.ToZero)">
-				            <div style="display: flex; flex-direction: column; align-items: center; text-align: center">
+                        <MarkerComponent @key="m.Id"
+                                         Lat="@Math.Round(m.AddressLat, 2, MidpointRounding.ToZero)"
+                                         Lng="@Math.Round(m.AddressLng, 2, MidpointRounding.ToZero)"
+                                         Clickable="true"
+                                         OnClick="@(() => Nav.NavigateTo($"/express_interest/{m.Id}"))">
+                            <div style="display: flex; flex-direction: column; align-items: center; text-align: center">
                                 <h6 style="background: white">@m.Name - @m.Price.ToString("C")</h6>
                                 <Image Src="/browse.png" Alt="Browse" />
                                 <span style="background: white">@m.Owner_name</span>
