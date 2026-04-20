@@ -239,7 +239,7 @@ else
                 ToolName = tool.Name,
                 StartDate = startDate.Value.ToString("yyyy-MM-dd"),
                 EndDate = endDate.Value.ToString("yyyy-MM-dd"),
-                Message = message
+                Message = message,
             };
 
             var response = await ToolService.SubmitInterestAsync(request);
