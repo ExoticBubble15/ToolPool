@@ -1,5 +1,5 @@
 ﻿@page "/login"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @inject HttpClient Http
@@ -72,7 +72,7 @@
                 else
                 {
                     loginFailed = false;
-                    Navigation.NavigateTo("/");
+                    Navigation.NavigateTo("/", forceLoad: true);
                 }
             }
             catch (Exception ex)

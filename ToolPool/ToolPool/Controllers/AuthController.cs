@@ -64,13 +64,20 @@ namespace ToolPool.Controllers
         [HttpGet("status")]
         public async Task<IActionResult> AuthStatus()
         {
-            if (User.Identity != null &&  User.Identity.IsAuthenticated)
+            if (User.Identity != null && User.Identity.IsAuthenticated)
             {
-                return Ok();
+                var email = User.FindFirstValue(ClaimTypes.Email);
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                return Ok(new
+                {
+                    authenticated = true,
+                    email,
+                    userId
+                });
             }
             else
             {
-                return BadRequest();
+                return Unauthorized(new { authenticated = false });
             }
         }
 
@@ -88,6 +95,7 @@ namespace ToolPool.Controllers
             // issue auth cookie
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, request.Email)
             };
             var identity = new ClaimsIdentity(claims, "cookies");

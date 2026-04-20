@@ -1,5 +1,5 @@
 ﻿@page "/profile"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using BlazorBootstrap
 @using System.Net.Http.Json
 @inject HttpClient Http
@@ -42,16 +42,31 @@
             <div class="info-row">
                 <span class="label">Stripe</span>
                 <span class="value">
-                    @if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
+                    @if (StripeStatusLoading)
                     {
-                        <span class="badge text-bg-secondary">Not connected</span>
+                        <span class="badge text-bg-secondary">Checking...</span>
                     }
-                    else
+                    else if (StripeOnboardingComplete)
                     {
                         <span class="badge text-bg-success">Connected</span>
                     }
+                    else
+                    {
+                        <span class="badge text-bg-secondary">Not connected</span>
+                    }
                 </span>
             </div>
+            @if (!StripeStatusLoading && !StripeOnboardingComplete && !string.IsNullOrWhiteSpace(Account.StripeAccountId))
+            {
+                <div class="info-row">
+                    <span class="label"></span>
+                    <span class="value">
+                        <button class="btn btn-link p-0" @onclick="FinishStripeOnboarding">
+                            Finish onboarding now
+                        </button>
+                    </span>
+                </div>
+            }
             <div class="info-row">
                 <span class="label">Sendbird</span>
                 <span class="value">
@@ -176,6 +191,8 @@
     private bool IsDeleting;
     private string DeleteProgressMessage = "";
     private int DeleteProgressPercent;
+    private bool StripeOnboardingComplete;
+    private bool StripeStatusLoading;
 
     private AccountInfo Account { get; set; } = new();
     private List<ListingItem> MyListings { get; set; } = new();
@@ -192,6 +209,7 @@
             Account = me ?? new AccountInfo();
             MyListings = listings ?? new List<ListingItem>();
             MyActivities = activities ?? new List<ActivityItem>();
+            await RefreshStripeStatusAsync();
         }
         catch (Exception ex)
         {
@@ -219,6 +237,64 @@
     private void OnLogoutClicked()
     {
         Navigation.NavigateTo("/api/auth/logout", forceLoad: true);
+    }
+
+    private async Task RefreshStripeStatusAsync()
+    {
+        StripeOnboardingComplete = false;
+        StripeStatusLoading = false;
+
+        if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
+        {
+            return;
+        }
+
+        StripeStatusLoading = true;
+        try
+        {
+            var status = await Http.GetFromJsonAsync<bool>(
+                Navigation.ToAbsoluteUri($"/api/stripe/onboarding-status/{Account.StripeAccountId}")
+            );
+
+            StripeOnboardingComplete = status;
+        }
+        catch
+        {
+            StripeOnboardingComplete = false;
+        }
+        finally
+        {
+            StripeStatusLoading = false;
+        }
+    }
+
+    private async Task FinishStripeOnboarding()
+    {
+        if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PostAsync(
+                Navigation.ToAbsoluteUri($"/api/stripe/create-onboarding-link/{Account.StripeAccountId}"),
+                null
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LoadError = "Unable to start Stripe onboarding right now. Please try again.";
+                return;
+            }
+
+            var onboardingUrl = await response.Content.ReadAsStringAsync();
+            Navigation.NavigateTo(onboardingUrl.Trim('"'), forceLoad: true);
+        }
+        catch
+        {
+            LoadError = "Unable to start Stripe onboarding right now. Please try again.";
+        }
     }
 
     private async Task OnDeleteAccountConfirmed()

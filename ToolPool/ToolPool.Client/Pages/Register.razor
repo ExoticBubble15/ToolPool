@@ -1,7 +1,8 @@
 ﻿@page "/register"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using BlazorBootstrap
 @using ToolPool.Client.Models
+@using System.ComponentModel.DataAnnotations
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
@@ -16,11 +17,17 @@
         }
     </div>
     <div class="mb-3">
-        <input class="form-control @(emailEmpty ? "is-invalid" : "")" @bind="Email" @bind:event="oninput" placeholder="Enter Email" style="width: 300px;" />
+        <input class="form-control @((emailEmpty || emailInvalidFormat) ? "is-invalid" : "")" @bind="Email" @bind:event="oninput" placeholder="Enter Email" style="width: 300px;" />
         @if (emailEmpty)
         {
             <div class="invalid-feedback">
                 Email cannot be empty.
+            </div>
+        }
+        @if (emailInvalidFormat)
+        {
+            <div class="invalid-feedback">
+                Please enter a valid email format.
             </div>
         }
     </div>
@@ -57,6 +64,13 @@
         @onclick="TryRegister">
         Register
     </Button>
+
+    @if (!string.IsNullOrWhiteSpace(registerFailureMessage))
+    {
+        <div class="alert alert-danger mt-2" role="alert" style="max-width: 420px; width: 100%;">
+            @registerFailureMessage
+        </div>
+    }
 </div>
 
 @code {
@@ -66,6 +80,7 @@
     private string? PasswordPlainConfirm { get; set; }
 
     private bool emailEmpty;
+    private bool emailInvalidFormat;
     private bool usernameEmpty;
     private bool passwordEmpty;
     private bool passwordMismatch = false;
@@ -77,14 +92,24 @@
 
     private async Task TryRegister()
     {
+        registerFailureMessage = null;
+        failedToRegister = false;
+
         emailEmpty = string.IsNullOrEmpty(Email);
+        emailInvalidFormat = !emailEmpty && !new EmailAddressAttribute().IsValid(Email);
         usernameEmpty = string.IsNullOrEmpty(Username);
         passwordEmpty = string.IsNullOrEmpty(PasswordPlain);
         passwordMismatch = PasswordPlain != PasswordPlainConfirm;
         passwordTooShort = (PasswordPlain?.Length ?? 0) < 6;
 
-        if (emailEmpty || usernameEmpty || passwordEmpty || passwordMismatch || passwordTooShort)
+        if (emailEmpty || emailInvalidFormat || usernameEmpty || passwordEmpty || passwordMismatch || passwordTooShort)
+        {
+            if (emailInvalidFormat)
+            {
+                registerFailureMessage = "Please enter a valid format and try again.";
+            }
             return;
+        }
 
         var request = new RegisterRequest
         {
@@ -92,16 +117,30 @@
             Password = PasswordPlain!,
             Username = Username!
         };
-        
-        // TODO: Broken?
+
         registerLoading = true;
-        var response = await Http.PostAsJsonAsync("api/users/register", request);
-        if (response.IsSuccessStatusCode)
+
+        try
         {
-            // redirect or success UI
-            registerLoading = false;
-            Navigation.NavigateTo("/");
+            var response = await Http.PostAsJsonAsync("api/users/register", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+                return;
+            }
+
+            failedToRegister = true;
+            registerFailureMessage = "Please enter a valid format and try again.";
         }
-        
+        catch
+        {
+            failedToRegister = true;
+            registerFailureMessage = "Registration failed. Please try again.";
+        }
+        finally
+        {
+            registerLoading = false;
+        }
     }
 }

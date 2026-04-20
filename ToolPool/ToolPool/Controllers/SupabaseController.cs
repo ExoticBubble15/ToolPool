@@ -489,11 +489,19 @@ namespace ToolPool.Controllers
                 });
             }
 
-            // issue auth cookie on success
-            var claims = new List<Claim>
+            Guid userId = Guid.Empty;
+            if (result.UserSession?.User?.Id is string sessionUserId)
             {
-                new Claim(ClaimTypes.Email, request.Email)
-            };
+                Guid.TryParse(sessionUserId, out userId);
+            }
+
+            // issue auth cookie on success
+            var claims = new List<Claim>();
+            if (userId != Guid.Empty)
+            {
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+            }
+            claims.Add(new Claim(ClaimTypes.Email, request.Email));
             var identity = new ClaimsIdentity(claims, "cookies");
             var principal = new ClaimsPrincipal(identity);
 

@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text.Json;
 using ToolPool.Client.Models;
 using System.Text.Json.Serialization;
@@ -355,7 +354,8 @@ public class SupabaseDemoService
 
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
     {
-        var url = $"{_opt.Url}rest/v1/Neighborhoods?select=neighborhood,latitude,longitude";
+        var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
+        var url = $"{baseUrl}/rest/v1/Neighborhoods?select=neighborhood,latitude,longitude";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);

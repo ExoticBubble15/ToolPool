@@ -1,9 +1,10 @@
 ﻿@page "/stripe"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
 @using System.Globalization
+@using System.Net
 @inject ToolService ItemService
 @inject CartService Cart
 @inject HttpClient Http
@@ -191,7 +192,12 @@
     {
         Cart.OnChange += StateHasChanged;
 
-        await LoadCurrentUserAsync();
+        var hasUser = await LoadCurrentUserAsync();
+        if (!hasUser)
+        {
+            return;
+        }
+
         HasStripeOnboarded = await CheckStripeAsync();
         // HasStripeOnboarded = true;
 
@@ -210,12 +216,25 @@
             .ToList();
     }
 
-    private async Task LoadCurrentUserAsync()
+    private async Task<bool> LoadCurrentUserAsync()
     {
-        var me = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
+        var response = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+            return false;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Failed to load profile: {response.StatusCode} - {body}");
+        }
+
+        var me = await response.Content.ReadFromJsonAsync<AccountInfo>();
 
         if (me is null)
-            throw new InvalidOperationException("Failed to load current user profile.");
+            throw new InvalidOperationException("Failed to parse current user profile.");
 
         OwnerId = me.Id;
         OwnerName = me.Username ?? "";
@@ -223,6 +242,7 @@
 
         toolSubmission.OwnerId = OwnerId;
         toolSubmission.OwnerName = OwnerName;
+        return true;
     }
 
     private async Task GoToStripeOnboarding()
@@ -240,6 +260,13 @@
                 Nav.ToAbsoluteUri($"/api/stripe/create-onboarding-link/{StripeAccountId}"),
                 null
             );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                SubmitMessage = $"Failed to create onboarding link: {(int)response.StatusCode}";
+                SubmitOk = false;
+                return;
+            }
 
             var url = await response.Content.ReadAsStringAsync();
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);

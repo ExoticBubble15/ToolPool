@@ -1,9 +1,10 @@
 @page "/express_interest"
 @page "/express_interest/{ToolId:guid}"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using BlazorBootstrap
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
+@using System.Net
 @inject ToolService ToolService
 @inject NavigationManager Nav
 @inject HttpClient Http
@@ -199,7 +200,22 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        currentUser = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
+        var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
+        if (profileResponse.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        if (!profileResponse.IsSuccessStatusCode)
+        {
+            errorMsg = $"Failed to load profile: {(int)profileResponse.StatusCode}";
+            authChecked = true;
+            isLoading = false;
+            return;
+        }
+
+        currentUser = await profileResponse.Content.ReadFromJsonAsync<AccountInfo>();
         authChecked = true;
 
         if (currentUser is null || ToolId is null) { isLoading = false; return; }

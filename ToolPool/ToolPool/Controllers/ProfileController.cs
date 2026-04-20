@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using ToolPool.Services;
 
 namespace ToolPool.Controllers;
@@ -9,13 +10,11 @@ namespace ToolPool.Controllers;
 [Route("api/profile")]
 public class ProfileController : ControllerBase
 {
-    private readonly Supabase.Client _supabase;
     private readonly SupabaseDemoService _supabaseDemoService;
     private readonly UserService _userService;
 
-    public ProfileController(Supabase.Client supabase, SupabaseDemoService supabaseDemoService, UserService userService)
+    public ProfileController(SupabaseDemoService supabaseDemoService, UserService userService)
     {
-        _supabase = supabase;
         _supabaseDemoService = supabaseDemoService;
         _userService = userService;
     }
@@ -23,7 +22,7 @@ public class ProfileController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> GetMe()
     {
-        var userId = TryGetCurrentUserId();
+        var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
             return Unauthorized(new { error = "No active user session." });
@@ -41,7 +40,7 @@ public class ProfileController : ControllerBase
     [HttpGet("my-listings")]
     public async Task<IActionResult> GetMyListings()
     {
-        var userId = TryGetCurrentUserId();
+        var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
             return Unauthorized(new { error = "No active user session." });
@@ -54,7 +53,7 @@ public class ProfileController : ControllerBase
     [HttpGet("my-activities")]
     public async Task<IActionResult> GetMyActivities()
     {
-        var userId = TryGetCurrentUserId();
+        var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
             return Unauthorized(new { error = "No active user session." });
@@ -67,7 +66,7 @@ public class ProfileController : ControllerBase
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteMe()
     {
-        var userId = TryGetCurrentUserId();
+        var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
             return Unauthorized(new { error = "No active user session." });
@@ -85,14 +84,32 @@ public class ProfileController : ControllerBase
         }
     }
 
-    private Guid? TryGetCurrentUserId()
+    private async Task<Guid?> TryGetCurrentUserIdAsync()
     {
-        var userId = _supabase.Auth.CurrentSession?.User?.Id;
-        if (Guid.TryParse(userId, out var parsed))
+        var idClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+            User.FindFirstValue("user_id");
+
+        if (Guid.TryParse(idClaim, out var parsedFromClaim))
         {
-            return parsed;
+            return parsedFromClaim;
         }
 
-        return null;
+        var email =
+            User.FindFirstValue(ClaimTypes.Email) ??
+            User.Identity?.Name;
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var user = await _supabaseDemoService.GetUserAsync(email);
+        if (user is null)
+        {
+            return null;
+        }
+
+        return user.Id;
     }
 }

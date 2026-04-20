@@ -1,5 +1,5 @@
 @page "/chat"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using System.Text.Json.Serialization
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services

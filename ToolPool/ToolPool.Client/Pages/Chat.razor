@@ -1,5 +1,5 @@
 @page "/chat/{ChannelUrl}"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Microsoft.JSInterop
 @using System.Text.Json
 @using ToolPool.Client.Models
