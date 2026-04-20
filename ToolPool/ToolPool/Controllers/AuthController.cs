@@ -71,8 +71,8 @@ namespace ToolPool.Controllers
                 return Ok(new
                 {
                     authenticated = true,
-                    email,
-                    userId
+                    email = email,
+                    uid = userId
                 });
             }
             else
@@ -108,6 +108,29 @@ namespace ToolPool.Controllers
             });
 
             return Ok(loginStatus);
+        }
+
+        [HttpPost("restoreSession")]
+        public async Task<IActionResult> RestoreSession()
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            User? user = await _supabaseService.GetUserAsync(email ?? "");
+            if (user?.Session == null) return Ok();
+
+            Supabase.Gotrue.Session session = user.Session;
+
+            try
+            {
+                await supabase.Auth.SetSession(session.AccessToken, session.RefreshToken);
+            }
+            catch (Exception ex) 
+            { 
+                return BadRequest(ex);
+            }
+            
+            return Ok();
         }
     }
 }
