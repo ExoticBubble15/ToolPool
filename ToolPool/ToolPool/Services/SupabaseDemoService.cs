@@ -3,6 +3,7 @@ using System.Text.Json;
 using ToolPool.Client.Models;
 using System.Text.Json.Serialization;
 using ToolPool.Models;
+using Supabase.Gotrue;
 
 namespace ToolPool.Services;
 
@@ -168,6 +169,27 @@ public class SupabaseDemoService
 
         req.Headers.Add("Prefer", "return=representation");
         req.Content = JsonContent.Create(payload);
+
+        using var resp = await client.SendAsync(req);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        Console.WriteLine("SUPABASE INSERT RESPONSE:");
+        Console.WriteLine(body);
+
+        resp.EnsureSuccessStatusCode();
+    }
+
+    public async Task UpdateUserSessionAsync(string email, Session newSession)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var url = $"{_opt.Url}/rest/v1/Users?email={email}";
+
+        using var req = new HttpRequestMessage(HttpMethod.Patch, url);
+
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        req.Content = JsonContent.Create(new { session = newSession });
 
         using var resp = await client.SendAsync(req);
 

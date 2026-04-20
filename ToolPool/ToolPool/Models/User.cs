@@ -7,7 +7,7 @@ namespace ToolPool.Models
         public Guid Id { get; set; }
         public string Username { get; set; } = "";
         public string Email { get; set; } = "";
-        public Session? UserSession { get; set; }
+        public Session? Session { get; set; }
         public string? Stripe_Customer_Id { get; set; }
         public string? Stripe_Account_Id { get; set; }
         public string? Sendbird_User_Id { get; set; }

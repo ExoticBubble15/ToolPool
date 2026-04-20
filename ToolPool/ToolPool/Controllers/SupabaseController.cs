@@ -498,7 +498,7 @@ namespace ToolPool.Controllers
             }
 
             Guid userId = Guid.Empty;
-            if (result.UserSession?.User?.Id is string sessionUserId)
+            if (result.Session?.User?.Id is string sessionUserId)
             {
                 Guid.TryParse(sessionUserId, out userId);
             }

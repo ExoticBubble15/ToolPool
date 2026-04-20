@@ -29,7 +29,7 @@ public class UserService
         {
             // TODO: error handling for all these below
             var response = await _supabase.Auth.SignUp(request.Email, request.Password);
-            var session =  await _supabase.Auth.SignIn(request.Email, request.Password);
+            var csession =  await _supabase.Auth.SignIn(request.Email, request.Password);
             // Create Stripe Customer
             var customerId = await _stripe.CreateCustomerAsync(request.Email);
             // Create Stripe Seller Account
@@ -44,7 +44,7 @@ public class UserService
                 Id = Guid.TryParse(response?.User?.Id, out var parsedUserId) ? parsedUserId : Guid.Empty,
                 Username = request.Username,
                 Email = request.Email,
-                UserSession = session,
+                Session = csession,
                 Stripe_Customer_Id = customerId,
                 Stripe_Account_Id = accountId,
                 Sendbird_User_Id = sendbirdId,
@@ -64,7 +64,8 @@ public class UserService
                 email = request.Email,
                 username = request.Username,
                 avg_rating = 0.0,
-                total_ratings = 0
+                total_ratings = 0,
+                session = csession,
             };
 
             await _db.InsertUserAsync(payload);
@@ -104,6 +105,7 @@ public class UserService
             {
                 var user = await _db.GetUserAsync(request.Email);
                 user?.UserSession = response;
+                await _db.UpdateUserSessionAsync(request.Email, response);
                 return new LoginStatus { success = true, };
             }
         }

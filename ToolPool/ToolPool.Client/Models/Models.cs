@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 namespace ToolPool.Client.Models;
 
@@ -214,4 +215,11 @@ public class ChatPaymentContext
 
     [JsonPropertyName("reason")]
     public string? Reason { get; set; }
+}
+
+public class AuthStatus
+{
+    public bool authenticated { get; set; }
+    public string? email { get; set; }
+    public string? uid { get; set; }
 }
