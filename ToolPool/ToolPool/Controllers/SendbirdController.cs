@@ -10,11 +10,13 @@ public class SendbirdController : ControllerBase
 {
     private readonly SendbirdService _sendbird;
     private readonly SupabaseDemoService _supabase;
+    private readonly ILogger<SendbirdController> _logger;
 
-    public SendbirdController(SendbirdService sendbird, SupabaseDemoService supabase)
+    public SendbirdController(SendbirdService sendbird, SupabaseDemoService supabase, ILogger<SendbirdController> logger)
     {
         _sendbird = sendbird;
         _supabase = supabase;
+        _logger = logger;
     }
 
     [HttpGet("app-id")]
@@ -53,7 +55,23 @@ public class SendbirdController : ControllerBase
         if (user is null)
             return Unauthorized(new { error = "User not found" });
 
-        var sendbirdId = user.SendbirdUserId ?? user.Id.ToString();
+        // Intentional read-with-side-effect: self-heal provisioning for legacy users
+        // who never got a Sendbird account at signup. This keeps the chat UI free of
+        // a separate onboarding step.
+        string sendbirdId;
+        try
+        {
+            var desired = string.IsNullOrEmpty(user.SendbirdUserId) ? user.Id.ToString() : user.SendbirdUserId;
+            sendbirdId = await _sendbird.CreateOrGetUserAsync(desired, user.Username ?? desired);
+            if (user.SendbirdUserId != sendbirdId)
+                await _supabase.UpdateUserSendbirdIdAsync(user.Id, sendbirdId);
+        }
+        catch (SendbirdException ex)
+        {
+            _logger.LogError(ex, "Sendbird user provisioning failed in channels/me for user {UserId}", userId);
+            return StatusCode(502, new { error = "Chat provisioning failed" });
+        }
+
         var channels = await _sendbird.ListUserChannelsAsync(sendbirdId);
         return Ok(channels);
     }

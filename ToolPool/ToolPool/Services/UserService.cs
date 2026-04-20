@@ -29,22 +29,27 @@ public class UserService
         {
             // TODO: error handling for all these below
             var response = await _supabase.Auth.SignUp(request.Email, request.Password);
-            var csession =  await _supabase.Auth.SignIn(request.Email, request.Password);
+            var session = await _supabase.Auth.SignIn(request.Email, request.Password);
+
+            var authUserId = response?.User?.Id;
+            if (string.IsNullOrEmpty(authUserId))
+                throw new InvalidOperationException("Supabase signup returned no user id");
+
+            // Provision Sendbird BEFORE Stripe so a Sendbird outage does not leave
+            // orphaned Stripe customer / connected-account records.
+            var sendbirdId = await _sendbird.CreateOrGetUserAsync(authUserId, request.Username);
             // Create Stripe Customer
             var customerId = await _stripe.CreateCustomerAsync(request.Email);
             // Create Stripe Seller Account
             var accountId = await _stripe.CreateConnectedAccountAsync(request.Email);
-            // create sendbird id
-            var sendbirdId = await _sendbird.CreateOrGetUserAsync(response?.User?.Id ?? "", request.Username);
-
 
             // 4. Save to Supabase
             var newUser = new User
             {
-                Id = Guid.TryParse(response?.User?.Id, out var parsedUserId) ? parsedUserId : Guid.Empty,
+                Id = Guid.TryParse(authUserId, out var parsedUserId) ? parsedUserId : Guid.Empty,
                 Username = request.Username,
                 Email = request.Email,
-                Session = csession,
+                Session = session,
                 Stripe_Customer_Id = customerId,
                 Stripe_Account_Id = accountId,
                 Sendbird_User_Id = sendbirdId,
@@ -55,7 +60,7 @@ public class UserService
 
             var payload = new
             {
-                id = response?.User?.Id,
+                id = authUserId,
                 stripe_account_id = accountId,
                 stripe_customer_id = customerId,
                 sendbird_user_id = sendbirdId,
@@ -65,7 +70,7 @@ public class UserService
                 username = request.Username,
                 avg_rating = 0.0,
                 total_ratings = 0,
-                session = csession,
+                session = session,
             };
 
             await _db.InsertUserAsync(payload);
@@ -104,12 +109,12 @@ public class UserService
             else
             {
                 var user = await _db.GetUserAsync(request.Email);
-                user?.UserSession = response;
+                user?.Session = response;
                 await _db.UpdateUserSessionAsync(request.Email, response);
                 return new LoginStatus { success = true, };
             }
         }
-        catch (Exception ex) 
+        catch (Exception) 
         {
             return new LoginStatus { 
                 success = false,

@@ -11,7 +11,6 @@ public class SupabaseDemoService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SupabaseOptions _opt;
-    private Dictionary<String, User> _users;
     private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
     private HttpClient client;
 
@@ -568,6 +567,19 @@ public class SupabaseDemoService
 
         var results = await resp.Content.ReadFromJsonAsync<List<InterestSubmission>>(_jsonOpts);
         return results?.FirstOrDefault();
+    }
+
+    public async Task UpdateInterestChannelUrlAsync(Guid interestId, string channelUrl)
+    {
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}";
+
+        using var req = new HttpRequestMessage(HttpMethod.Patch, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Content = JsonContent.Create(new { channel_url = channelUrl });
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
     }
 
     public async Task<InterestSubmission?> GetInterestByIdAsync(Guid interestId)
