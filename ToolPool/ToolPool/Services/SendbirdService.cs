@@ -64,9 +64,9 @@ public class SendbirdService
             if (getResp.IsSuccessStatusCode)
                 return userId;
 
-            if (getResp.StatusCode != HttpStatusCode.NotFound)
+            var body = await SafeReadBody(getResp);
+            if (!IsMissingUserResponse(getResp.StatusCode, body))
             {
-                var body = await SafeReadBody(getResp);
                 _logger.LogError("Sendbird GET /users/{UserId} failed unexpectedly: {Status} {Body}",
                     userId, (int)getResp.StatusCode, body);
                 throw new SendbirdException(
@@ -78,7 +78,8 @@ public class SendbirdService
         using (var createReq = BuildRequest(HttpMethod.Post, "/users", new
         {
             user_id = userId,
-            nickname = string.IsNullOrWhiteSpace(nickname) ? userId : nickname
+            nickname = string.IsNullOrWhiteSpace(nickname) ? userId : nickname,
+            profile_url = BuildDefaultProfileUrl(userId, nickname)
         }))
         using (var createResp = await client.SendAsync(createReq))
         {
@@ -220,6 +221,32 @@ public class SendbirdService
         catch { return ""; }
     }
 
+    private static string BuildDefaultProfileUrl(string userId, string? nickname)
+    {
+        var seed = string.IsNullOrWhiteSpace(nickname) ? userId : nickname;
+        return $"https://api.dicebear.com/9.x/initials/svg?seed={Uri.EscapeDataString(seed)}";
+    }
+
+    private static bool IsMissingUserResponse(HttpStatusCode status, string body)
+    {
+        if (status == HttpStatusCode.NotFound)
+            return true;
+
+        try
+        {
+            var error = JsonSerializer.Deserialize<SendbirdErrorResponse>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return error?.Code == 400201;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Lists group channels the given user belongs to.
     /// </summary>
@@ -269,4 +296,13 @@ public class ChannelListResponse
 {
     [JsonPropertyName("channels")]
     public List<SendbirdChannel> Channels { get; set; } = new();
+}
+
+public class SendbirdErrorResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
+
+    [JsonPropertyName("message")]
+    public string? Message { get; set; }
 }
