@@ -73,6 +73,8 @@ namespace ToolPool.Models
         [JsonPropertyName("sendbird_user_id")]
         public string? SendbirdUserId { get; set; }
 
+        [JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set;  }
         [JsonPropertyName("created_at")]
         public DateTimeOffset? CreatedAt { get; set; }
     }

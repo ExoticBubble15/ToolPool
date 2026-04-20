@@ -91,6 +91,7 @@ public class StripeRentalRequest
     public Guid UserId { get; set; }
 
     public string? Message { get; set; }
+    public string? UserEmail { get; set; }
 }
 
 public class StripeResponse

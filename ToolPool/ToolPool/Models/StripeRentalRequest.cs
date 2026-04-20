@@ -11,5 +11,6 @@
 
         public Guid UserId { get; set; }
         public string? Message { get; set; }
+        public string? UserEmail { get; set; }
     }
 }

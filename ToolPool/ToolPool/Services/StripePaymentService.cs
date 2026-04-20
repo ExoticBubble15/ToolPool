@@ -81,7 +81,7 @@ public class StripePaymentService
         var options = new SessionCreateOptions
         {
             Mode = "payment",
-
+            CustomerEmail = request.UserEmail,
             Metadata = new Dictionary<string, string>
 {
     { "UserId", request.UserId.ToString() },
@@ -117,5 +117,20 @@ public class StripePaymentService
         var session = await service.CreateAsync(options);
 
         return session.Url;
+    }
+
+    public async Task TransferToOwnerAsync(string ownerStripeAccountId, decimal amount)
+    {
+        var transferService = new TransferService();
+
+        var options = new TransferCreateOptions
+        {
+            Amount = (long)(amount * 100), // dollars → cents
+            Currency = "usd",
+            Destination = ownerStripeAccountId,
+            Description = "Tool rental payout"
+        };
+
+        await transferService.CreateAsync(options);
     }
 }

@@ -133,24 +133,6 @@ public class PaymentController : ControllerBase
             }
 
             // -----------------------------
-            // 7. Check for existing interest (avoid duplicates)
-            // -----------------------------
-            var existingInterest = await _supabase.GetInterestByRenterAndToolAsync(renter.Id.ToString(), toolId);
-
-            if (existingInterest != null)
-            {
-                Console.WriteLine($"FOUND EXISTING INTEREST: {existingInterest.Id}");
-                // Reuse existing interest and channel - payment just confirms it
-                var existingChannelUrl = existingInterest.ChannelUrl ?? channelUrl;
-                return Ok(new InterestResponse
-                {
-                    Success = true,
-                    ChannelUrl = existingChannelUrl,
-                    InterestId = existingInterest.Id
-                });
-            }
-
-            // -----------------------------
             // 8. Create new interest record (only if none exists)
             // -----------------------------
             var interest = new InterestSubmission
@@ -169,6 +151,36 @@ public class PaymentController : ControllerBase
             Console.WriteLine("ABOUT TO INSERT INTEREST");
 
             var saved = await _supabase.InsertInterestAsync(interest);
+
+            try
+            {
+                await Task.Delay(2000);
+
+                var ownerStripeId = owner.StripeAccountId;
+
+                if (!string.IsNullOrEmpty(ownerStripeId))
+                {
+                    var transferService = new Stripe.TransferService();
+
+                    var transfer = await transferService.CreateAsync(new Stripe.TransferCreateOptions
+                    {
+                        Amount = (long) (tool.Price * ((endDate.Date - startDate.Date).Days + 1) * 100m * 0.9m), 
+                        Currency = "usd",
+                        Destination = ownerStripeId,
+                        Description = $"Payout for {tool.Name}"
+                    });
+
+                    Console.WriteLine($"Payout sent: {transfer.Id}");
+                }
+                else
+                {
+                    Console.WriteLine("Owner has no Stripe account, skipping payout");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Payout failed (non-blocking): {ex.Message}");
+            }
 
             if (saved is null)
             {

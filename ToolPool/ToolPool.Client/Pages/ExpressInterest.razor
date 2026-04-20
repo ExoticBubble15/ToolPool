@@ -312,7 +312,8 @@ else
                 StartDate = startDate.Value,
                 EndDate = endDate.Value,
                 UserId = currentUser.Id,
-                Message = message
+                Message = message,
+                UserEmail = currentUser.Email
             };
 
             Console.WriteLine("REQUEST USER ID (RAW): " + request.UserId);
