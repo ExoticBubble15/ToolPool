@@ -39,6 +39,21 @@ public class Tool
     public string ImageUrl { get; set; } = string.Empty;
 }
 
+public class MarkerDetails
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+
+    public string Description { get; set; }
+
+    public string Owner_name { get; set; } = string.Empty;
+    
+    public decimal Price { get; set; }
+
+    public double AddressLat { get; set; }
+    
+    public double AddressLng { get; set; }
+}
 public class NeighborhoodTriple
 {
     public string Neighborhood { get; set; }

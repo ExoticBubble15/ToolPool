@@ -41,6 +41,14 @@ namespace ToolPool.Controllers
             return "good";
         }
 
+        [HttpGet("markerDetails")]
+        public async Task<List<MarkerDetails>> markerDetails()
+        {
+            var res = await _supabase.GetMarkerDetails();
+            Console.WriteLine($"\"markerDetails\": {res.Count}");
+            return res;
+        }
+
         [HttpGet("neighborhoodTriples")]
         public async Task<List<NeighborhoodTriple>> neighborhoodTriples()
         {

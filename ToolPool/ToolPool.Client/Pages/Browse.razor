@@ -152,20 +152,30 @@
 
 <Collapse @ref="displayMap">
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center">
-        @if (!mapLoaded)
+        @if (!mapLoaded && !markersLoaded)
         {
             <Spinner />
             <i>loading map</i>
         }
 
         <div class="map">
-            <GoogleMapsComponents.GoogleMap @ref="map"
-            Options="mapOptions"
-            OnAfterInit="mapRenderDone">
-            </GoogleMapsComponents.GoogleMap>
+            <AdvancedGoogleMap @ref="map" Options="mapOptions" OnAfterInit="mapRenderDone">
+                @if (mapLoaded && markersLoaded) {
+	                @foreach (var m in markers)
+	                {
+                        <MarkerComponent @key="m.Id" Lat="@Math.Round(m.AddressLat, 2, MidpointRounding.ToZero)" Lng="@Math.Round(m.AddressLng, 2, MidpointRounding.ToZero)">
+				            <div style="display: flex; flex-direction: column; align-items: center; text-align: center">
+                                <h6 style="background: white">@m.Name - @m.Price.ToString("C")</h6>
+                                <Image Src="/browse.png" Alt="Browse" />
+                                <span style="background: white">@m.Owner_name</span>
+                            </div>
+                        </MarkerComponent>
+	                }
+                }
+            </AdvancedGoogleMap>
         </div>
     </div>
-    </Collapse>
+ </Collapse>
 
 <h3 class="browse-section-title">Available Tools</h3>
 
@@ -284,7 +294,7 @@ else
 
     private static LatLngLiteral startingCenter = new LatLngLiteral(42.3604, -71.0580); //city hall
     private bool mapLoaded = false;
-    private GoogleMapsComponents.GoogleMap? map;
+    private AdvancedGoogleMap map;
     private MapOptions mapOptions = new MapOptions()
     {
         Zoom = 16,
@@ -301,6 +311,8 @@ else
         await displayMap.ToggleAsync();
         mapVisible = !mapVisible;
     }
+    private List<MarkerDetails> markers;
+    private bool markersLoaded = false;
 
     private void NavigateToTool(Guid id) => Nav.NavigateTo($"/express_interest/{id}");
 
@@ -337,6 +349,9 @@ else
             // cityNeighborhoods = await ToolService.GetCityNeighborhoodsAsync();
             selectedNeighborhoods = new List<string>(neighborhoodsList);
             neighborhoodsLoaded = true;
+
+            markers = await ToolService.GetMarkerDetails();
+            markersLoaded = true;
 
             allTools = await ToolService.GetToolsAsync();
             if (!allTools.Any())

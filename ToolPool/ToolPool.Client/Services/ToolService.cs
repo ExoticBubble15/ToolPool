@@ -13,6 +13,8 @@ public class ToolService
         _http = http;
     }
 
+    public async Task<List<MarkerDetails>> GetMarkerDetails()
+        => await _http.GetFromJsonAsync<List<MarkerDetails>>("/api/markerDetails") ?? new();
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
         => await _http.GetFromJsonAsync<List<NeighborhoodTriple>>("/api/neighborhoodTriples") ?? new();
 

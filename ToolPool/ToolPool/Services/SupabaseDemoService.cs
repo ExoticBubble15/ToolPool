@@ -353,6 +353,21 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
+    public async Task<List<MarkerDetails>> GetMarkerDetails()
+    {
+        var url = $"{_opt.Url}rest/v1/Tools?select=id,name,description,owner_name,price,addressLat,addressLng";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var triples = await resp.Content.ReadFromJsonAsync<List<MarkerDetails>>(_jsonOpts);
+        return triples ?? new List<MarkerDetails>();
+    }
+
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
     {
         var url = $"{_opt.Url}rest/v1/Neighborhoods?select=neighborhood,latitude,longitude";
