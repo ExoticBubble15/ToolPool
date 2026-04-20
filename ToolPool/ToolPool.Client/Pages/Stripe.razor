@@ -1,124 +1,182 @@
 ﻿@page "/stripe"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using BlazorBootstrap
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
 @using System.Globalization
+@using System.Net
 @inject ToolService ItemService
 @inject CartService Cart
 @inject HttpClient Http
 @inject NavigationManager Nav
-@using System.Net.Http.Json
+@using System.Net.Http.Json 
+@inject ToolService ToolService
+@using Philiprehberger.Geolocation;
 
-<div class="page-wrap">
-    <div class="page-hero">
-        <h1>Tool Pool</h1>
-        <p>Your Listings</p>
+<h2 class="pageTitle">Upload a Tool</h2>
+<span class="pageSubtitle">Post a tool for others to view.</span>
+
+@* STRIPE ONBOARDING BLOCK *@
+@if (!HasStripeOnboarded)
+{
+    <div class="item-card suggest-card" style="margin-bottom: 1rem;">
+        <div class="item-info">
+            <h3>Complete Stripe Setup</h3>
+            <p>You must finish Stripe onboarding before you can receive payments.</p>
+        </div>
+
+        <button class="btn-submit" @onclick="GoToStripeOnboarding">
+            Complete Stripe Onboarding →
+        </button>
+    </div>
+}
+
+@* ADD TOOL FORM *@
+<div class="browse-location-card">
+
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Title*</span>
+        <TextInput @bind-Value="@toolSubmission.Name" Placeholder="Title" />
     </div>
 
-    @* STRIPE ONBOARDING BLOCK *@
-    @if (!HasStripeOnboarded)
-    {
-        <div class="item-card suggest-card" style="margin-bottom: 1rem;">
-            <div class="item-info">
-                <h3>Complete Stripe Setup</h3>
-                <p>You must finish Stripe onboarding before you can receive payments.</p>
-            </div>
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Price</span>
+        <CurrencyInput @bind-Value="@toolSubmission.Price" TValue="decimal" />
+    </div>
 
-            <button class="btn-submit" @onclick="GoToStripeOnboarding">
-                Complete Stripe Onboarding →
-            </button>
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Description*</span>
+        <TextInput @bind-Value="@toolSubmission.Description" Placeholder="Description" />
+    </div>
+
+    @if (categoriesLoaded)
+    {
+        <div class="browse-filter-group">
+            <span class="browse-filter-label">Category*</span>
+            <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories"> Category @(toolSubmission.Category == string.Empty ? "" : $"({toolSubmission.Category})") ⌵</Button>
+
+            <Collapse @ref="categoriesMenu">
+                <InputRadioGroup @bind-Value="toolSubmission.Category">
+                    @foreach (var c in categoriesList)
+                    {
+                        <div style="display: flex; align-items: center;">
+                            <InputRadio id="@c" Value="@c" />
+                            <label for="@c" style="margin-left: 5px">@c</label>
+                        </div>
+                    }
+                </InputRadioGroup>
+            </Collapse>
         </div>
     }
 
-    @* ADD TOOL FORM *@
-    <div class="suggest-wrap">
-        <div class="item-card suggest-card">
-            <div class="item-info">
-                <h3>Add a Tool</h3>
-                <p>Create a new listing.</p>
-            </div>
-
-            <div class="submit-grid">
-                <input class="submit-input" placeholder="Tool name" @bind="FormName" />
-                <input class="submit-input" placeholder="Short description" @bind="FormDescription" />
-                <input class="submit-input" placeholder="Image URL" @bind="FormImageUrl" />
-                <input class="submit-input" placeholder="Category" @bind="FormCategory" />
-                <input class="submit-input" placeholder="Neighborhood" @bind="FormNeighborhood" />
-
-                <input class="submit-input" type="number" step="0.01" min="0"
-                       placeholder="Daily price (USD)" @bind="FormPriceText" />
-            </div>
-
-            <div class="submit-actions">
-                <button class="btn-submit"
-                        @onclick="SubmitTool"
-                        disabled="@(IsSubmitting || !HasStripeOnboarded)">
-                    @(IsSubmitting ? "Submitting..." : "Submit Tool")
-                </button>
-            </div>
-
-            @if (!string.IsNullOrWhiteSpace(SubmitMessage))
-            {
-                <span class="submit-msg @(SubmitOk ? "ok" : "err")">@SubmitMessage</span>
-            }
-        </div>
+    <div class="browse-search-group">
+        <span class="browse-filter-label">Location*</span>
+        <span class="location-search">
+            <AutoComplete @bind-Value="addressSearch"
+                          TItem="AddressPair"
+                          DataProvider="GetSuggestions"
+                          PropertyName="Address"
+                          StringComparison="StringComparison.OrdinalIgnoreCase"
+                          Placeholder=@locationPlaceholder
+                          OnChanged="AddressSelect" />
+        </span>
     </div>
 
-    @* USER'S TOOL LISTINGS *@
-    <div class="item-grid">
-        @if (Items.Count == 0)
-        {
-            <p>No tools listed yet.</p>
-        }
-        else
-        {
-            @foreach (var item in Items)
-            {
-                var inCart = Cart.IsInCart(item.Id);
-
-                <div class="item-card @(inCart ? "in-cart" : "")">
-                    <div class="item-info">
-                        <h3>@item.Name</h3>
-                        <p>@item.Description</p>
-                    </div>
-
-                    <div class="item-footer">
-                        <span class="item-price">$@item.Price.ToString("F2")</span>
-
-                        @* <button class="@(inCart ? "btn-remove" : "btn-add")"
-                                @onclick="() => Toggle(item)">
-                            @(inCart ? "Added" : "+ Add")
-                        </button> *@
-
-                        <button class="btn-delete"
-                                @onclick="() => DeleteItem(item)">
-                            Delete Item
-                        </button>
-                    </div>
-                </div>
-            }
-        }
+    <div class="browse-search-group">
+        <span class="browse-filter-label">Image URL</span>
+        <TextInput @bind-Value="@toolSubmission.ImageUrl" Placeholder="Upload image" />
     </div>
 
-    @if (Cart.Count > 0)
+    @* SUBMIT TOOL *@
+    <i>* fields are required</i>
+    <Button Color="ButtonColor.Success" @onclick="SubmitTool" Disabled="@(MissingFields() || IsSubmitting)">
+        @(IsSubmitting ? "Submitting..." : "Submit Tool")
+    </Button>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(SubmitMessage))
+{
+    <span class="submit-msg @(SubmitOk ? "ok" : "err")">@SubmitMessage</span>
+} 
+
+@* USER'S TOOL LISTINGS *@
+<div class="item-grid">
+    @if (Items.Count == 0)
     {
-        <div class="sticky-bar">
-            <span>@Cart.Count item(s) · $@Cart.Total.ToString("F2")</span>
-            <a href="/cart" class="btn-checkout-sticky">View Cart →</a>
-        </div>
+        <p>No tools listed yet.</p>
+    }
+    else
+    {
+        @foreach (var item in Items)
+        {
+            var inCart = Cart.IsInCart(item.Id);
+
+            <div class="item-card @(inCart ? "in-cart" : "")">
+                <div class="item-info">
+                    <h3>@item.Name</h3>
+                    <p>@item.Description</p>
+                </div>
+
+                <div class="item-footer">
+                    <span class="item-price">$@item.Price.ToString("F2")</span>
+
+                    @* <button class="@(inCart ? "btn-remove" : "btn-add")"
+                            @onclick="() => Toggle(item)">
+                        @(inCart ? "Added" : "+ Add")
+                    </button> *@
+
+                    <button class="btn-delete"
+                            @onclick="() => DeleteItem(item)">
+                        Delete Item
+                    </button>
+                </div>
+            </div>
+        }
     }
 </div>
 
+@if (Cart.Count > 0)
+{
+    <div class="sticky-bar">
+        <span>@Cart.Count item(s) · $@Cart.Total.ToString("F2")</span>
+        <a href="/cart" class="btn-checkout-sticky">View Cart →</a>
+    </div>
+}
+
 @code {
+    private Tool toolSubmission = new Tool();
+    Collapse categoriesMenu = default!;
+    private List<String> categoriesList;
+    private bool categoriesLoaded = false;
+    private async Task ToggleCategories()
+    {
+        await categoriesMenu.ToggleAsync();
+    }
+
+    private string locationPlaceholder = "Search for a location";
+    private string addressSearch;
+
+    private async Task<AutoCompleteDataProviderResult<AddressPair>> GetSuggestions(AutoCompleteDataProviderRequest<AddressPair> ap)
+    {
+        var results = await Http.GetFromJsonAsync<List<AddressPair>>($"api/suggestLocations/{ap.Filter.Value}");
+        return new AutoCompleteDataProviderResult<AddressPair>
+        {
+            Data = results,
+            TotalCount = results.Count
+        };
+    }
+
+    private async Task AddressSelect(AddressPair ap)
+    {
+        var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
+        locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
+        toolSubmission.AddressLat = coords.Latitude;
+        toolSubmission.AddressLng = coords.Longitude;
+    }
+
 
     private List<Tool> Items = new();
-
-    private string FormName = "";
-    private string FormDescription = "";
-    private string FormImageUrl = "";
-    private string FormCategory = "";
-    private string FormNeighborhood = "";
-    private string FormPriceText = "";
 
     private bool IsSubmitting = false;
     private string SubmitMessage = "";
@@ -126,7 +184,6 @@
 
     private bool HasStripeOnboarded = false;
 
-    private Guid CurrentUserId;
     private Guid OwnerId;
     private string OwnerName = "";
     private string? StripeAccountId;
@@ -135,10 +192,19 @@
     {
         Cart.OnChange += StateHasChanged;
 
-        await LoadCurrentUserAsync();
+        var hasUser = await LoadCurrentUserAsync();
+        if (!hasUser)
+        {
+            return;
+        }
+
         HasStripeOnboarded = await CheckStripeAsync();
+        // HasStripeOnboarded = true;
 
         await LoadUserToolsAsync();
+
+        categoriesList = await ToolService.GetCategoriesAsync();
+        categoriesLoaded = true;
     }
 
     private async Task LoadUserToolsAsync()
@@ -150,17 +216,33 @@
             .ToList();
     }
 
-    private async Task LoadCurrentUserAsync()
+    private async Task<bool> LoadCurrentUserAsync()
     {
-        var me = await Http.GetFromJsonAsync<AccountInfo>(Nav.ToAbsoluteUri("/api/profile/me"));
+        var response = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+            return false;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Failed to load profile: {response.StatusCode} - {body}");
+        }
+
+        var me = await response.Content.ReadFromJsonAsync<AccountInfo>();
 
         if (me is null)
-            throw new InvalidOperationException("Failed to load current user profile.");
+            throw new InvalidOperationException("Failed to parse current user profile.");
 
-        CurrentUserId = me.Id;
         OwnerId = me.Id;
         OwnerName = me.Username ?? "";
         StripeAccountId = me.StripeAccountId;
+
+        toolSubmission.OwnerId = OwnerId;
+        toolSubmission.OwnerName = OwnerName;
+        return true;
     }
 
     private async Task GoToStripeOnboarding()
@@ -178,6 +260,13 @@
                 Nav.ToAbsoluteUri($"/api/stripe/create-onboarding-link/{StripeAccountId}"),
                 null
             );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                SubmitMessage = $"Failed to create onboarding link: {(int)response.StatusCode}";
+                SubmitOk = false;
+                return;
+            }
 
             var url = await response.Content.ReadAsStringAsync();
             Nav.NavigateTo(url.Trim('"'), forceLoad: true);
@@ -198,10 +287,29 @@
         );
     }
 
+    //field validation
+    private bool MissingFields()
+    {
+        return toolSubmission.Name == String.Empty ||
+                toolSubmission.Description == String.Empty ||
+                toolSubmission.Price < 0 ||
+                toolSubmission.Category == String.Empty ||
+                toolSubmission.AddressLat == 0 ||
+                toolSubmission.AddressLng == 0;
+    }
+
     private async Task SubmitTool()
     {
         SubmitMessage = "";
         SubmitOk = false;
+
+        //set neighborhood as closest to address coords
+        var neighborhoodTriples = await ToolService.GetNeighborhoodTriples();
+        GeoCoordinate addressCord = new GeoCoordinate(toolSubmission.AddressLat, toolSubmission.AddressLng);
+        var sorted = neighborhoodTriples.OrderBy(trip => Geo.Distance(new GeoCoordinate(trip.Latitude, trip.Longitude), addressCord, DistanceUnit.Miles));
+        toolSubmission.Neighborhood = sorted.First().Neighborhood;
+
+        toolSubmission.CreatedAt = DateTime.UtcNow;
 
         if (!HasStripeOnboarded)
         {
@@ -209,39 +317,23 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(FormName))
-        {
-            SubmitMessage = "Name is required.";
-            return;
-        }
-
-        if (!decimal.TryParse(FormPriceText, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) || price < 0)
-        {
-            SubmitMessage = "Invalid price.";
-            return;
-        }
-
         IsSubmitting = true;
-
         try
         {
-            await ItemService.InsertToolAsync(
-                FormName.Trim(),
-                FormDescription.Trim(),
-                price
-            );
+            foreach (var prop in toolSubmission.GetType().GetProperties())
+            {
+                Console.WriteLine($"{prop.Name}: {prop.GetValue(toolSubmission)}");
+            }
+            // NEED TO FIX SUBMITTING TOOL TO DB - RN ALL THE FORM DATA IS STORED IN A TOOL OBJECT, SO MAYBE JUST PASS IT TO THE APIS AND CONTROLLERS?
+            await ItemService.InsertToolAsync(toolSubmission);
 
             await LoadUserToolsAsync();
 
             SubmitOk = true;
             SubmitMessage = "Tool added successfully.";
-
-            FormName = "";
-            FormDescription = "";
-            FormImageUrl = "";
-            FormCategory = "";
-            FormNeighborhood = "";
-            FormPriceText = "";
+            toolSubmission = new Tool();
+            toolSubmission.OwnerId = OwnerId;
+            toolSubmission.OwnerName = OwnerName;
         }
         catch (Exception ex)
         {

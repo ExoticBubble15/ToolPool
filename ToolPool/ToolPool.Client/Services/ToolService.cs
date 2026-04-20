@@ -13,6 +13,11 @@ public class ToolService
         _http = http;
     }
 
+    public async Task<List<MarkerDetails>> GetMarkerDetails()
+        => await _http.GetFromJsonAsync<List<MarkerDetails>>("/api/markerDetails") ?? new();
+    public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
+        => await _http.GetFromJsonAsync<List<NeighborhoodTriple>>("/api/neighborhoodTriples") ?? new();
+
     public async Task<String> ReverseGeocode(string latitude, string longitude)
         => await _http.GetStringAsync($"/api/reverseGeocode/{latitude}/{longitude}");
 
@@ -42,16 +47,11 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<InterestResponse>() ?? new InterestResponse();
     }
 
-    public async Task<Tool> InsertToolAsync(string name, string description, decimal price)
+    public async Task<Tool> InsertToolAsync(Tool t)
     {
-        var resp = await _http.PostAsJsonAsync("/api/Tools", new { name, description, price });
+        var resp = await _http.PostAsJsonAsync("/api/Tools", t);
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadFromJsonAsync<Tool>() ?? new Tool
-        {
-            Name = name,
-            Description = description,
-            Price = price
-        };
+        return await resp.Content.ReadFromJsonAsync<Tool>() ?? new Tool();
     }
 
     public async Task DeleteToolAsync(Guid id)

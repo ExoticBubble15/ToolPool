@@ -1,7 +1,7 @@
 @using System.Net
 @using BlazorBootstrap
 @using ToolPool.Client.Services
-@rendermode InteractiveServer
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using ToolPool.Client.Models
 @using ToolPool.Client.Services
 @inject NavigationManager Navigation
@@ -15,6 +15,7 @@
     {
         <span style="margin-right: 5px; font-size: 0.9em;">@username</span>
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
+        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/stripe">Listings</Button>
         <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/chat">Messages</Button>
         <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="SignOutAsync">Sign Out</Button>
     } else

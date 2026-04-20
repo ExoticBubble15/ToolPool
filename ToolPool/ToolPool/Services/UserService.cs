@@ -41,7 +41,8 @@ public class UserService
             // 4. Save to Supabase
             var newUser = new User
             {
-                Username = response?.User?.Id ?? "",
+                Id = Guid.TryParse(response?.User?.Id, out var parsedUserId) ? parsedUserId : Guid.Empty,
+                Username = request.Username,
                 Email = request.Email,
                 UserSession = session,
                 Stripe_Customer_Id = customerId,
