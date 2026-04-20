@@ -12,13 +12,16 @@ public class PaymentController : ControllerBase
 {
     private readonly SupabaseDemoService _supabase;
     private readonly SendbirdService _sendbird;
+    private readonly ILogger<PaymentController> _logger;
 
     public PaymentController(
         SupabaseDemoService supabase,
-        SendbirdService sendbird)
+        SendbirdService sendbird,
+        ILogger<PaymentController> logger)
     {
         _supabase = supabase;
         _sendbird = sendbird;
+        _logger = logger;
     }
 
     [HttpGet("success")]
@@ -98,43 +101,77 @@ public class PaymentController : ControllerBase
                 return BadRequest("Owner not found");
 
             // -----------------------------
-            // 5. Ensure Sendbird IDs
+            // 5. Ensure Sendbird users exist (provision + persist id). Hard fail if down.
             // -----------------------------
-            if (string.IsNullOrEmpty(renter.SendbirdUserId))
-            {
-                renter.SendbirdUserId = renter.Id.ToString();
-                await _supabase.UpdateUserSendbirdIdAsync(renter.Id, renter.SendbirdUserId);
-            }
-
-            if (string.IsNullOrEmpty(owner.SendbirdUserId))
-            {
-                owner.SendbirdUserId = owner.Id.ToString();
-                await _supabase.UpdateUserSendbirdIdAsync(owner.Id, owner.SendbirdUserId);
-            }
-
-            // -----------------------------
-            // 6. Create chat (non-fatal)
-            // -----------------------------
-            string? channelUrl = null;
-
+            string renterSbId, ownerSbId;
             try
             {
-                var channel = await _sendbird.CreateGroupChannelAsync(
-                    renter.SendbirdUserId,
-                    owner.SendbirdUserId,
-                    tool.Name
-                );
+                renterSbId = await EnsureSendbirdUserAsync(renter);
+                ownerSbId = await EnsureSendbirdUserAsync(owner);
+            }
+            catch (SendbirdException ex)
+            {
+                _logger.LogError(ex, "Sendbird user provisioning failed in PaymentSuccess (renter={RenterId}, owner={OwnerId})", renter.Id, owner.Id);
+                return StatusCode(502, "Chat provisioning failed");
+            }
 
+            // -----------------------------
+            // 6. Check for existing interest (dedupe on (renter, tool))
+            // -----------------------------
+            var existingInterest = await _supabase.GetInterestByRenterAndToolAsync(renter.Id.ToString(), toolId);
+
+            if (existingInterest != null)
+            {
+                // Verify and self-heal the existing channel. Historical rows from
+                // the old is_distinct era may share a channel across tools — if
+                // the renter is not a member of the stored channel, we create a
+                // fresh per-interest channel and update the row.
+                string reusedChannelUrl;
+                try
+                {
+                    if (!string.IsNullOrEmpty(existingInterest.ChannelUrl)
+                        && await _sendbird.VerifyChannelMembersAsync(existingInterest.ChannelUrl, renterSbId, ownerSbId))
+                    {
+                        reusedChannelUrl = existingInterest.ChannelUrl;
+                    }
+                    else
+                    {
+                        var refreshed = await _sendbird.CreateGroupChannelAsync(
+                            renterSbId, ownerSbId, tool.Name, interestId: existingInterest.Id.ToString());
+                        reusedChannelUrl = refreshed.ChannelUrl;
+                        await _supabase.UpdateInterestChannelUrlAsync(existingInterest.Id, reusedChannelUrl);
+                        _logger.LogInformation("Self-healed channel_url for interest {InterestId}: {NewUrl}", existingInterest.Id, reusedChannelUrl);
+                    }
+                }
+                catch (SendbirdException ex)
+                {
+                    _logger.LogError(ex, "Sendbird channel verify/create failed for existing interest {InterestId}", existingInterest.Id);
+                    return StatusCode(502, "Chat provisioning failed");
+                }
+
+                return Ok(new InterestResponse
+                {
+                    Success = true,
+                    ChannelUrl = reusedChannelUrl,
+                    InterestId = existingInterest.Id
+                });
+            }
+
+            // -----------------------------
+            // 7. No existing interest — create fresh per-interest channel + row
+            // -----------------------------
+            string channelUrl;
+            try
+            {
+                var channel = await _sendbird.CreateGroupChannelAsync(renterSbId, ownerSbId, tool.Name);
                 channelUrl = channel.ChannelUrl;
             }
-            catch (Exception ex)
+            catch (SendbirdException ex)
             {
-                Console.WriteLine($"Sendbird error (ignored): {ex.Message}");
+                _logger.LogError(ex, "Sendbird channel creation failed in PaymentSuccess (renter={RenterId}, tool={ToolId})", renter.Id, toolId);
+                return StatusCode(502, "Chat provisioning failed");
             }
 
-            // -----------------------------
-            // 8. Create new interest record (only if none exists)
-            // -----------------------------
             var interest = new InterestSubmission
             {
                 ToolId = toolId,
@@ -147,8 +184,6 @@ public class PaymentController : ControllerBase
                 ChannelUrl = channelUrl,
                 Status = "pending"
             };
-
-            Console.WriteLine("ABOUT TO INSERT INTEREST");
 
             var saved = await _supabase.InsertInterestAsync(interest);
 
@@ -184,15 +219,10 @@ public class PaymentController : ControllerBase
 
             if (saved is null)
             {
-                Console.WriteLine("INSERT FAILED (null result)");
+                _logger.LogError("Interest insert returned null (channelUrl={ChannelUrl})", channelUrl);
                 return StatusCode(500, "Interest insert failed");
             }
 
-            Console.WriteLine($"INTEREST CREATED: {saved.Id}");
-
-            // -----------------------------
-            // 9. Return response
-            // -----------------------------
             return Ok(new InterestResponse
             {
                 Success = true,
@@ -202,8 +232,20 @@ public class PaymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"💥 PAYMENT SUCCESS ERROR: {ex}");
+            _logger.LogError(ex, "PAYMENT SUCCESS unhandled error");
             return StatusCode(500, ex.Message);
         }
+    }
+
+    private async Task<string> EnsureSendbirdUserAsync(Models.AppUser user)
+    {
+        var desired = string.IsNullOrEmpty(user.SendbirdUserId) ? user.Id.ToString() : user.SendbirdUserId;
+        var provisioned = await _sendbird.CreateOrGetUserAsync(desired, user.Username ?? desired);
+        if (user.SendbirdUserId != provisioned)
+        {
+            await _supabase.UpdateUserSendbirdIdAsync(user.Id, provisioned);
+            user.SendbirdUserId = provisioned;
+        }
+        return provisioned;
     }
 }

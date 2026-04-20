@@ -22,15 +22,17 @@ namespace ToolPool.Controllers
         private readonly SendbirdService _sendbird;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly UserService _userService;
+        private readonly ILogger<SupabaseController> _logger;
         HttpClient client;
 
-        public SupabaseController(IConfiguration config, SupabaseDemoService supabase, SendbirdService sendbird, IHttpClientFactory httpClientFactory, UserService userService)
+        public SupabaseController(IConfiguration config, SupabaseDemoService supabase, SendbirdService sendbird, IHttpClientFactory httpClientFactory, UserService userService, ILogger<SupabaseController> logger)
         {
             _config = config;
             _supabase = supabase;
             _sendbird = sendbird;
             _httpClientFactory = httpClientFactory;
             _userService = userService;
+            _logger = logger;
             client = _httpClientFactory.CreateClient();
         }
 
@@ -297,29 +299,81 @@ namespace ToolPool.Controllers
                 return BadRequest(new { error = "Tool owner account not found" });
             }
 
-            // Ensure both users have sendbird_user_id (backfill from Users.id if null)
-            if (string.IsNullOrEmpty(renter.SendbirdUserId))
-            {
-                renter.SendbirdUserId = renter.Id.ToString();
-                await _supabase.UpdateUserSendbirdIdAsync(renter.Id, renter.SendbirdUserId);
-            }
-            if (string.IsNullOrEmpty(owner.SendbirdUserId))
-            {
-                owner.SendbirdUserId = owner.Id.ToString();
-                await _supabase.UpdateUserSendbirdIdAsync(owner.Id, owner.SendbirdUserId);
-            }
-
-            // Create or reuse Sendbird channel using sendbird_user_id values
-            string? channelUrl = null;
+            // Ensure both users have a real Sendbird account (provision + persist id).
+            // Hard-fail with 502 if Sendbird provisioning fails — never persist an
+            // interest row whose sendbird_user_id refers to a non-existent account.
+            string renterSbId, ownerSbId;
             try
             {
-                var channel = await _sendbird.CreateGroupChannelAsync(
-                    renter.SendbirdUserId, owner.SendbirdUserId, request.ToolName);
-                channelUrl = channel.ChannelUrl;
+                renterSbId = await EnsureSendbirdUserAsync(renter);
+                ownerSbId = await EnsureSendbirdUserAsync(owner);
+            }
+            catch (SendbirdException ex)
+            {
+                _logger.LogError(ex, "Sendbird user provisioning failed in SubmitInterest (renter={RenterId}, owner={OwnerId})", renter.Id, owner.Id);
+                _dbgLog("sendbird-fail", new { stage = "provision", status = (int)ex.Status, body = ex.ResponseBody });
+                return StatusCode(502, new { error = "Chat provisioning failed" });
+            }
+
+            // App-level dedupe on (renter, tool). Sendbird is no longer is_distinct,
+            // so the interest row is the source of truth for "one chat per rental".
+            InterestSubmission? existing;
+            try
+            {
+                existing = await _supabase.GetInterestByRenterAndToolAsync(renter.Id.ToString(), tool.Id);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Sendbird error (non-fatal): {ex.Message}");
+                _logger.LogError(ex, "Existing-interest lookup failed for renter={RenterId} tool={ToolId}", renter.Id, tool.Id);
+                return StatusCode(500, new { error = "Interest lookup failed" });
+            }
+
+            if (existing is not null)
+            {
+                string reusedChannelUrl;
+                try
+                {
+                    if (!string.IsNullOrEmpty(existing.ChannelUrl)
+                        && await _sendbird.VerifyChannelMembersAsync(existing.ChannelUrl, renterSbId, ownerSbId))
+                    {
+                        reusedChannelUrl = existing.ChannelUrl;
+                    }
+                    else
+                    {
+                        var refreshed = await _sendbird.CreateGroupChannelAsync(
+                            renterSbId, ownerSbId, request.ToolName, interestId: existing.Id.ToString());
+                        reusedChannelUrl = refreshed.ChannelUrl;
+                        await _supabase.UpdateInterestChannelUrlAsync(existing.Id, reusedChannelUrl);
+                    }
+                }
+                catch (SendbirdException ex)
+                {
+                    _logger.LogError(ex, "Sendbird channel verify/create failed for existing interest {InterestId}", existing.Id);
+                    _dbgLog("sendbird-fail", new { stage = "existing-interest", interestId = existing.Id, status = (int)ex.Status });
+                    return StatusCode(502, new { error = "Chat provisioning failed" });
+                }
+
+                return Ok(new InterestResponse
+                {
+                    Success = true,
+                    ChannelUrl = reusedChannelUrl,
+                    InterestId = existing.Id
+                });
+            }
+
+            // No existing interest — create a fresh per-interest channel, then insert the row.
+            string channelUrl;
+            try
+            {
+                var channel = await _sendbird.CreateGroupChannelAsync(
+                    renterSbId, ownerSbId, request.ToolName);
+                channelUrl = channel.ChannelUrl;
+            }
+            catch (SendbirdException ex)
+            {
+                _logger.LogError(ex, "Sendbird channel creation failed in SubmitInterest (renter={RenterId}, tool={ToolId})", renter.Id, tool.Id);
+                _dbgLog("sendbird-fail", new { stage = "new-interest", status = (int)ex.Status, body = ex.ResponseBody });
+                return StatusCode(502, new { error = "Chat provisioning failed" });
             }
 
             // renter_id stored as Users.id.ToString() for schema compatibility (column is text)
@@ -348,9 +402,21 @@ namespace ToolPool.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Supabase interest insert error: {ex.Message}");
+                _logger.LogError(ex, "Interest insert failed after successful Sendbird provisioning (channelUrl={ChannelUrl})", channelUrl);
                 return StatusCode(500, new { error = ex.Message });
             }
+        }
+
+        private async Task<string> EnsureSendbirdUserAsync(Models.AppUser user)
+        {
+            var desired = string.IsNullOrEmpty(user.SendbirdUserId) ? user.Id.ToString() : user.SendbirdUserId;
+            var provisioned = await _sendbird.CreateOrGetUserAsync(desired, user.Username ?? desired);
+            if (user.SendbirdUserId != provisioned)
+            {
+                await _supabase.UpdateUserSendbirdIdAsync(user.Id, provisioned);
+                user.SendbirdUserId = provisioned;
+            }
+            return provisioned;
         }
 
         [HttpGet("my-interests")]
