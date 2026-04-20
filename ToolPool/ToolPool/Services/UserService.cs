@@ -29,7 +29,7 @@ public class UserService
         {
             // TODO: error handling for all these below
             var response = await _supabase.Auth.SignUp(request.Email, request.Password);
-            var session = await _supabase.Auth.SignIn(request.Email, request.Password);
+            var csession = await _supabase.Auth.SignIn(request.Email, request.Password);
 
             var authUserId = response?.User?.Id;
             if (string.IsNullOrEmpty(authUserId))
@@ -49,7 +49,7 @@ public class UserService
                 Id = Guid.TryParse(authUserId, out var parsedUserId) ? parsedUserId : Guid.Empty,
                 Username = request.Username,
                 Email = request.Email,
-                Session = session,
+                Session = csession,
                 Stripe_Customer_Id = customerId,
                 Stripe_Account_Id = accountId,
                 Sendbird_User_Id = sendbirdId,
@@ -70,7 +70,7 @@ public class UserService
                 username = request.Username,
                 avg_rating = 0.0,
                 total_ratings = 0,
-                session = session,
+                session = csession,
             };
 
             await _db.InsertUserAsync(payload);
@@ -79,6 +79,7 @@ public class UserService
         }
         catch (Supabase.Gotrue.Exceptions.GotrueException ex)
         {
+            // should delete all created records here
             Console.WriteLine("=== GOTRUE ERROR ===");
             Console.WriteLine("Message:");
             Console.WriteLine(ex.Message);
@@ -97,7 +98,8 @@ public class UserService
     {
         try
         {
-            var response = await _supabase.Auth.SignIn(request.Email, request.Password);
+            var response = await _supabase.Auth.SignInWithPassword(request.Email, request.Password);
+            
             if (response?.User == null)
             {
                 return new LoginStatus
