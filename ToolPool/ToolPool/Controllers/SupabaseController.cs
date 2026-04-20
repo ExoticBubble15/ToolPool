@@ -214,6 +214,24 @@ namespace ToolPool.Controllers
         {
             var tool = await _supabase.GetToolByIdAsync(id);
             if (tool is null) return NotFound();
+
+            if (tool.OwnerId is Guid ownerId)
+            {
+                try
+                {
+                    var rating = await _supabase.GetOwnerRatingAsync(ownerId);
+                    if (rating is not null)
+                    {
+                        tool.OwnerAvgRating = rating.AvgRating;
+                        tool.OwnerTotalRatings = rating.TotalRatings;
+                    }
+                }
+                catch
+                {
+                    // Rating enrichment is best-effort — leave fields null on failure.
+                }
+            }
+
             return Ok(tool);
         }
 

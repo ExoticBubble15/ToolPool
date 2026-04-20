@@ -38,6 +38,12 @@ public class Tool
 
     [JsonPropertyName("image_url")]
     public string ImageUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("owner_avg_rating")]
+    public double? OwnerAvgRating { get; set; }
+
+    [JsonPropertyName("owner_total_ratings")]
+    public int? OwnerTotalRatings { get; set; }
 }
 
 public class MarkerDetails

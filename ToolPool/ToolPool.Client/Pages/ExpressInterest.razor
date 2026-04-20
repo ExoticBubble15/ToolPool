@@ -70,6 +70,26 @@ else
                     <div class="ei-owner-avatar">@(string.IsNullOrEmpty(tool.OwnerName) ? "?" : tool.OwnerName[0].ToString())</div>
                     <div>
                         <span class="ei-owner-name">@(string.IsNullOrEmpty(tool.OwnerName) ? "Owner" : tool.OwnerName)</span>
+                        @{
+                            var totalRatings = Math.Max(0, tool.OwnerTotalRatings ?? 0);
+                            var avg = totalRatings > 0 ? Math.Clamp(tool.OwnerAvgRating ?? 0, 0, 5) : 0;
+                            var fillPercent = Math.Clamp(avg / 5.0 * 100.0, 0, 100)
+                                .ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                            var reviewWord = totalRatings == 1 ? "review" : "reviews";
+                            var ratingText = totalRatings > 0
+                                ? $"{avg:F1} ({totalRatings} {reviewWord})"
+                                : "0.0 (Not rated)";
+                            var ratingTitle = totalRatings > 0
+                                ? $"{avg:F1} out of 5 from {totalRatings} {reviewWord}"
+                                : "Not rated yet";
+                        }
+                        <div class="ei-owner-rating" title="@ratingTitle">
+                            <span class="ei-stars" aria-hidden="true">
+                                <span class="ei-stars-bg">★★★★★</span>
+                                <span class="ei-stars-fg" style="width:@fillPercent%">★★★★★</span>
+                            </span>
+                            <span class="ei-rating-text @(totalRatings == 0 ? "ei-rating-text--empty" : "")">@ratingText</span>
+                        </div>
                     </div>
                 </div>
                 <div class="ei-owner-location">

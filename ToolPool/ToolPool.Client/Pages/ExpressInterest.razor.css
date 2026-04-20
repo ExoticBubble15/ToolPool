@@ -148,6 +148,39 @@
 .ei-owner-rating {
     font-size: 0.82rem;
     color: var(--subtext);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2px;
+}
+
+.ei-stars {
+    position: relative;
+    display: inline-block;
+    line-height: 1;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+}
+
+.ei-stars-bg {
+    color: var(--muted);
+}
+
+.ei-stars-fg {
+    color: #f5a623;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.ei-rating-text--empty {
+    color: var(--muted);
+}
+
+.ei-owner-rating--empty {
+    font-style: italic;
 }
 
 .ei-owner-location {

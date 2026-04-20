@@ -644,6 +644,21 @@ public class SupabaseDemoService
         return items?.FirstOrDefault();
     }
 
+    public async Task<Models.OwnerRating?> GetOwnerRatingAsync(Guid ownerId)
+    {
+        var url = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=avg_rating,total_ratings";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        if (!resp.IsSuccessStatusCode) return null;
+
+        var rows = await resp.Content.ReadFromJsonAsync<List<Models.OwnerRating>>(_jsonOpts);
+        return rows?.FirstOrDefault();
+    }
+
     public async Task<InterestSubmission> InsertInterestAsync(InterestSubmission interest)
     {
         //var client = _httpClientFactory.CreateClient();
