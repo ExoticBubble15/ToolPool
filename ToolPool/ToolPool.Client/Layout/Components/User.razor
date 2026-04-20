@@ -27,6 +27,7 @@
 @code {
     private bool authenticated;
     private string username = "";
+    private bool startup = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,15 +37,27 @@
             if (response.IsSuccessStatusCode)
             {
                 authenticated = true;
+                AuthStatus content = await response?.Content?.ReadFromJsonAsync<AuthStatus>() ?? new AuthStatus { authenticated = false };
+                if (content.authenticated)
+                {
+                    var result = await Http.GetAsync("api/auth/restoreSession");
+                    if (result.IsSuccessStatusCode)
+                    {
+                        authenticated = true;
+                    }
+                }
+                startup = false;
             }
             else
             {
                 authenticated = false;
+                startup = true;
             }
         }
         catch
         {
             authenticated = false;
+            startup = true;
         }
     }
 
