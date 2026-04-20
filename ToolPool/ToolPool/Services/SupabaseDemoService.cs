@@ -189,7 +189,7 @@ public class SupabaseDemoService
         req.Headers.Add("apikey", _opt.ServiceRoleKey);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
 
-        req.Content = JsonContent.Create(new { session = newSession });
+        req.Content = JsonContent.Create(new { access_token = newSession.AccessToken, refresh_token = newSession.RefreshToken });
 
         using var resp = await client.SendAsync(req);
 

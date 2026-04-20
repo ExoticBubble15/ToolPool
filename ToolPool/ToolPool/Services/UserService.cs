@@ -70,7 +70,8 @@ public class UserService
                 username = request.Username,
                 avg_rating = 0.0,
                 total_ratings = 0,
-                session = csession,
+                access_token = csession?.AccessToken,
+                refresh_token = csession?.RefreshToken,
             };
 
             await _db.InsertUserAsync(payload);
@@ -111,7 +112,15 @@ public class UserService
             else
             {
                 var user = await _db.GetUserAsync(request.Email);
-                user?.Session = response;
+                if (user == null) return new LoginStatus
+                {
+                    success = false,
+                    failureMessage = "Account does not exist. Register first."
+                };
+
+                user.Session = response;
+                user.access_token = response?.AccessToken;
+                user.refresh_token = response?.RefreshToken;
                 await _db.UpdateUserSessionAsync(request.Email, response);
                 return new LoginStatus { success = true, };
             }
