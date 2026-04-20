@@ -187,36 +187,6 @@ public class PaymentController : ControllerBase
 
             var saved = await _supabase.InsertInterestAsync(interest);
 
-            try
-            {
-                await Task.Delay(2000);
-
-                var ownerStripeId = owner.StripeAccountId;
-
-                if (!string.IsNullOrEmpty(ownerStripeId))
-                {
-                    var transferService = new Stripe.TransferService();
-
-                    var transfer = await transferService.CreateAsync(new Stripe.TransferCreateOptions
-                    {
-                        Amount = (long) (tool.Price * ((endDate.Date - startDate.Date).Days + 1) * 100m * 0.9m), 
-                        Currency = "usd",
-                        Destination = ownerStripeId,
-                        Description = $"Payout for {tool.Name}"
-                    });
-
-                    Console.WriteLine($"Payout sent: {transfer.Id}");
-                }
-                else
-                {
-                    Console.WriteLine("Owner has no Stripe account, skipping payout");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Payout failed (non-blocking): {ex.Message}");
-            }
-
             if (saved is null)
             {
                 _logger.LogError("Interest insert returned null (channelUrl={ChannelUrl})", channelUrl);

@@ -24,7 +24,7 @@ public class Tool
     public decimal Price { get; set; }
 
     [JsonPropertyName("owner_id")]
-    public Guid? OwnerId { get; set; }
+    public Guid OwnerId { get; set; }
 
     [JsonPropertyName("owner_name")]
     public string OwnerName { get; set; } = string.Empty;
@@ -93,6 +93,7 @@ public class StripeRentalRequest
 
     public string? Message { get; set; }
     public string? UserEmail { get; set; }
+    public Guid OwnerId { get; set; }
 }
 public class AvailabilityResponse
 {

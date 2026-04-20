@@ -13,16 +13,19 @@ namespace ToolPool.Services;
 public class StripePaymentService
 {
     private readonly AccountService _accountService = new();
+    private readonly SupabaseDemoService _supabaseService;
+
+
 
 
     // provides access to current http request/response
     private readonly IHttpContextAccessor _http;
 
     // constructor
-    public StripePaymentService(IHttpContextAccessor http)
+    public StripePaymentService(IHttpContextAccessor http, SupabaseDemoService supabaseService)
     {
         _http = http;
-
+        _supabaseService = supabaseService;
     }
 
     public async Task<string> CreateCustomerAsync(string email)
@@ -72,6 +75,8 @@ public class StripePaymentService
     {
         var req = _http.HttpContext!.Request;
         var baseUrl = $"{req.Scheme}://{req.Host}";
+        Console.WriteLine($"OwnerId being used: {request.OwnerId}");
+        var owner = await _supabaseService.GetUserByIdAsync(request.OwnerId);
 
         var days = (request.EndDate.Date - request.StartDate.Date).Days + 1;
         if (days <= 0) throw new Exception("Invalid date range");
@@ -108,6 +113,13 @@ public class StripePaymentService
             Quantity = days
         }
     },
+            PaymentIntentData = new SessionPaymentIntentDataOptions
+            {
+                TransferData = new SessionPaymentIntentDataTransferDataOptions
+                {
+                    Destination = owner.StripeAccountId
+                }
+            },
 
             SuccessUrl = $"{baseUrl}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
             CancelUrl = $"{baseUrl}/express_interest/{request.ToolId}"

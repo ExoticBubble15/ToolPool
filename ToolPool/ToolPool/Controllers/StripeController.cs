@@ -36,7 +36,8 @@ public class StripeController : ControllerBase
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             UserId = request.UserId,
-            Message = request.Message
+            Message = request.Message,
+            OwnerId = request.OwnerId
         };
 
         var url = await _stripe.CreateCheckoutSessionAsync(serverRequest);

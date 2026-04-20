@@ -10,7 +10,9 @@
         public DateTime EndDate { get; set; }
 
         public Guid UserId { get; set; }
+
         public string? Message { get; set; }
         public string? UserEmail { get; set; }
+        public Guid OwnerId { get; set; }
     }
 }

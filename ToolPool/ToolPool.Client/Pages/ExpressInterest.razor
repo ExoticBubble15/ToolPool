@@ -209,7 +209,7 @@ else
         var days = (endDate.Value - startDate.Value).Days + 1;
         return tool.Price * Math.Max(1, days);
     }
-    
+
     protected override async Task OnInitializedAsync()
     {
         var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
@@ -325,9 +325,12 @@ else
                 EndDate = endDate.Value,
                 UserId = currentUser.Id,
                 Message = message,
-                UserEmail = currentUser.Email
+                UserEmail = currentUser.Email,
+                OwnerId = tool.OwnerId
             };
 
+
+            Console.WriteLine("Onerid " + request.OwnerId);
             Console.WriteLine("REQUEST USER ID (RAW): " + request.UserId);
             Console.WriteLine("REQUEST JSON: " + System.Text.Json.JsonSerializer.Serialize(request));
             var response = await Http.PostAsJsonAsync("api/stripe/checkout-rental", request);
