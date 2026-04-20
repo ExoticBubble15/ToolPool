@@ -13,7 +13,11 @@ builder.Services.AddScoped(sp => new HttpClient
 //blazor google maps
 var httpClient = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
 string googleMapsKey = await httpClient.GetStringAsync("/api/getSecret/Google:Maps");
-builder.Services.AddBlazorGoogleMaps(googleMapsKey);
+builder.Services.AddBlazorGoogleMaps(new GoogleMapsComponents.Maps.MapApiLoadOptions(googleMapsKey)
+{
+    Version = "beta",
+    Libraries = "places,visualization,drawing,marker"
+});
 
 // clientside supabase client
 // supabase client setup
