@@ -514,7 +514,8 @@ public class SupabaseDemoService
     public async Task<List<ToolCategory>> GetCategories()
     {
         //var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools?select=category";
+        //var url = $"{_opt.Url}/rest/v1/Tools?select=category";
+        var url = $"{_opt.Url}/rest/v1/Categories";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
