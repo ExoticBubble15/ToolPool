@@ -28,16 +28,35 @@ public class StripeController : ControllerBase
     [HttpPost("checkout-rental")]
     public async Task<IActionResult> CheckoutRental([FromBody] ToolPool.Models.StripeRentalRequest request)
     {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var currentUserId))
+            return Unauthorized(new { error = "Not authenticated" });
+
+        var tool = await _supabase.GetToolByIdAsync(request.ToolId);
+        if (tool is null)
+            return BadRequest(new { error = "Tool not found" });
+
+        if (!tool.OwnerId.HasValue)
+            return BadRequest(new { error = "Tool owner is missing." });
+
+        var ownerId = tool.OwnerId.Value;
+
+        if (ownerId == currentUserId)
+            return BadRequest(new { error = "You cannot pay for your own listing." });
+
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
         var serverRequest = new ToolPool.Models.StripeRentalRequest
         {
             ToolId = request.ToolId,
-            ToolName = request.ToolName,
+            ToolName = string.IsNullOrWhiteSpace(request.ToolName) ? tool.Name : request.ToolName,
             PricePerDay = request.PricePerDay,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
-            UserId = request.UserId,
+            UserId = currentUserId,
             Message = request.Message,
-            OwnerId = request.OwnerId
+            UserEmail = string.IsNullOrWhiteSpace(request.UserEmail) ? email : request.UserEmail,
+            OwnerId = ownerId
         };
 
         var url = await _stripe.CreateCheckoutSessionAsync(serverRequest);
@@ -60,6 +79,9 @@ public class StripeController : ControllerBase
         // 3. Verify current user is the renter
         if (interest.RenterId != userId.ToString())
             return Ok(new { can_pay = false, reason = "Only the renter can pay" });
+
+        if (interest.OwnerId == userId)
+            return Ok(new { can_pay = false, reason = "You cannot pay for your own listing" });
 
         // 4. Load tool for price
         var tool = await _supabase.GetToolByIdAsync(interest.ToolId);
@@ -103,6 +125,9 @@ public class StripeController : ControllerBase
         // 3. Verify current user is the renter
         if (interest.RenterId != userId.ToString())
             return Forbid();
+
+        if (interest.OwnerId == userId)
+            return BadRequest(new { error = "You cannot pay for your own listing." });
 
         // 4. Load tool for price
         var tool = await _supabase.GetToolByIdAsync(interest.ToolId);

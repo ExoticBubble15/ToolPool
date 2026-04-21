@@ -168,6 +168,11 @@ else
                     <div class="ei-error">@errorMsg</div>
                 }
 
+                @if (IsOwnTool)
+                {
+                    <div class="ei-error">You cannot rent your own tool.</div>
+                }
+
                 @if (submitted)
                 {
                     <div class="ei-success">
@@ -180,10 +185,10 @@ else
                 else
                 {
                     <div class="ei-button-group">
-                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@(submitting || !HasValidDates || hasConflict)">
+                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@(submitting || !HasValidDates || hasConflict || IsOwnTool)">
                             @(submitting ? "Submitting..." : "Express Interest & Start Chat")
                         </button>
-                        <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates || hasConflict)">
+                        <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates || hasConflict || IsOwnTool)">
                             @if (HasValidDates)
                             {
                                 <span>Pay Now: $@CalculateTotal().ToString("F2")</span>
@@ -221,6 +226,7 @@ else
 
 
     private bool HasValidDates => startDate is not null && endDate is not null && endDate >= startDate;
+    private bool IsOwnTool => tool is not null && currentUser is not null && tool.OwnerId == currentUser.Id;
 
     private decimal CalculateTotal()
     {
@@ -271,6 +277,12 @@ else
         if (tool is null || currentUser is null)
             return;
 
+        if (IsOwnTool)
+        {
+            errorMsg = "You cannot rent your own tool.";
+            return;
+        }
+
         if (startDate is null || endDate is null)
         {
             errorMsg = "Please select rental dates.";
@@ -320,6 +332,12 @@ else
 
         if (tool is null || currentUser is null)
             return;
+
+        if (IsOwnTool)
+        {
+            errorMsg = "You cannot pay for your own listing.";
+            return;
+        }
 
         if (startDate is null || endDate is null)
         {

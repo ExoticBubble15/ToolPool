@@ -168,12 +168,29 @@
                 {
                     <article class="activity-card">
                         <div class="activity-main">
-                            <h3>@activity.ToolName</h3>
-                            <p>@activity.Message</p>
+                            <h3>@GetActivityTitle(activity)</h3>
+                            <p>@FormatActivityWindow(activity.StartDate, activity.EndDate)</p>
+                            <small>
+                                @if (!string.IsNullOrWhiteSpace(activity.CounterpartName))
+                                {
+                                    <span>As @GetRoleLabel(activity.Role) with @activity.CounterpartName</span>
+                                }
+                                else
+                                {
+                                    <span>As @GetRoleLabel(activity.Role)</span>
+                                }
+                            </small>
                         </div>
                         <div class="activity-side">
-                            <span class="badge @GetStatusBadgeClass(activity.Status)">@activity.Status</span>
+                            <span class="badge @GetStatusBadgeClass(activity.Status)">@GetStatusText(activity.Status)</span>
                             <small>@FormatActivityDate(activity.CreatedAt)</small>
+                            @if (!string.IsNullOrWhiteSpace(GetActivityTarget(activity)))
+                            {
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => OpenActivity(activity)">
+                                    Open
+                                </button>
+                            }
                         </div>
                     </article>
                 }
@@ -202,9 +219,15 @@
     {
         try
         {
-            var me = await Http.GetFromJsonAsync<AccountInfo>(Navigation.ToAbsoluteUri("/api/profile/me"));
-            var listings = await Http.GetFromJsonAsync<List<ListingItem>>(Navigation.ToAbsoluteUri("/api/profile/my-listings"));
-            var activities = await Http.GetFromJsonAsync<List<ActivityItem>>(Navigation.ToAbsoluteUri("/api/profile/my-activities"));
+            var meTask = Http.GetFromJsonAsync<AccountInfo>(Navigation.ToAbsoluteUri("/api/profile/me"));
+            var listingsTask = Http.GetFromJsonAsync<List<ListingItem>>(Navigation.ToAbsoluteUri("/api/profile/my-listings"));
+            var activitiesTask = Http.GetFromJsonAsync<List<ActivityItem>>(Navigation.ToAbsoluteUri("/api/profile/my-activities"));
+
+            await Task.WhenAll(meTask, listingsTask, activitiesTask);
+
+            var me = await meTask;
+            var listings = await listingsTask;
+            var activities = await activitiesTask;
 
             Account = me ?? new AccountInfo();
             MyListings = listings ?? new List<ListingItem>();
@@ -347,16 +370,77 @@
         }
     }
 
-    private static string GetStatusBadgeClass(string status) => status switch
+    private static string GetStatusBadgeClass(string status) => status?.ToLowerInvariant() switch
     {
-        "In Chat" => "text-bg-primary",
-        "Interested" => "text-bg-warning",
-        "Booked" => "text-bg-success",
+        "pending" => "text-bg-warning",
+        "confirmed" => "text-bg-success",
+        "completed" => "text-bg-primary",
+        "cancelled" => "text-bg-danger",
         _ => "text-bg-secondary"
     };
 
     private static string FormatActivityDate(DateTimeOffset? value) =>
         value?.ToString("MMM dd, HH:mm") ?? "--";
+
+    private static string FormatActivityWindow(string? startDate, string? endDate)
+    {
+        if (!DateTime.TryParse(startDate, out var start) || !DateTime.TryParse(endDate, out var end))
+        {
+            return "Date TBD";
+        }
+
+        return $"{start:MMM dd} - {end:MMM dd}";
+    }
+
+    private static string GetStatusText(string? status) => status?.ToLowerInvariant() switch
+    {
+        "pending" => "Waiting for owner",
+        "confirmed" => "Confirmed",
+        "completed" => "Completed",
+        "cancelled" => "Cancelled",
+        _ => "Pending"
+    };
+
+    private static string GetRoleLabel(string? role) => role?.ToLowerInvariant() switch
+    {
+        "owner" => "owner",
+        "renter" => "renter",
+        _ => "user"
+    };
+
+    private static string GetActivityTitle(ActivityItem activity)
+    {
+        if (!string.IsNullOrWhiteSpace(activity.ToolName))
+        {
+            return activity.ToolName;
+        }
+
+        return "Tool request";
+    }
+
+    private string? GetActivityTarget(ActivityItem activity)
+    {
+        if (!string.IsNullOrWhiteSpace(activity.ChannelUrl))
+        {
+            return $"/chat/{activity.ChannelUrl}?interestId={activity.Id}";
+        }
+
+        if (activity.ToolId.HasValue && activity.ToolId.Value != Guid.Empty)
+        {
+            return $"/express_interest/{activity.ToolId.Value}";
+        }
+
+        return null;
+    }
+
+    private void OpenActivity(ActivityItem activity)
+    {
+        var target = GetActivityTarget(activity);
+        if (!string.IsNullOrWhiteSpace(target))
+        {
+            Navigation.NavigateTo(target);
+        }
+    }
 
     private sealed class AccountInfo
     {
@@ -396,16 +480,43 @@
 
     private sealed class ActivityItem
     {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
         public Guid Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("tool_id")]
         public Guid? ToolId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("tool_name")]
         public string ToolName { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("message")]
         public string Message { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("renter_id")]
         public string? RenterId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner_id")]
         public Guid? OwnerId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel_url")]
         public string? ChannelUrl { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("start_date")]
         public string? StartDate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("end_date")]
         public string? EndDate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("counterpart_name")]
+        public string? CounterpartName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("role")]
+        public string? Role { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public DateTimeOffset? CreatedAt { get; set; }
     }
 }

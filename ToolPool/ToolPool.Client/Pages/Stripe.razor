@@ -5,6 +5,7 @@
 @using ToolPool.Client.Services
 @using System.Globalization
 @using System.Net
+@using Microsoft.AspNetCore.Components.Forms
 @inject ToolService ItemService
 @inject CartService Cart
 @inject HttpClient Http
@@ -83,8 +84,30 @@
     </div>
 
     <div class="browse-search-group">
-        <span class="browse-filter-label">Image URL</span>
-        <TextInput @bind-Value="@toolSubmission.ImageUrl" Placeholder="Upload image" />
+        <span class="browse-filter-label">Image</span>
+        <div class="image-drop-zone">
+            <InputFile class="image-drop-input"
+                       OnChange="HandleImageFileSelected"
+                       accept="image/*" />
+            <div class="image-drop-content">
+                <strong>Drag & drop an image here</strong>
+                <span>or click to choose a file (max 5MB)</span>
+            </div>
+        </div>
+
+        <div class="image-url-row">
+            <input class="image-url-input"
+                   @bind="imageUrlInput"
+                   placeholder="Or paste an image URL" />
+            <button type="button" class="btn-submit image-url-btn" @onclick="ApplyImageUrl">Use URL</button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(ImagePreviewUrl))
+        {
+            <div class="image-preview-wrap">
+                <img class="image-preview" src="@ImagePreviewUrl" alt="Image preview" />
+            </div>
+        }
     </div>
 
     @* SUBMIT TOOL *@
@@ -92,6 +115,13 @@
     <Button Color="ButtonColor.Success" @onclick="SubmitTool" Disabled="@(MissingFields() || IsSubmitting)">
         @(IsSubmitting ? "Submitting..." : "Submit Tool")
     </Button>
+    @if (IsSubmitting)
+    {
+        <div class="submit-loading">
+            <Spinner Size="SpinnerSize.Small" />
+            <span>Uploading and saving your tool...</span>
+        </div>
+    }
 </div>
 
 
@@ -183,6 +213,9 @@
     private bool SubmitOk = false;
 
     private bool HasStripeOnboarded = false;
+    private string imageUrlInput = "";
+    private string? uploadedImagePreview;
+    private const long MaxImageSize = 5 * 1024 * 1024;
 
     private Guid OwnerId;
     private string OwnerName = "";
@@ -198,12 +231,14 @@
             return;
         }
 
-        HasStripeOnboarded = await CheckStripeAsync();
-        // HasStripeOnboarded = true;
+        var stripeTask = CheckStripeAsync();
+        var toolsTask = LoadUserToolsAsync();
+        var categoriesTask = ToolService.GetCategoriesAsync();
 
-        await LoadUserToolsAsync();
+        await Task.WhenAll(stripeTask, toolsTask, categoriesTask);
 
-        categoriesList = await ToolService.GetCategoriesAsync();
+        HasStripeOnboarded = await stripeTask;
+        categoriesList = await categoriesTask;
         categoriesLoaded = true;
     }
 
@@ -303,14 +338,14 @@
         SubmitMessage = "";
         SubmitOk = false;
 
+        if (MissingFields())
+        {
+            SubmitMessage = "Please fill all required fields before submitting.";
+            SubmitOk = false;
+            return;
+        }
+
         //set neighborhood as closest to address coords
-        var neighborhoodTriples = await ToolService.GetNeighborhoodTriples();
-        GeoCoordinate addressCord = new GeoCoordinate(toolSubmission.AddressLat, toolSubmission.AddressLng);
-        var sorted = neighborhoodTriples.OrderBy(trip => Geo.Distance(new GeoCoordinate(trip.Latitude, trip.Longitude), addressCord, DistanceUnit.Miles));
-        toolSubmission.Neighborhood = sorted.First().Neighborhood;
-
-        toolSubmission.CreatedAt = DateTime.UtcNow;
-
         if (!HasStripeOnboarded)
         {
             SubmitMessage = "Complete Stripe onboarding first.";
@@ -318,8 +353,19 @@
         }
 
         IsSubmitting = true;
+        var loadingStartedAt = DateTime.UtcNow;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
         try
         {
+            //set neighborhood as closest to address coords
+            var neighborhoodTriples = await ToolService.GetNeighborhoodTriples();
+            GeoCoordinate addressCord = new GeoCoordinate(toolSubmission.AddressLat, toolSubmission.AddressLng);
+            var sorted = neighborhoodTriples.OrderBy(trip => Geo.Distance(new GeoCoordinate(trip.Latitude, trip.Longitude), addressCord, DistanceUnit.Miles));
+            toolSubmission.Neighborhood = sorted.First().Neighborhood;
+
+            toolSubmission.CreatedAt = DateTime.UtcNow;
+
             foreach (var prop in toolSubmission.GetType().GetProperties())
             {
                 Console.WriteLine($"{prop.Name}: {prop.GetValue(toolSubmission)}");
@@ -334,6 +380,8 @@
             toolSubmission = new Tool();
             toolSubmission.OwnerId = OwnerId;
             toolSubmission.OwnerName = OwnerName;
+            imageUrlInput = "";
+            uploadedImagePreview = null;
         }
         catch (Exception ex)
         {
@@ -341,6 +389,11 @@
         }
         finally
         {
+            var elapsed = DateTime.UtcNow - loadingStartedAt;
+            if (elapsed.TotalMilliseconds < 500)
+            {
+                await Task.Delay(500 - (int)elapsed.TotalMilliseconds);
+            }
             IsSubmitting = false;
         }
     }
@@ -378,6 +431,60 @@
         Cart.OnChange -= StateHasChanged;
     }
 
+    private string? ImagePreviewUrl =>
+        !string.IsNullOrWhiteSpace(uploadedImagePreview)
+            ? uploadedImagePreview
+            : (string.IsNullOrWhiteSpace(toolSubmission.ImageUrl) ? null : toolSubmission.ImageUrl);
+
+    private async Task HandleImageFileSelected(InputFileChangeEventArgs e)
+    {
+        SubmitMessage = "";
+
+        var file = e.File;
+        if (file is null)
+        {
+            return;
+        }
+
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            SubmitOk = false;
+            SubmitMessage = "Please choose an image file.";
+            return;
+        }
+
+        if (file.Size > MaxImageSize)
+        {
+            SubmitOk = false;
+            SubmitMessage = "Image is too large. Max size is 5MB.";
+            return;
+        }
+
+        await using var stream = file.OpenReadStream(MaxImageSize);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        var dataUrl = $"data:{file.ContentType};base64,{base64}";
+
+        toolSubmission.ImageUrl = dataUrl;
+        uploadedImagePreview = dataUrl;
+        imageUrlInput = "";
+    }
+
+    private void ApplyImageUrl()
+    {
+        var url = imageUrlInput?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        toolSubmission.ImageUrl = url;
+        uploadedImagePreview = url;
+        SubmitMessage = "";
+    }
+
     private class AccountInfo
     {
         public Guid Id { get; set; }
@@ -387,3 +494,79 @@
         public string? StripeAccountId { get; set; }
     }
 }
+
+<style>
+    .image-drop-zone {
+        position: relative;
+        border: 1px dashed #94a3b8;
+        border-radius: 10px;
+        padding: 1rem;
+        background: #f8fafc;
+        min-height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .image-drop-input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .image-drop-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        text-align: center;
+        color: #334155;
+        pointer-events: none;
+    }
+
+    .image-drop-content span {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .image-url-row {
+        margin-top: 0.55rem;
+        display: flex;
+        gap: 0.45rem;
+    }
+
+    .image-url-input {
+        flex: 1;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.45rem 0.6rem;
+    }
+
+    .image-url-btn {
+        white-space: nowrap;
+    }
+
+    .image-preview-wrap {
+        margin-top: 0.6rem;
+    }
+
+    .image-preview {
+        width: 100%;
+        max-width: 280px;
+        max-height: 200px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        object-fit: cover;
+        display: block;
+    }
+
+    .submit-loading {
+        margin-top: 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        color: #475569;
+        font-size: 0.92rem;
+    }
+</style>

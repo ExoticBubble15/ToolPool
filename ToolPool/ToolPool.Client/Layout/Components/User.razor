@@ -14,13 +14,13 @@
     @if(authenticated)
     {
         <span style="margin-right: 5px; font-size: 0.9em;">@username</span>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/profile">Profile</Button>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/stripe">Listings</Button>
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/chat">Messages</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick='() => Navigation.NavigateTo("/profile")'>Profile</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick='() => Navigation.NavigateTo("/stripe")'>Listings</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick='() => Navigation.NavigateTo("/chat")'>Messages</Button>
         <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="SignOutAsync">Sign Out</Button>
     } else
     {
-        <Button Class="headerButton" Type="ButtonType.Link" Color="ButtonColor.Success" To="/login">Login</Button>
+        <Button Class="headerButton" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick='() => Navigation.NavigateTo("/login")'>Login</Button>
     }
 </span>
 
@@ -33,19 +33,12 @@
     {
         try
         {
-            var response = await Http.GetAsync("api/auth/status");
+            var response = await Http.GetAsync("/api/auth/status");
             if (response.IsSuccessStatusCode)
             {
-                authenticated = true;
                 AuthStatus content = await response?.Content?.ReadFromJsonAsync<AuthStatus>() ?? new AuthStatus { authenticated = false };
-                if (content.authenticated)
-                {
-                    var result = await Http.GetAsync("api/auth/restoreSession");
-                    if (result.IsSuccessStatusCode)
-                    {
-                        authenticated = true;
-                    }
-                }
+                authenticated = content.authenticated;
+                username = content.email ?? "";
                 startup = false;
             }
             else

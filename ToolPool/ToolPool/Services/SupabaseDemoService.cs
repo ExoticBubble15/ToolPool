@@ -317,7 +317,112 @@ public class SupabaseDemoService
             PropertyNameCaseInsensitive = true
         });
 
-        return activities ?? new List<ProfileActivityDto>();
+        var results = activities ?? new List<ProfileActivityDto>();
+        if (!results.Any())
+        {
+            return results;
+        }
+
+        var missingToolNameIds = results
+            .Where(x => string.IsNullOrWhiteSpace(x.ToolName) && x.ToolId != Guid.Empty)
+            .Select(x => x.ToolId)
+            .Distinct()
+            .ToList();
+
+        var toolNameLookup = missingToolNameIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await GetToolNamesByIdsAsync(missingToolNameIds);
+
+        var userCache = new Dictionary<Guid, Models.AppUser?>();
+
+        foreach (var item in results)
+        {
+            if (string.IsNullOrWhiteSpace(item.ToolName)
+                && item.ToolId != Guid.Empty
+                && toolNameLookup.TryGetValue(item.ToolId, out var resolvedToolName))
+            {
+                item.ToolName = resolvedToolName;
+            }
+
+            item.Status = string.IsNullOrWhiteSpace(item.Status)
+                ? "pending"
+                : item.Status.Trim().ToLowerInvariant();
+
+            if (item.OwnerId == userId)
+            {
+                item.Role = "owner";
+                if (Guid.TryParse(item.RenterId, out var renterGuid))
+                {
+                    if (!userCache.TryGetValue(renterGuid, out var renter))
+                    {
+                        renter = await GetUserByIdAsync(renterGuid);
+                        userCache[renterGuid] = renter;
+                    }
+
+                    item.CounterpartName = renter?.Username ?? renter?.Email ?? "Renter";
+                }
+                else
+                {
+                    item.CounterpartName = "Renter";
+                }
+            }
+            else
+            {
+                item.Role = "renter";
+                if (item.OwnerId.HasValue)
+                {
+                    var ownerGuid = item.OwnerId.Value;
+                    if (!userCache.TryGetValue(ownerGuid, out var owner))
+                    {
+                        owner = await GetUserByIdAsync(ownerGuid);
+                        userCache[ownerGuid] = owner;
+                    }
+
+                    item.CounterpartName = owner?.Username ?? owner?.Email ?? "Owner";
+                }
+                else
+                {
+                    item.CounterpartName = "Owner";
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private async Task<Dictionary<Guid, string>> GetToolNamesByIdsAsync(IEnumerable<Guid> toolIds)
+    {
+        var ids = toolIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        var inClause = string.Join(",", ids.Select(x => x.ToString()));
+        var url = $"{_opt.Url}/rest/v1/Tools?id=in.({inClause})&select=id,name";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        if (!resp.IsSuccessStatusCode)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var rows = await resp.Content.ReadFromJsonAsync<List<ToolNameLookupDto>>(
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        return rows?
+            .Where(x => x.Id != Guid.Empty && !string.IsNullOrWhiteSpace(x.Name))
+            .GroupBy(x => x.Id)
+            .ToDictionary(x => x.Key, x => x.First().Name) ?? new Dictionary<Guid, string>();
     }
 
     public async Task DeleteRatingsByUserAsync(Guid userId)
@@ -874,6 +979,12 @@ public class ProfileActivityDto
 
     public string? Status { get; set; }
 
+    [JsonPropertyName("counterpart_name")]
+    public string? CounterpartName { get; set; }
+
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
+
     [JsonPropertyName("created_at")]
     public DateTimeOffset? CreatedAt { get; set; }
 }
@@ -888,4 +999,10 @@ public class StripeAccountLookupDto
 {
     [JsonPropertyName("stripe_account_id")]
     public string? StripeAccountId { get; set; }
+}
+
+public class ToolNameLookupDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
