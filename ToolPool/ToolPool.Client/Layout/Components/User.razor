@@ -31,14 +31,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("Attempting Startup auth session restore");
         try
         {
-            var response = await Http.GetAsync("/api/auth/status");
+            var response = await Http.GetAsync("api/auth/status");
             if (response.IsSuccessStatusCode)
             {
                 AuthStatus content = await response?.Content?.ReadFromJsonAsync<AuthStatus>() ?? new AuthStatus { authenticated = false };
                 authenticated = content.authenticated;
                 username = content.email ?? "";
+                if (startup)
+                {
+                    await Http.PostAsync("api/auth/restoreSession", null);
+                }
                 startup = false;
             }
             else
