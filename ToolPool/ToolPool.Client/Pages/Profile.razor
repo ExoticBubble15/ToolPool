@@ -182,7 +182,7 @@
                             </small>
                         </div>
                         <div class="activity-side">
-                            <span class="badge @GetStatusBadgeClass(activity.Status)">@GetStatusText(activity.Status)</span>
+                            @* <span class="badge @GetStatusBadgeClass(activity.Status)">@GetStatusText(activity.Status)</span> *@
                             <small>@FormatActivityDate(activity.CreatedAt)</small>
                             @if (!string.IsNullOrWhiteSpace(GetActivityTarget(activity)))
                             {

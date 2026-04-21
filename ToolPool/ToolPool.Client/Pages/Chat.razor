@@ -15,12 +15,12 @@
     <div class="chat-header">
         <a href="/chat" class="chat-back">&larr;</a>
         <h2>@ChannelName</h2>
-        @if (paymentContext?.CanPay == true)
+        @* @if (paymentContext?.CanPay == true)
         {
             <button class="chat-pay-btn" @onclick="StartPayment" disabled="@isStartingPayment">
                 @(isStartingPayment ? "..." : $"Pay Now: ${paymentContext.TotalAmount:F2}")
             </button>
-        }
+        } *@
     </div>
 
     @if (!authChecked)

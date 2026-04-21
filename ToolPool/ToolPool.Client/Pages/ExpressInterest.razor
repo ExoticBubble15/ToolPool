@@ -185,9 +185,9 @@ else
                 else
                 {
                     <div class="ei-button-group">
-                        <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@(submitting || !HasValidDates || hasConflict || IsOwnTool)">
+                        @* <button class="ei-submit-btn" @onclick="ExpressInterestOnly" disabled="@(submitting || !HasValidDates || hasConflict || IsOwnTool)">
                             @(submitting ? "Submitting..." : "Express Interest & Start Chat")
-                        </button>
+                        </button> *@
                         <button class="ei-pay-btn" @onclick="PayAndExpressInterest" disabled="@(submitting || !HasValidDates || hasConflict || IsOwnTool)">
                             @if (HasValidDates)
                             {
@@ -199,7 +199,7 @@ else
                             }
                         </button>
                     </div>
-                    <p class="ei-button-hint">Start a conversation first, or pay now to secure your rental.</p>
+                    <p class="ei-button-hint">Pay now to secure your rental.</p>
                 }
             </div>
         </div>
