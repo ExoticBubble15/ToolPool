@@ -705,6 +705,19 @@ public class SupabaseDemoService
         return results?.FirstOrDefault();
     }
 
+    public async Task UpdateInterestStatusAsync(Guid interestId, string status)
+    {
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}";
+
+        using var req = new HttpRequestMessage(HttpMethod.Patch, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Content = JsonContent.Create(new { status });
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+    }
+
     // ── Tool queries ──
 
     public async Task<List<Models.Tool>> GetToolsAsync()
@@ -747,6 +760,21 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
 
         var items = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
+        return items?.FirstOrDefault();
+    }
+
+    public async Task<Models.ToolAddressLookup?> GetToolAddressByIdAsync(Guid id)
+    {
+        var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,owner_id,addressLat,addressLng,neighborhood&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var items = await resp.Content.ReadFromJsonAsync<List<Models.ToolAddressLookup>>(_jsonOpts);
         return items?.FirstOrDefault();
     }
 

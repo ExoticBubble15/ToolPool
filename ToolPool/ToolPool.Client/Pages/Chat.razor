@@ -23,6 +23,66 @@
         } *@
     </div>
 
+    @if (pickupAddressInfo is not null && (pickupAddressInfo.CanView || pickupAddressInfo.CanReveal))
+    {
+        <div style="margin: 0 1rem 1rem; padding: 0.9rem 1rem; border-radius: 14px; background: #f6f8f7; border: 1px solid #d8e0dc;">
+            <div style="display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #647067;">Pickup Address</div>
+                    <div style="margin-top: 0.2rem; font-size: 0.9rem; color: #55635a;">Status: @GetBookingStatusText(pickupAddressInfo.Status)</div>
+                    @if (pickupAddressInfo.CanView && !string.IsNullOrWhiteSpace(pickupAddressInfo.Address))
+                    {
+                        <div style="margin-top: 0.35rem; font-weight: 600; color: #1d2a22;">@pickupAddressInfo.Address</div>
+                    }
+                    else
+                    {
+                        <div style="margin-top: 0.35rem; color: #55635a;">Reveal this only when you're ready for pickup.</div>
+                    }
+                </div>
+
+                @if (pickupAddressInfo.CanReveal)
+                {
+                    <button class="chat-send" @onclick="RevealPickupAddress" disabled="@isBookingActionRunning">
+                        @(isRevealingAddress ? "Revealing..." : "Reveal Exact Address")
+                    </button>
+                }
+            </div>
+
+            @if (pickupAddressInfo.CanStartHandoff || pickupAddressInfo.CanConfirmPickup || pickupAddressInfo.CanRequestReturn || pickupAddressInfo.CanConfirmReturn)
+            {
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.9rem;">
+                    @if (pickupAddressInfo.CanStartHandoff)
+                    {
+                        <button class="chat-send" @onclick="StartHandoff" disabled="@isBookingActionRunning">
+                            @(isBookingActionRunning ? "Updating..." : "Start Handoff")
+                        </button>
+                    }
+
+                    @if (pickupAddressInfo.CanConfirmPickup)
+                    {
+                        <button class="chat-send" @onclick="ConfirmPickup" disabled="@isBookingActionRunning">
+                            @(isBookingActionRunning ? "Updating..." : "Confirm Pickup")
+                        </button>
+                    }
+
+                    @if (pickupAddressInfo.CanRequestReturn)
+                    {
+                        <button class="chat-send" @onclick="RequestReturn" disabled="@isBookingActionRunning">
+                            @(isBookingActionRunning ? "Updating..." : "Return Tool")
+                        </button>
+                    }
+
+                    @if (pickupAddressInfo.CanConfirmReturn)
+                    {
+                        <button class="chat-send" @onclick="ConfirmReturn" disabled="@isBookingActionRunning">
+                            @(isBookingActionRunning ? "Updating..." : "Confirm Return")
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     @if (!authChecked)
     {
         <div class="chat-loading">
@@ -92,7 +152,10 @@
     private string Error = "";
     private DotNetObjectReference<Chat>? _dotnetRef;
     private ChatPaymentContext? paymentContext;
+    private PickupAddressInfo? pickupAddressInfo;
     private bool isStartingPayment = false;
+    private bool isRevealingAddress = false;
+    private bool isBookingActionRunning = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -134,6 +197,7 @@
             if (InterestId.HasValue)
             {
                 paymentContext = await ToolService.GetChatPaymentContextAsync(InterestId.Value);
+                await LoadPickupAddressInfoAsync();
             }
 
             IsLoading = false;
@@ -156,6 +220,10 @@
         if (msg is not null)
         {
             Messages.Add(msg);
+            if (InterestId.HasValue && msg.Message.StartsWith("Exact pickup address:", StringComparison.OrdinalIgnoreCase))
+            {
+                await LoadPickupAddressInfoAsync(showErrors: false);
+            }
             await InvokeAsync(StateHasChanged);
             await ScrollToBottom();
         }
@@ -232,6 +300,138 @@
             isStartingPayment = false;
         }
     }
+
+    private async Task LoadPickupAddressInfoAsync(bool showErrors = true)
+    {
+        if (!InterestId.HasValue)
+        {
+            pickupAddressInfo = null;
+            return;
+        }
+
+        try
+        {
+            pickupAddressInfo = await ToolService.GetPickupAddressInfoAsync(InterestId.Value);
+        }
+        catch (Exception ex)
+        {
+            if (showErrors)
+            {
+                Error = $"Pickup address unavailable: {ex.Message}";
+            }
+        }
+    }
+
+    private async Task RevealPickupAddress()
+    {
+        if (isRevealingAddress || !InterestId.HasValue || pickupAddressInfo?.CanReveal != true) return;
+
+        isRevealingAddress = true;
+        isBookingActionRunning = true;
+        Error = "";
+
+        try
+        {
+            pickupAddressInfo = await ToolService.RevealPickupAddressAsync(InterestId.Value);
+
+            if (!string.IsNullOrWhiteSpace(pickupAddressInfo?.Address))
+            {
+                var announceText = $"Exact pickup address: {pickupAddressInfo.Address}";
+                var result = await JS.InvokeAsync<JsonElement>("sendbirdInterop.sendMessage", ChannelUrl, announceText);
+                var msg = JsonSerializer.Deserialize<ChatMessage>(result.GetRawText(),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (msg is not null)
+                {
+                    Messages.Add(msg);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = $"Address reveal failed: {ex.Message}";
+        }
+        finally
+        {
+            isRevealingAddress = false;
+            isBookingActionRunning = false;
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task StartHandoff()
+    {
+        await RunBookingAction(
+            () => ToolService.StartHandoffAsync(InterestId!.Value),
+            "Owner started handoff. Please confirm pickup once the tool is in your hands.");
+    }
+
+    private async Task ConfirmPickup()
+    {
+        await RunBookingAction(
+            () => ToolService.ConfirmPickupAsync(InterestId!.Value),
+            "Pickup confirmed. Rental is now in progress.");
+    }
+
+    private async Task RequestReturn()
+    {
+        await RunBookingAction(
+            () => ToolService.RequestReturnAsync(InterestId!.Value),
+            "Return requested. Owner, please confirm once the tool is back with you.");
+    }
+
+    private async Task ConfirmReturn()
+    {
+        await RunBookingAction(
+            () => ToolService.ConfirmReturnAsync(InterestId!.Value),
+            "Return confirmed. Booking completed.");
+    }
+
+    private async Task RunBookingAction(Func<Task<PickupAddressInfo?>> action, string announcement)
+    {
+        if (isBookingActionRunning || !InterestId.HasValue) return;
+
+        isBookingActionRunning = true;
+        Error = "";
+
+        try
+        {
+            pickupAddressInfo = await action();
+
+            if (!string.IsNullOrWhiteSpace(announcement))
+            {
+                var result = await JS.InvokeAsync<JsonElement>("sendbirdInterop.sendMessage", ChannelUrl, announcement);
+                var msg = JsonSerializer.Deserialize<ChatMessage>(result.GetRawText(),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (msg is not null)
+                {
+                    Messages.Add(msg);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Error = $"Booking update failed: {ex.Message}";
+        }
+        finally
+        {
+            isBookingActionRunning = false;
+            StateHasChanged();
+            await ScrollToBottom();
+        }
+    }
+
+    private static string GetBookingStatusText(string? status) => status?.ToLowerInvariant() switch
+    {
+        "pending" => "Waiting for owner",
+        "confirmed" => "Confirmed",
+        "revealed" => "Address shared",
+        "handoff_requested" => "Waiting for pickup confirmation",
+        "handed_off" => "Tool checked out",
+        "return_requested" => "Waiting for return confirmation",
+        "completed" => "Completed",
+        _ => "Pending"
+    };
 
     public async ValueTask DisposeAsync()
     {

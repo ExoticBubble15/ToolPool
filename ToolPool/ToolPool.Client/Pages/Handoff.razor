@@ -1,6 +1,11 @@
 ﻿@page "/handoff"
+@inject NavigationManager Nav
 
 <h2 class="pageTitle">Handoff</h2>
 <span class="pageSubtitle">
-    todo
+    Start pickup and confirm handoff from the booking chat.
 </span>
+
+<div style="margin-top: 1.5rem;">
+    <button class="btn btn-dark" @onclick='() => Nav.NavigateTo("/chat")'>Open Booking Chats</button>
+</div>

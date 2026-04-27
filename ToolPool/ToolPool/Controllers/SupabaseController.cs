@@ -62,17 +62,7 @@ namespace ToolPool.Controllers
         [HttpGet("reverseGeocode/{lat}/{lng}")]
         public async Task<String> ReverseGeocode(string lat, string lng)
         {
-            //var client = _httpClientFactory.CreateClient();
-
-            //geocode api: gets detailed location info from latitude, longitude
-            var geocodeUrl = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={_config["Google:Maps"]}";
-
-            var geocodeReq = new HttpRequestMessage(HttpMethod.Get, geocodeUrl);
-            var geocodeResp = await client.SendAsync(geocodeReq);
-            var geocodeContent = await geocodeResp.Content.ReadAsStringAsync();
-            var geocodeJson = JsonDocument.Parse(geocodeContent);
-            var f = geocodeJson.RootElement.GetProperty("results")[0];
-            var address = f.GetProperty("formatted_address").GetString();
+            var address = await ReverseGeocodeExactAddressAsync(lat, lng);
 
             Console.WriteLine($"reverseGeocode/{lat}/{lng}: {address}");
             return address;
@@ -515,6 +505,235 @@ namespace ToolPool.Controllers
             }
 
             return Ok(results.OrderByDescending(r => r.CreatedAt).ToList());
+        }
+
+        [HttpGet("interests/{interestId:guid}/pickup-address")]
+        public async Task<ActionResult<PickupAddressResponse>> GetPickupAddress(Guid interestId)
+        {
+            var userId = GetAuthenticatedUserId();
+            if (userId is null)
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var interest = await _supabase.GetInterestByIdAsync(interestId);
+            if (interest is null)
+                return NotFound(new { error = "Interest not found" });
+
+            var isOwner = interest.OwnerId == userId.Value;
+            var isRenter = interest.RenterId == userId.Value.ToString();
+            if (!isOwner && !isRenter)
+                return Forbid();
+
+            try
+            {
+                var response = await BuildPickupAddressResponseAsync(interest, userId.Value);
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("interests/{interestId:guid}/reveal-address")]
+        public async Task<ActionResult<PickupAddressResponse>> RevealPickupAddress(Guid interestId)
+        {
+            var userId = GetAuthenticatedUserId();
+            if (userId is null)
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var interest = await _supabase.GetInterestByIdAsync(interestId);
+            if (interest is null)
+                return NotFound(new { error = "Interest not found" });
+
+            if (interest.OwnerId != userId.Value)
+                return Forbid();
+
+            var normalizedStatus = NormalizeInterestStatus(interest.Status);
+            if (!CanRevealAddress(normalizedStatus) && !IsAddressRevealedStatus(normalizedStatus))
+            {
+                return BadRequest(new { error = "This booking cannot reveal an address right now." });
+            }
+
+            if (!IsAddressRevealedStatus(normalizedStatus))
+            {
+                await _supabase.UpdateInterestStatusAsync(interestId, "revealed");
+                interest.Status = "revealed";
+            }
+
+            try
+            {
+                var response = await BuildPickupAddressResponseAsync(interest, userId.Value);
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("interests/{interestId:guid}/start-handoff")]
+        public async Task<ActionResult<PickupAddressResponse>> StartHandoff(Guid interestId)
+        {
+            return await TransitionInterestAsync(
+                interestId,
+                allowedActor: "owner",
+                requiredStatus: "revealed",
+                nextStatus: "handoff_requested",
+                invalidStatusMessage: "You can only start handoff after the address is revealed.");
+        }
+
+        [HttpPost("interests/{interestId:guid}/confirm-pickup")]
+        public async Task<ActionResult<PickupAddressResponse>> ConfirmPickup(Guid interestId)
+        {
+            return await TransitionInterestAsync(
+                interestId,
+                allowedActor: "renter",
+                requiredStatus: "handoff_requested",
+                nextStatus: "handed_off",
+                invalidStatusMessage: "Pickup can only be confirmed after the owner starts handoff.");
+        }
+
+        [HttpPost("interests/{interestId:guid}/request-return")]
+        public async Task<ActionResult<PickupAddressResponse>> RequestReturn(Guid interestId)
+        {
+            return await TransitionInterestAsync(
+                interestId,
+                allowedActor: "renter",
+                requiredStatus: "handed_off",
+                nextStatus: "return_requested",
+                invalidStatusMessage: "You can request return only after pickup is confirmed.");
+        }
+
+        [HttpPost("interests/{interestId:guid}/confirm-return")]
+        public async Task<ActionResult<PickupAddressResponse>> ConfirmReturn(Guid interestId)
+        {
+            return await TransitionInterestAsync(
+                interestId,
+                allowedActor: "owner",
+                requiredStatus: "return_requested",
+                nextStatus: "completed",
+                invalidStatusMessage: "Return can only be confirmed after the renter requests return.");
+        }
+
+        private Guid? GetAuthenticatedUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return null;
+
+            return userId;
+        }
+
+        private static string NormalizeInterestStatus(string? status) =>
+            string.IsNullOrWhiteSpace(status) ? "pending" : status.Trim().ToLowerInvariant();
+
+        private static bool IsAddressRevealedStatus(string? status) =>
+            NormalizeInterestStatus(status) is "revealed" or "handoff_requested" or "handed_off" or "return_requested" or "completed";
+
+        private static bool CanRevealAddress(string? status) =>
+            NormalizeInterestStatus(status) is "pending" or "confirmed";
+
+        private async Task<ActionResult<PickupAddressResponse>> TransitionInterestAsync(
+            Guid interestId,
+            string allowedActor,
+            string requiredStatus,
+            string nextStatus,
+            string invalidStatusMessage)
+        {
+            var userId = GetAuthenticatedUserId();
+            if (userId is null)
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var interest = await _supabase.GetInterestByIdAsync(interestId);
+            if (interest is null)
+                return NotFound(new { error = "Interest not found" });
+
+            var isOwner = interest.OwnerId == userId.Value;
+            var isRenter = interest.RenterId == userId.Value.ToString();
+            if ((allowedActor == "owner" && !isOwner) || (allowedActor == "renter" && !isRenter))
+                return Forbid();
+
+            if (NormalizeInterestStatus(interest.Status) != requiredStatus)
+                return BadRequest(new { error = invalidStatusMessage });
+
+            await _supabase.UpdateInterestStatusAsync(interestId, nextStatus);
+            interest.Status = nextStatus;
+
+            try
+            {
+                var response = await BuildPickupAddressResponseAsync(interest, userId.Value);
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        private async Task<PickupAddressResponse> BuildPickupAddressResponseAsync(InterestSubmission interest, Guid viewerId)
+        {
+            var toolAddress = await _supabase.GetToolAddressByIdAsync(interest.ToolId);
+            if (toolAddress is null)
+                throw new InvalidOperationException("Tool address details were not found.");
+
+            var normalizedStatus = NormalizeInterestStatus(interest.Status);
+            var isOwner = interest.OwnerId == viewerId;
+            var isRenter = interest.RenterId == viewerId.ToString();
+            var isRevealed = IsAddressRevealedStatus(normalizedStatus);
+            var canReveal = isOwner && CanRevealAddress(normalizedStatus);
+            var canStartHandoff = isOwner && normalizedStatus == "revealed";
+            var canConfirmPickup = isRenter && normalizedStatus == "handoff_requested";
+            var canRequestReturn = isRenter && normalizedStatus == "handed_off";
+            var canConfirmReturn = isOwner && normalizedStatus == "return_requested";
+            var canView = isOwner || isRevealed;
+
+            string? address = null;
+            if (canView)
+            {
+                address = await ReverseGeocodeExactAddressAsync(
+                    toolAddress.AddressLat.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    toolAddress.AddressLng.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            return new PickupAddressResponse
+            {
+                InterestId = interest.Id,
+                ToolName = string.IsNullOrWhiteSpace(interest.ToolName) ? toolAddress.Name : interest.ToolName,
+                Status = normalizedStatus,
+                CanView = canView,
+                CanReveal = canReveal,
+                IsRevealed = isRevealed,
+                Address = address,
+                CanStartHandoff = canStartHandoff,
+                CanConfirmPickup = canConfirmPickup,
+                CanRequestReturn = canRequestReturn,
+                CanConfirmReturn = canConfirmReturn
+            };
+        }
+
+        private async Task<string> ReverseGeocodeExactAddressAsync(string lat, string lng)
+        {
+            if (string.IsNullOrWhiteSpace(_config["Google:Maps"]))
+                throw new InvalidOperationException("Google Maps API key is not configured.");
+
+            var geocodeUrl = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={_config["Google:Maps"]}";
+            using var geocodeReq = new HttpRequestMessage(HttpMethod.Get, geocodeUrl);
+            using var geocodeResp = await client.SendAsync(geocodeReq);
+
+            if (!geocodeResp.IsSuccessStatusCode)
+                throw new InvalidOperationException("Reverse geocoding failed.");
+
+            var geocodeContent = await geocodeResp.Content.ReadAsStringAsync();
+            using var geocodeJson = JsonDocument.Parse(geocodeContent);
+
+            if (!geocodeJson.RootElement.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
+                throw new InvalidOperationException("No exact address is available for this tool.");
+
+            var address = results[0].GetProperty("formatted_address").GetString();
+            if (string.IsNullOrWhiteSpace(address))
+                throw new InvalidOperationException("No exact address is available for this tool.");
+
+            return address;
         }
 
         public record CreateToolRequest(string Name, string Description, decimal Price);

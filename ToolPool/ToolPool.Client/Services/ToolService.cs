@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using System.Text.Json;
 using ToolPool.Client.Models;
 using ToolPool.Client.Pages;
 
@@ -112,5 +113,98 @@ public class ToolService
         if (!resp.IsSuccessStatusCode) return null;
         var result = await resp.Content.ReadFromJsonAsync<StripeResponse>();
         return result?.Url;
+    }
+
+    public async Task<PickupAddressInfo?> GetPickupAddressInfoAsync(Guid interestId)
+    {
+        var resp = await _http.GetAsync($"/api/interests/{interestId}/pickup-address");
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to load pickup address."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    public async Task<PickupAddressInfo?> RevealPickupAddressAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/interests/{interestId}/reveal-address", null);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to reveal pickup address."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    public async Task<PickupAddressInfo?> StartHandoffAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/interests/{interestId}/start-handoff", null);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to start handoff."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    public async Task<PickupAddressInfo?> ConfirmPickupAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/interests/{interestId}/confirm-pickup", null);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to confirm pickup."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    public async Task<PickupAddressInfo?> RequestReturnAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/interests/{interestId}/request-return", null);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to request return."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    public async Task<PickupAddressInfo?> ConfirmReturnAsync(Guid interestId)
+    {
+        var resp = await _http.PostAsync($"/api/interests/{interestId}/confirm-return", null);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to confirm return."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
+    private static async Task<string> ReadErrorAsync(HttpResponseMessage response, string fallback)
+    {
+        var error = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(error))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(error);
+            if (json.RootElement.TryGetProperty("error", out var errorValue))
+            {
+                var parsed = errorValue.GetString();
+                if (!string.IsNullOrWhiteSpace(parsed))
+                {
+                    return parsed;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return error;
     }
 }
