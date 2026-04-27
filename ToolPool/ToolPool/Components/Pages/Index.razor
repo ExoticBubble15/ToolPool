@@ -1,5 +1,8 @@
 @page "/"
 @layout LandingLayout
+@using System.Security.Claims
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
 
 <PageTitle>ToolPool — Borrow tools from your neighbors</PageTitle>
 
@@ -14,7 +17,14 @@
                 <a href="#faq">FAQ</a>
             </nav>
             <div class="row gap-sm">
-                <a class="btn btn-ghost" href="/login" style="padding: 0.5rem 0.9rem; font-size: 0.88rem;">Sign in</a>
+                @if (IsAuthenticated)
+                {
+                    <a class="btn btn-ghost" href="/profile" style="padding: 0.5rem 0.9rem; font-size: 0.88rem;">Profile</a>
+                }
+                else
+                {
+                    <a class="btn btn-ghost" href="/login" style="padding: 0.5rem 0.9rem; font-size: 0.88rem;">Sign in</a>
+                }
                 <a class="btn btn-primary" href="/browse" style="padding: 0.55rem 1rem; font-size: 0.88rem;">
                     Get started
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
@@ -385,3 +395,16 @@
         </div>
     </footer>
 </div>
+
+@code {
+    private ClaimsPrincipal? CurrentUser => HttpContextAccessor.HttpContext?.User;
+    private bool IsAuthenticated => CurrentUser?.Identity?.IsAuthenticated == true;
+
+    protected override void OnInitialized()
+    {
+        if (IsAuthenticated)
+        {
+            Navigation.NavigateTo("/browse", replace: true);
+        }
+    }
+}

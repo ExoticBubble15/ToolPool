@@ -46,8 +46,10 @@ builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
     });
 
 builder.Services.AddHttpClient("Sendbird", client =>
