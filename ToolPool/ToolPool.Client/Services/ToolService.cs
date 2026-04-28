@@ -181,6 +181,17 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
     }
 
+    public async Task<PickupAddressInfo?> SubmitOwnerRatingAsync(Guid interestId, int score)
+    {
+        var resp = await _http.PostAsJsonAsync($"/api/interests/{interestId}/rating", new { score });
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(await ReadErrorAsync(resp, "Failed to submit rating."));
+        }
+
+        return await resp.Content.ReadFromJsonAsync<PickupAddressInfo>();
+    }
+
     private static async Task<string> ReadErrorAsync(HttpResponseMessage response, string fallback)
     {
         var error = await response.Content.ReadAsStringAsync();

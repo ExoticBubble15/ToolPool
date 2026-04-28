@@ -615,6 +615,49 @@ namespace ToolPool.Controllers
                 invalidStatusMessage: "Return can only be confirmed after the renter requests return.");
         }
 
+        public class OwnerRatingRequest
+        {
+            [JsonPropertyName("score")]
+            public int Score { get; set; }
+        }
+
+        [HttpPost("interests/{interestId:guid}/rating")]
+        public async Task<ActionResult<PickupAddressResponse>> SubmitOwnerRating(Guid interestId, [FromBody] OwnerRatingRequest body)
+        {
+            var userId = GetAuthenticatedUserId();
+            if (userId is null)
+                return Unauthorized(new { error = "Not authenticated" });
+
+            if (body is null || body.Score < 1 || body.Score > 5)
+                return BadRequest(new { error = "Score must be between 1 and 5." });
+
+            var interest = await _supabase.GetInterestByIdAsync(interestId);
+            if (interest is null)
+                return NotFound(new { error = "Interest not found" });
+
+            if (interest.RenterId != userId.Value.ToString())
+                return Forbid();
+
+            if (NormalizeInterestStatus(interest.Status) != "completed")
+                return BadRequest(new { error = "You can only rate after the rental is completed." });
+
+            if (interest.OwnerId is not Guid ownerId)
+                return BadRequest(new { error = "This rental has no owner to rate." });
+
+            await _supabase.UpsertRatingAsync(interestId, userId.Value, ownerId, body.Score);
+            await _supabase.RecomputeUserAggregateAsync(ownerId);
+
+            try
+            {
+                var response = await BuildPickupAddressResponseAsync(interest, userId.Value);
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         private Guid? GetAuthenticatedUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -695,6 +738,16 @@ namespace ToolPool.Controllers
                     toolAddress.AddressLng.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
 
+            var canRateOwner = false;
+            int? currentOwnerRating = null;
+            if (isRenter && normalizedStatus == "completed" && interest.OwnerId is Guid ownerIdForRating)
+            {
+                canRateOwner = true;
+                var existing = await _supabase.GetRatingAsync(interest.Id, viewerId, ownerIdForRating);
+                if (existing is not null)
+                    currentOwnerRating = existing.Score;
+            }
+
             return new PickupAddressResponse
             {
                 InterestId = interest.Id,
@@ -707,7 +760,9 @@ namespace ToolPool.Controllers
                 CanStartHandoff = canStartHandoff,
                 CanConfirmPickup = canConfirmPickup,
                 CanRequestReturn = canRequestReturn,
-                CanConfirmReturn = canConfirmReturn
+                CanConfirmReturn = canConfirmReturn,
+                CanRateOwner = canRateOwner,
+                CurrentOwnerRating = currentOwnerRating
             };
         }
 

@@ -52,6 +52,61 @@
             <div class="rental-tool-name">@info.ToolName</div>
             <div class="rental-status-pill">@GetBookingStatusText(info.Status)</div>
             <p class="rental-done-text">This rental is complete. Thanks for using ToolPool.</p>
+
+            @if (info.CanRateOwner)
+            {
+                <div class="rental-rating-block">
+                    <div class="rental-rating-label">
+                        @(info.CurrentOwnerRating.HasValue ? "Your rating" : "Rate the owner")
+                    </div>
+                    <div class="rental-stars" role="radiogroup" aria-label="Rating">
+                        @for (var s = 1; s <= 5; s++)
+                        {
+                            var starValue = s;
+                            var filled = selectedScore.HasValue
+                                ? starValue <= selectedScore.Value
+                                : (info.CurrentOwnerRating ?? 0) >= starValue;
+                            <button type="button"
+                                    class="rental-star @(filled ? "rental-star--filled" : "")"
+                                    aria-label="@($"{starValue} star{(starValue == 1 ? "" : "s")}")"
+                                    disabled="@isRatingRunning"
+                                    @onclick="() => SelectScore(starValue)">★</button>
+                        }
+                    </div>
+                    <div class="rental-actions">
+                        <button class="chat-send"
+                                @onclick="SubmitRating"
+                                disabled="@(isRatingRunning || !selectedScore.HasValue || selectedScore == info.CurrentOwnerRating)">
+                            @(isRatingRunning
+                                ? "Submitting..."
+                                : info.CurrentOwnerRating.HasValue ? "Update Rating" : "Submit Rating")
+                        </button>
+                    </div>
+                    @if (ratingSavedAt is not null)
+                    {
+                        <div class="rental-rating-saved">Saved @ratingSavedAt</div>
+                    }
+                    @if (!string.IsNullOrEmpty(ratingError))
+                    {
+                        <div class="rental-error">@ratingError</div>
+                    }
+                </div>
+            }
+            else if (info.CurrentOwnerRating.HasValue)
+            {
+                <div class="rental-rating-block">
+                    <div class="rental-rating-label">Your rating</div>
+                    <div class="rental-stars">
+                        @for (var s = 1; s <= 5; s++)
+                        {
+                            var starValue = s;
+                            var filled = (info.CurrentOwnerRating ?? 0) >= starValue;
+                            <span class="rental-star @(filled ? "rental-star--filled" : "") rental-star--readonly">★</span>
+                        }
+                    </div>
+                </div>
+            }
+
             <div class="rental-actions">
                 <button class="chat-send" @onclick='() => Nav.NavigateTo("/chat")'>Back to Conversations</button>
                 @if (!string.IsNullOrWhiteSpace(ChannelUrl))
@@ -233,6 +288,60 @@
         margin-top: 0.75rem;
         color: #2f4a3a;
     }
+
+    .rental-rating-block {
+        margin-top: 1.25rem;
+        padding: 1rem 1.1rem;
+        background: #ffffff;
+        border: 1px solid #d8e5dd;
+        border-radius: 12px;
+    }
+
+    .rental-rating-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #647067;
+    }
+
+    .rental-stars {
+        margin-top: 0.4rem;
+        display: flex;
+        gap: 0.2rem;
+    }
+
+    .rental-star {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #c8d1cc;
+        transition: color 0.12s;
+    }
+
+        .rental-star:hover:not(:disabled) {
+            color: #d9b441;
+        }
+
+        .rental-star--filled {
+            color: #e0a93a;
+        }
+
+        .rental-star--readonly {
+            cursor: default;
+        }
+
+        .rental-star:disabled {
+            cursor: not-allowed;
+        }
+
+    .rental-rating-saved {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #3a7d5a;
+    }
 </style>
 
 @code {
@@ -249,6 +358,11 @@
     private PickupAddressInfo? info;
     private bool isActionRunning;
     private Guid loadedFor = Guid.Empty;
+
+    private int? selectedScore;
+    private bool isRatingRunning;
+    private string? ratingError;
+    private string? ratingSavedAt;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -290,6 +404,7 @@
         try
         {
             info = await ToolService.GetPickupAddressInfoAsync(InterestId);
+            selectedScore = info?.CurrentOwnerRating;
         }
         catch (Exception ex)
         {
@@ -298,6 +413,48 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private void SelectScore(int score)
+    {
+        if (isRatingRunning) return;
+        selectedScore = score;
+        ratingError = null;
+        ratingSavedAt = null;
+    }
+
+    private async Task SubmitRating()
+    {
+        if (isRatingRunning || !selectedScore.HasValue) return;
+        var score = selectedScore.Value;
+        if (score < 1 || score > 5)
+        {
+            ratingError = "Please pick between 1 and 5 stars.";
+            return;
+        }
+
+        isRatingRunning = true;
+        ratingError = null;
+        ratingSavedAt = null;
+        try
+        {
+            var updated = await ToolService.SubmitOwnerRatingAsync(InterestId, score);
+            if (updated is not null)
+            {
+                info = updated;
+                selectedScore = updated.CurrentOwnerRating ?? score;
+                ratingSavedAt = DateTime.Now.ToString("h:mm tt");
+            }
+        }
+        catch (Exception ex)
+        {
+            ratingError = ex.Message;
+        }
+        finally
+        {
+            isRatingRunning = false;
+            StateHasChanged();
         }
     }
 

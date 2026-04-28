@@ -261,6 +261,12 @@ public class PickupAddressInfo
 
     [JsonPropertyName("can_confirm_return")]
     public bool CanConfirmReturn { get; set; }
+
+    [JsonPropertyName("can_rate_owner")]
+    public bool CanRateOwner { get; set; }
+
+    [JsonPropertyName("current_owner_rating")]
+    public int? CurrentOwnerRating { get; set; }
 }
 
 public class AuthStatus

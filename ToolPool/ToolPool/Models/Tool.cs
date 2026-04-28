@@ -176,5 +176,34 @@ namespace ToolPool.Models
 
         [JsonPropertyName("can_confirm_return")]
         public bool CanConfirmReturn { get; set; }
+
+        [JsonPropertyName("can_rate_owner")]
+        public bool CanRateOwner { get; set; }
+
+        [JsonPropertyName("current_owner_rating")]
+        public int? CurrentOwnerRating { get; set; }
+    }
+
+    public class Rating
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("interest_id")]
+        public Guid InterestId { get; set; }
+
+        [JsonPropertyName("rater_id")]
+        public Guid RaterId { get; set; }
+
+        [JsonPropertyName("rated_user_id")]
+        public Guid RatedUserId { get; set; }
+
+        [JsonPropertyName("score")]
+        public int Score { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
     }
 }

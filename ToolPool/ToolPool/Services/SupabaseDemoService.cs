@@ -793,6 +793,81 @@ public class SupabaseDemoService
         return rows?.FirstOrDefault();
     }
 
+    // ── Ratings ──
+
+    public async Task<Models.Rating?> GetRatingAsync(Guid interestId, Guid raterId, Guid ratedUserId)
+    {
+        var url = $"{_opt.Url}/rest/v1/Ratings?interest_id=eq.{interestId}&rater_id=eq.{raterId}&rated_user_id=eq.{ratedUserId}&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        if (!resp.IsSuccessStatusCode) return null;
+
+        var rows = await resp.Content.ReadFromJsonAsync<List<Models.Rating>>(_jsonOpts);
+        return rows?.FirstOrDefault();
+    }
+
+    public async Task UpsertRatingAsync(Guid interestId, Guid raterId, Guid ratedUserId, int score)
+    {
+        var existing = await GetRatingAsync(interestId, raterId, ratedUserId);
+
+        if (existing is not null)
+        {
+            var patchUrl = $"{_opt.Url}/rest/v1/Ratings?id=eq.{existing.Id}";
+            using var patchReq = new HttpRequestMessage(HttpMethod.Patch, patchUrl);
+            patchReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+            patchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+            patchReq.Content = JsonContent.Create(new { score });
+
+            using var patchResp = await client.SendAsync(patchReq);
+            patchResp.EnsureSuccessStatusCode();
+            return;
+        }
+
+        var insertUrl = $"{_opt.Url}/rest/v1/Ratings";
+        using var insertReq = new HttpRequestMessage(HttpMethod.Post, insertUrl);
+        insertReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        insertReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        insertReq.Headers.Add("Prefer", "return=representation");
+        insertReq.Content = JsonContent.Create(new
+        {
+            interest_id = interestId,
+            rater_id = raterId,
+            rated_user_id = ratedUserId,
+            score
+        });
+
+        using var insertResp = await client.SendAsync(insertReq);
+        insertResp.EnsureSuccessStatusCode();
+    }
+
+    public async Task RecomputeUserAggregateAsync(Guid ratedUserId)
+    {
+        var listUrl = $"{_opt.Url}/rest/v1/Ratings?rated_user_id=eq.{ratedUserId}&select=score";
+        using var listReq = new HttpRequestMessage(HttpMethod.Get, listUrl);
+        listReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        listReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var listResp = await client.SendAsync(listReq);
+        listResp.EnsureSuccessStatusCode();
+
+        var rows = await listResp.Content.ReadFromJsonAsync<List<Models.Rating>>(_jsonOpts) ?? new();
+        var total = rows.Count;
+        double? avg = total > 0 ? Math.Round(rows.Average(r => (double)r.Score), 2) : null;
+
+        var patchUrl = $"{_opt.Url}/rest/v1/Users?id=eq.{ratedUserId}";
+        using var patchReq = new HttpRequestMessage(HttpMethod.Patch, patchUrl);
+        patchReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        patchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        patchReq.Content = JsonContent.Create(new { avg_rating = avg, total_ratings = total });
+
+        using var patchResp = await client.SendAsync(patchReq);
+        patchResp.EnsureSuccessStatusCode();
+    }
+
     public async Task<InterestSubmission> InsertInterestAsync(InterestSubmission interest)
     {
         //var client = _httpClientFactory.CreateClient();
