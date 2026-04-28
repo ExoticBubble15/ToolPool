@@ -32,11 +32,13 @@
         </div>
     }
     
-    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin">Sign In</Button>
-    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register">Register</Button>
+    <Button style="width: 200px;" Type="ButtonType.Button" Color="ButtonColor.Success" @onclick="tryLogin" Disabled="@signingIn" Loading="@signingIn" LoadingText="Signing In...">Sign In</Button>
+    <Button style="width: 200px;" Type="ButtonType.Link" Color="ButtonColor.Success" To="/register" Disabled="@(signingIn)">Register</Button>
 </div> 
 
 @code {
+    private bool signingIn = false;
+
     private string? Username { get; set; }
     private string? PasswordPlain { get; set; }
 
@@ -52,6 +54,7 @@
 
         if (!(usernameEmpty || passwordEmpty))
         {
+            signingIn = true;
             var request = new LoginRequest
             {
                 Email = Username,
@@ -78,6 +81,9 @@
             {
                 errorText = ex.Message;
                 loginFailed = true;
+            } finally
+            {
+                signingIn = false;
             }
         }
     }

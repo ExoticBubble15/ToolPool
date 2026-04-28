@@ -3,6 +3,7 @@
 @using System.Security.Claims
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 @inject NavigationManager Navigation
+@using ToolPool.Client.Layout.Components
 
 <PageTitle>ToolPool — Borrow tools from your neighbors</PageTitle>
 
@@ -10,7 +11,7 @@
     @* TOPBAR *@
     <header class="lp-topbar">
         <div class="lp-topbar-inner">
-            <a class="lp-wordmark" href="/">Tool<em>Pool</em></a>
+            <a class="lp-wordmark" href="/"><h3>Tool<em>Pool</em></h3></a>
             <nav class="lp-nav">
                 <a href="#how">How it works</a>
                 <a href="#trust">Trust &amp; safety</a>
@@ -48,11 +49,11 @@
                     ToolPool is a neighborhood library for power tools, ladders, and the random thing you only need once. Borrow from your neighbors. Lend what's gathering dust. Skip the trip to the hardware store.
                 </p>
                 <div class="row gap-sm wrap" style="margin-top: 1.5rem;">
-                    <a class="btn btn-primary btn-lg" href="/browse">
+                    <a class="btn btn-primary btn-lg" href="/browse" style="padding: 0.25rem">
                         Browse tools near me
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                     </a>
-                    <a class="btn btn-secondary btn-lg" href="/browse">
+                    <a class="btn btn-secondary btn-lg" href="/browse" style="padding: 0.25rem">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
                         List your tools
                     </a>
@@ -360,40 +361,7 @@
     </section>
 
     @* FOOTER *@
-    <footer class="lp-footer">
-        <div class="lp-footer-inner">
-            <div>
-                <a class="lp-wordmark" href="/">Tool<em>Pool</em></a>
-                <p class="muted" style="font-size: 0.85rem; margin-top: 0.6rem; max-width: 32ch;">
-                    A neighborhood tool library for Greater Boston. Borrow more, store less.
-                </p>
-            </div>
-            <div class="lp-footer-cols">
-                <div>
-                    <span class="eyebrow">Product</span>
-                    <a href="/browse">Browse</a>
-                    <a href="/browse">List a tool</a>
-                    <a href="#how">How it works</a>
-                </div>
-                <div>
-                    <span class="eyebrow">Company</span>
-                    <a href="#">About</a>
-                    <a href="#">Press</a>
-                    <a href="#">Contact</a>
-                </div>
-                <div>
-                    <span class="eyebrow">Legal</span>
-                    <a href="#">Terms</a>
-                    <a href="#">Privacy</a>
-                    <a href="#trust">Trust &amp; safety</a>
-                </div>
-            </div>
-        </div>
-        <div class="lp-footer-bottom">
-            <span>© 2026 ToolPool</span>
-            <span>Made in Boston</span>
-        </div>
-    </footer>
+    <Footer/>
 </div>
 
 @code {

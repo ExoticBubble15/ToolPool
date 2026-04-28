@@ -13,6 +13,7 @@
 @using System.Net.Http.Json 
 @inject ToolService ToolService
 @using Philiprehberger.Geolocation;
+@inject IJSRuntime JSRuntime
 
 <h2 class="pageTitle">Upload a Tool</h2>
 <span class="pageSubtitle">Post a tool for others to view.</span>
@@ -20,7 +21,7 @@
 @* STRIPE ONBOARDING BLOCK *@
 @if (!HasStripeOnboarded)
 {
-    <div class="item-card suggest-card" style="margin-bottom: 1rem;">
+    <div class="item-card" style="margin-bottom: 1rem;">
         <div class="item-info">
             <h3>Complete Stripe Setup</h3>
             <p>You must finish Stripe onboarding before you can receive payments.</p>
@@ -33,7 +34,7 @@
 }
 
 @* ADD TOOL FORM *@
-<div class="browse-location-card">
+<div class="browse-location-card" style="width: 85%; margin: 0 auto">
 
     <div class="browse-filter-group">
         <span class="browse-filter-label">Title*</span>
@@ -50,25 +51,30 @@
         <TextInput @bind-Value="@toolSubmission.Description" Placeholder="Description" />
     </div>
 
+    <div class="browse-filter-group">
+        <span class="browse-filter-label">Category*</span>
+        <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories"> @(toolSubmission.Category == string.Empty ? "Choose a category" : $"{toolSubmission.Category}") ⌵</Button>
+
     @if (categoriesLoaded)
     {
-        <div class="browse-filter-group">
-            <span class="browse-filter-label">Category*</span>
-            <Button Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories"> Category @(toolSubmission.Category == string.Empty ? "" : $"({toolSubmission.Category})") ⌵</Button>
-
-            <Collapse @ref="categoriesMenu">
-                <InputRadioGroup @bind-Value="toolSubmission.Category">
-                    @foreach (var c in categoriesList)
-                    {
-                        <div style="display: flex; align-items: center;">
-                            <InputRadio id="@c" Value="@c" />
-                            <label for="@c" style="margin-left: 5px">@c</label>
-                        </div>
-                    }
-                </InputRadioGroup>
-            </Collapse>
+        <Collapse @ref="categoriesMenu">
+            <InputRadioGroup @bind-Value="toolSubmission.Category">
+                @foreach (var c in categoriesList)
+                {
+                    <div style="display: flex; align-items: center;">
+                        <InputRadio id="@c" Value="@c" />
+                        <label for="@c" style="margin-left: 5px">@c</label>
+                    </div>
+                }
+            </InputRadioGroup>
+        </Collapse>
+    } else {
+        <div style="display: flex; flex-direction: column; align-items: center; margin-top: 0.75rem">
+            <Spinner />
+            <i>fetching categories</i>
         </div>
     }
+    </div>
 
     <div class="browse-search-group">
         <span class="browse-filter-label">Location*</span>
@@ -119,16 +125,22 @@
     {
         <div class="submit-loading">
             <Spinner Size="SpinnerSize.Small" />
-            <span>Uploading and saving your tool...</span>
+            <span>Saving and uploading your tool...</span>
         </div>
     }
 </div>
 
-
+<h3 style="margin-top: 0.75rem">Your Tools (@Items.Count)</h3>
 @if (!string.IsNullOrWhiteSpace(SubmitMessage))
 {
-    <span class="submit-msg @(SubmitOk ? "ok" : "err")">@SubmitMessage</span>
-} 
+    <div style="display: flex; align-items: center; gap: 0.45rem">
+        @if (deleting)
+        {
+            <Spinner Size="SpinnerSize.Small" />                
+        }
+        <span class="submit-msg @(SubmitOk ? "ok" : "err")">@SubmitMessage</span>
+    </div>
+}
 
 @* USER'S TOOL LISTINGS *@
 <div class="item-grid">
@@ -144,9 +156,15 @@
 
             <div class="item-card @(inCart ? "in-cart" : "")">
                 <div class="item-info">
-                    <h3>@item.Name</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between">
+                        <h3>@item.Name</h3>
+                        @* <b style="font-size: 0.75rem; border: solid 1px black; border-radius: 8px; padding: 0.25rem">@item.Category</b> *@
+                        <span class="badge text-bg-secondary" style="color: black">@item.Category</span>
+                    </div>
                     <p>@item.Description</p>
                 </div>
+
+                <i>@itemAddresses[item.Id]</i>
 
                 <div class="item-footer">
                     <span class="item-price">$@item.Price.ToString("F2")</span>
@@ -156,9 +174,9 @@
                         @(inCart ? "Added" : "+ Add")
                     </button> *@
 
-                    <button class="btn-delete"
+                    <button class="btn-delete" disabled="@deleting"
                             @onclick="() => DeleteItem(item)">
-                        Delete Item
+                        @(deleting && item.Id == deletingItemId ? "Deleting..." : "Delete Item")
                     </button>
                 </div>
             </div>
@@ -207,10 +225,13 @@
 
 
     private List<Tool> Items = new();
+    private Dictionary<Guid, string> itemAddresses = new();
 
     private bool IsSubmitting = false;
     private string SubmitMessage = "";
     private bool SubmitOk = false;
+    private bool deleting = false;
+    private Guid? deletingItemId = null;
 
     private bool HasStripeOnboarded = false;
     private string imageUrlInput = "";
@@ -249,6 +270,11 @@
         Items = allTools
             .Where(t => t.OwnerId == OwnerId)
             .ToList();
+
+        foreach(var item in Items)
+        {
+            itemAddresses[item.Id] = await ToolService.ReverseGeocode(item.AddressLat.ToString(), item.AddressLng.ToString());
+        }
     }
 
     private async Task<bool> LoadCurrentUserAsync()
@@ -376,10 +402,11 @@
             await LoadUserToolsAsync();
 
             SubmitOk = true;
-            SubmitMessage = "Tool added successfully.";
+            SubmitMessage = "Tool added successfully!";
             toolSubmission = new Tool();
             toolSubmission.OwnerId = OwnerId;
             toolSubmission.OwnerName = OwnerName;
+            addressSearch = null;
             imageUrlInput = "";
             uploadedImagePreview = null;
         }
@@ -415,15 +442,28 @@
 
     private async Task DeleteItem(Tool item)
     {
-        if (Cart.IsInCart(item.Id))
+        bool confirmDelete = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you would like to delete the following tool? \nName: \"{item.Name}\" \nDescription: \"{item.Description}\" \nCategory: \"{item.Category}\" \nPickup Location: \"{itemAddresses[item.Id]}\" \nPrice: ${item.Price}");
+        Console.WriteLine(confirmDelete);
+        if (confirmDelete)
         {
-            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
-            await Cart.RemoveAsync(cartItem.Id);
-            Cart.NotifyChanged();
-        }
+            deleting = true;
+            SubmitMessage = "Deleting tool...";
+            deletingItemId = item.Id;
+            StateHasChanged();
+            
+            if (Cart.IsInCart(item.Id))
+            {
+                var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
+                await Cart.RemoveAsync(cartItem.Id);
+                Cart.NotifyChanged();
+            }
 
-        await ItemService.DeleteToolAsync(item.Id);
-        await LoadUserToolsAsync();
+            await ItemService.DeleteToolAsync(item.Id);
+            await LoadUserToolsAsync();
+            deleting = false;
+            deletingItemId = null;
+            SubmitMessage = "Tool deleted successfully.";
+        }
     }
 
     public void Dispose()
