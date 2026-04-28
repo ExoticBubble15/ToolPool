@@ -46,8 +46,9 @@
                     {
                         @if (!string.IsNullOrEmpty(item.ChannelUrl))
                         {
-                            <a href="/chat/@item.ChannelUrl?interestId=@item.Id" class="chat-channel-card">
-                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div class="chat-channel-card" style="display: flex; align-items: center; gap: 0.75rem; padding: 0;">
+                                <a href="@($"/chat/{Uri.EscapeDataString(item.ChannelUrl)}?interestId={item.Id}")"
+                                   style="flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; text-decoration: none; color: inherit;">
                                     <div>
                                         <span class="chat-channel-name">@item.ToolName</span>
                                         <span class="chat-channel-meta">
@@ -55,15 +56,18 @@
                                         </span>
                                     </div>
                                     <div style="text-align: right;">
-                                        @* <span class="chat-channel-meta" style="text-transform: capitalize;">@item.Status</span> *@
                                         @if (item.CreatedAt.HasValue)
                                         {
                                             <br />
                                             <span class="chat-channel-meta" style="font-size: 0.75em;">@item.CreatedAt.Value.LocalDateTime.ToString("MMM d")</span>
                                         }
                                     </div>
-                                </div>
-                            </a>
+                                </a>
+                                <a href="@($"/rental/{item.Id}?channelUrl={Uri.EscapeDataString(item.ChannelUrl)}")"
+                                   style="margin-right: 1rem; padding: 0.4rem 0.85rem; border-radius: 999px; background: rgba(58, 125, 90, 0.1); color: #3a7d5a; font-size: 0.8rem; font-weight: 600; text-decoration: none;">
+                                    Manage
+                                </a>
+                            </div>
                         }
                         else
                         {

@@ -430,7 +430,7 @@
     {
         if (!string.IsNullOrWhiteSpace(activity.ChannelUrl))
         {
-            return $"/chat/{activity.ChannelUrl}?interestId={activity.Id}";
+            return $"/chat/{Uri.EscapeDataString(activity.ChannelUrl)}?interestId={activity.Id}";
         }
 
         if (activity.ToolId.HasValue && activity.ToolId.Value != Guid.Empty)
