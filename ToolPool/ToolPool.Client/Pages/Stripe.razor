@@ -53,7 +53,17 @@
 
     <div class="browse-filter-group">
         <span class="browse-filter-label">Category*</span>
-        <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories"> @(toolSubmission.Category == string.Empty ? "Choose a category" : $"{toolSubmission.Category}") ⌵</Button>
+        <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories" Disabled="@(!categoriesLoaded)">
+            <span style="margin-right: 10px">@(toolSubmission.Category == string.Empty ? "Choose a category" : $"{toolSubmission.Category}")</span>
+            @if (categoriesExpanded)
+            {
+                <Icon Name="IconName.ChevronUp" />
+            }
+            else
+            {
+                <Icon Name="IconName.ChevronDown" />
+            }
+        </Button>
 
     @if (categoriesLoaded)
     {
@@ -61,17 +71,17 @@
             <InputRadioGroup @bind-Value="toolSubmission.Category">
                 @foreach (var c in categoriesList)
                 {
-                    <div style="display: flex; align-items: center;">
-                        <InputRadio id="@c" Value="@c" />
-                        <label for="@c" style="margin-left: 5px">@c</label>
-                    </div>
+                    <label style="display: flex; align-items: center; padding: 5px 12px; cursor: pointer; margin: 0; gap: 5px" >
+                        <InputRadio id="@c" Value="@c"/>
+                        @c
+                    </label>
                 }
             </InputRadioGroup>
         </Collapse>
     } else {
         <div style="display: flex; flex-direction: column; align-items: center; margin-top: 0.75rem">
             <Spinner />
-            <i>fetching categories</i>
+            <i>Fetching categories...</i>
         </div>
     }
     </div>
@@ -197,9 +207,11 @@
     Collapse categoriesMenu = default!;
     private List<String> categoriesList;
     private bool categoriesLoaded = false;
+    private bool categoriesExpanded = false;
     private async Task ToggleCategories()
     {
         await categoriesMenu.ToggleAsync();
+        categoriesExpanded = !categoriesExpanded;
     }
 
     private string locationPlaceholder = "Search for a location";
@@ -407,8 +419,14 @@
             toolSubmission.OwnerId = OwnerId;
             toolSubmission.OwnerName = OwnerName;
             addressSearch = null;
+            locationPlaceholder = "Search for a location";
             imageUrlInput = "";
             uploadedImagePreview = null;
+
+            if(categoriesExpanded)
+            {
+                await ToggleCategories();
+            }
         }
         catch (Exception ex)
         {
