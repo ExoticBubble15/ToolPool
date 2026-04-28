@@ -24,7 +24,6 @@ public class SupabaseDemoService
 
     public async Task<List<ToolPool.Models.DemoItem>> GetDemoItemsAsync()
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?select=id,name,description,price&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -34,7 +33,7 @@ public class SupabaseDemoService
         using var resp = await client.SendAsync(req);
         resp.EnsureSuccessStatusCode();
 
-        var items = await resp.Content.ReadFromJsonAsync<List<ToolPool.Models.DemoItem >> (new JsonSerializerOptions
+        var items = await resp.Content.ReadFromJsonAsync<List<ToolPool.Models.DemoItem>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
@@ -52,7 +51,6 @@ public class SupabaseDemoService
         string neighborhood,
         string imageUrl)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
@@ -93,7 +91,6 @@ public class SupabaseDemoService
 
     public async Task<ToolPool.Models.DemoItem> InsertDemoItemAsync(string name, string description, decimal price)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools";
 
         var payload = new
@@ -127,7 +124,6 @@ public class SupabaseDemoService
 
     //public async Task<List<DemoItemSubmission>> GetLatestSubmissionsAsync(int limit = 5)
     //{
-    //    var client = _httpClientFactory.CreateClient();
     //    var url = $"{_opt.Url}/rest/v1/Tools_submissions?select=id,name,description,price,submitted_at&order=submitted_at.desc&limit={limit}";
 
     //    using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -146,7 +142,6 @@ public class SupabaseDemoService
     //}
     public async Task DeleteDemoItemAsync(Guid id)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
@@ -159,7 +154,6 @@ public class SupabaseDemoService
 
     public async Task InsertUserAsync(object payload)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users";
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
@@ -181,7 +175,6 @@ public class SupabaseDemoService
 
     public async Task UpdateUserSessionAsync(string email, Session newSession)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?email=eq.{Uri.EscapeDataString(email)}";
 
         using var req = new HttpRequestMessage(HttpMethod.Patch, url);
@@ -200,9 +193,8 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task<ToolPool.Models.User?> GetUserAsync(string email) 
+    public async Task<ToolPool.Models.User?> GetUserAsync(string email)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?email=eq.{email}&select=*&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -221,7 +213,6 @@ public class SupabaseDemoService
 
     public async Task<ProfileUserDto?> GetProfileUserAsync(Guid userId)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}&select=id,email,username,created_at,updated_at,stripe_account_id,stripe_customer_id,sendbird_user_id&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -241,7 +232,6 @@ public class SupabaseDemoService
 
     public async Task<string?> GetStripeDestinationForToolAsync(Guid toolId)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{toolId}&select=owner_id&limit=1";
 
         using var toolReq = new HttpRequestMessage(HttpMethod.Get, url);
@@ -281,7 +271,6 @@ public class SupabaseDemoService
 
     public async Task<List<ProfileListingDto>> GetListingsByOwnerAsync(Guid ownerId)
     {
-        var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?owner_id=eq.{ownerId}&select=id,name,description,price,category,neighborhood,image_url,owner_id,owner_name,created_at&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -301,7 +290,6 @@ public class SupabaseDemoService
 
     public async Task<List<ProfileActivityDto>> GetActivitiesByUserAsync(Guid userId)
     {
-        var client = _httpClientFactory.CreateClient();
         var filter = Uri.EscapeDataString($"(owner_id.eq.{userId},renter_id.eq.{userId})");
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?or={filter}&select=id,tool_id,tool_name,renter_id,owner_id,message,start_date,end_date,channel_url,status,created_at&order=created_at.desc";
 
@@ -402,7 +390,6 @@ public class SupabaseDemoService
             return new Dictionary<Guid, string>();
         }
 
-        var client = _httpClientFactory.CreateClient();
         var inClause = string.Join(",", ids.Select(x => x.ToString()));
         var url = $"{_opt.Url}/rest/v1/Tools?id=in.({inClause})&select=id,name";
 
@@ -469,8 +456,6 @@ public class SupabaseDemoService
 
     private async Task SendDeleteAsync(string url)
     {
-        var client = _httpClientFactory.CreateClient();
-
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
         req.Headers.Add("apikey", _opt.ServiceRoleKey);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
@@ -513,8 +498,6 @@ public class SupabaseDemoService
 
     public async Task<List<ToolCategory>> GetCategories()
     {
-        //var client = _httpClientFactory.CreateClient();
-        //var url = $"{_opt.Url}/rest/v1/Tools?select=category";
         var url = $"{_opt.Url}/rest/v1/Categories";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -530,7 +513,6 @@ public class SupabaseDemoService
 
     public async Task<List<ToolNeighborhood>> GetNeighborhoods()
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?select=neighborhood";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -544,27 +526,8 @@ public class SupabaseDemoService
         return items ?? new List<ToolNeighborhood>();
     }
 
-    //public async Task<List<NeighborhoodTuple>> GetCityNeighborhoods()
-    //{
-    //    var client = _httpClientFactory.CreateClient();
-    //    var url = $"{_opt.Url}/rest/v1/Neighborhoods?select=neighborhood,city";
-
-    //    using var req = new HttpRequestMessage(HttpMethod.Get, url);
-    //    req.Headers.Add("apikey", _opt.AnonKey);
-    //    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
-
-    //    using var resp = await client.SendAsync(req);
-    //    resp.EnsureSuccessStatusCode();
-
-    //    var items = await resp.Content.ReadFromJsonAsync<List<NeighborhoodTuple>>(_jsonOpts);
-    //    return items ?? new List<NeighborhoodTuple>();
-    //}
-
-    // ── User queries ──
-
     public async Task<Models.AppUser?> GetUserByIdAsync(Guid id)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{id.ToString().ToLower()}&select=id,email,username,sendbird_user_id,stripe_account_id,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -580,7 +543,6 @@ public class SupabaseDemoService
 
     public async Task<Models.AppUser?> GetUserByEmailAsync(string email)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?email=eq.{Uri.EscapeDataString(email)}&select=id,email,username,sendbird_user_id,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -596,7 +558,6 @@ public class SupabaseDemoService
 
     public async Task<Models.AppUser> CreateUserAsync(Guid id, string email, string username)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users";
 
         var payload = new { id, email, username, sendbird_user_id = id.ToString() };
@@ -616,7 +577,6 @@ public class SupabaseDemoService
 
     public async Task UpdateUserSendbirdIdAsync(Guid userId, string sendbirdUserId)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}";
 
         using var req = new HttpRequestMessage(HttpMethod.Patch, url);
@@ -628,11 +588,8 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    // ── Interest queries ──
-
     public async Task<List<InterestSubmission>> GetInterestsByRenterAsync(string renterId)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -647,7 +604,6 @@ public class SupabaseDemoService
 
     public async Task<List<InterestSubmission>> GetInterestsByOwnerAsync(Guid ownerId)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?owner_id=eq.{ownerId}&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -662,7 +618,6 @@ public class SupabaseDemoService
 
     public async Task<InterestSubmission?> GetInterestByRenterAndToolAsync(string renterId, Guid toolId)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?renter_id=eq.{Uri.EscapeDataString(renterId)}&tool_id=eq.{toolId}&order=created_at.desc&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -691,7 +646,6 @@ public class SupabaseDemoService
 
     public async Task<InterestSubmission?> GetInterestByIdAsync(Guid interestId)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -705,12 +659,24 @@ public class SupabaseDemoService
         return results?.FirstOrDefault();
     }
 
+    public async Task UpdateInterestStatusAsync(Guid interestId, string status)
+    {
+        var url = $"{_opt.Url}/rest/v1/Interest_Submissions?id=eq.{interestId}";
+
+        using var req = new HttpRequestMessage(HttpMethod.Patch, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        req.Content = JsonContent.Create(new { status });
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+    }
+
     // ── Tool queries ──
 
     public async Task<List<Models.Tool>> GetToolsAsync()
     {
-        //var client = _httpClientFactory.CreateClient();
-        var url = $"{_opt.Url}/rest/v1/Tools?select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at&order=created_at.desc";
+        var url = $"{_opt.Url}/rest/v1/Tools?order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("apikey", _opt.AnonKey);
@@ -736,7 +702,6 @@ public class SupabaseDemoService
 
     public async Task<Models.Tool?> GetToolByIdAsync(Guid id)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -747,6 +712,21 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
 
         var items = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
+        return items?.FirstOrDefault();
+    }
+
+    public async Task<Models.ToolAddressLookup?> GetToolAddressByIdAsync(Guid id)
+    {
+        var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,owner_id,addressLat,addressLng,neighborhood&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.ServiceRoleKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var resp = await client.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
+
+        var items = await resp.Content.ReadFromJsonAsync<List<Models.ToolAddressLookup>>(_jsonOpts);
         return items?.FirstOrDefault();
     }
 
@@ -765,9 +745,83 @@ public class SupabaseDemoService
         return rows?.FirstOrDefault();
     }
 
+    // ── Ratings ──
+
+    public async Task<Models.Rating?> GetRatingAsync(Guid interestId, Guid raterId, Guid ratedUserId)
+    {
+        var url = $"{_opt.Url}/rest/v1/Ratings?interest_id=eq.{interestId}&rater_id=eq.{raterId}&rated_user_id=eq.{ratedUserId}&limit=1";
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Add("apikey", _opt.AnonKey);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
+
+        using var resp = await client.SendAsync(req);
+        if (!resp.IsSuccessStatusCode) return null;
+
+        var rows = await resp.Content.ReadFromJsonAsync<List<Models.Rating>>(_jsonOpts);
+        return rows?.FirstOrDefault();
+    }
+
+    public async Task UpsertRatingAsync(Guid interestId, Guid raterId, Guid ratedUserId, int score)
+    {
+        var existing = await GetRatingAsync(interestId, raterId, ratedUserId);
+
+        if (existing is not null)
+        {
+            var patchUrl = $"{_opt.Url}/rest/v1/Ratings?id=eq.{existing.Id}";
+            using var patchReq = new HttpRequestMessage(HttpMethod.Patch, patchUrl);
+            patchReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+            patchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+            patchReq.Content = JsonContent.Create(new { score });
+
+            using var patchResp = await client.SendAsync(patchReq);
+            patchResp.EnsureSuccessStatusCode();
+            return;
+        }
+
+        var insertUrl = $"{_opt.Url}/rest/v1/Ratings";
+        using var insertReq = new HttpRequestMessage(HttpMethod.Post, insertUrl);
+        insertReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        insertReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        insertReq.Headers.Add("Prefer", "return=representation");
+        insertReq.Content = JsonContent.Create(new
+        {
+            interest_id = interestId,
+            rater_id = raterId,
+            rated_user_id = ratedUserId,
+            score
+        });
+
+        using var insertResp = await client.SendAsync(insertReq);
+        insertResp.EnsureSuccessStatusCode();
+    }
+
+    public async Task RecomputeUserAggregateAsync(Guid ratedUserId)
+    {
+        var listUrl = $"{_opt.Url}/rest/v1/Ratings?rated_user_id=eq.{ratedUserId}&select=score";
+        using var listReq = new HttpRequestMessage(HttpMethod.Get, listUrl);
+        listReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        listReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+
+        using var listResp = await client.SendAsync(listReq);
+        listResp.EnsureSuccessStatusCode();
+
+        var rows = await listResp.Content.ReadFromJsonAsync<List<Models.Rating>>(_jsonOpts) ?? new();
+        var total = rows.Count;
+        double? avg = total > 0 ? Math.Round(rows.Average(r => (double)r.Score), 2) : null;
+
+        var patchUrl = $"{_opt.Url}/rest/v1/Users?id=eq.{ratedUserId}";
+        using var patchReq = new HttpRequestMessage(HttpMethod.Patch, patchUrl);
+        patchReq.Headers.Add("apikey", _opt.ServiceRoleKey);
+        patchReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
+        patchReq.Content = JsonContent.Create(new { avg_rating = avg, total_ratings = total });
+
+        using var patchResp = await client.SendAsync(patchReq);
+        patchResp.EnsureSuccessStatusCode();
+    }
+
     public async Task<InterestSubmission> InsertInterestAsync(InterestSubmission interest)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions";
 
         var payload = new
@@ -797,9 +851,8 @@ public class SupabaseDemoService
     }
 
 
-    public async Task<Models.Tool> InsertToolAsync(Models.Tool payload) 
+    public async Task<Models.Tool> InsertToolAsync(Models.Tool payload)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools";
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
@@ -824,7 +877,6 @@ public class SupabaseDemoService
 
     public async Task DeleteToolAsync(Guid id)
     {
-        //var client = _httpClientFactory.CreateClient();
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
@@ -867,45 +919,7 @@ public class SupabaseDemoService
 
         return false;
     }
-
-    //public async Task SeedToolsAsync()
-    //{
-    //    var existing = await GetToolsAsync();
-    //    var hasSeeded = existing.Any(t => !string.IsNullOrEmpty(t.Category));
-    //    if (hasSeeded) return;
-
-    //    // Delete old tools that lack category data (pre-migration leftovers)
-    //    foreach (var old in existing.Where(t => string.IsNullOrEmpty(t.Category)))
-    //    {
-    //        await DeleteToolAsync(old.Id);
-    //    }
-
-    //    var seeds = new[]
-    //    {
-    //        new { name = "DeWalt Power Drill", description = "Cordless 20V drill with two batteries and charger", price = 12.00m, category = "Power Tools", owner_name = "Mike T.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&fit=crop" },
-    //        new { name = "Circular Saw", description = "7-1/4 inch blade, great for framing and decking", price = 18.00m, category = "Power Tools", owner_name = "Emma L.", neighborhood = "Westside", image_url = "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&fit=crop" },
-    //        new { name = "Hand Tool Set", description = "Complete 50-piece set with wrenches, pliers, and screwdrivers", price = 8.00m, category = "Hand Tools", owner_name = "James K.", neighborhood = "Midtown", image_url = "https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&fit=crop" },
-    //        new { name = "Ladder (20ft)", description = "Extension ladder, aluminum, supports up to 250 lbs", price = 15.00m, category = "Equipment", owner_name = "Mike T.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&fit=crop" },
-    //        new { name = "Pressure Washer", description = "2000 PSI electric pressure washer with hose and nozzles", price = 25.00m, category = "Cleaning", owner_name = "Sarah M.", neighborhood = "Eastside", image_url = "https://images.unsplash.com/photo-1622735620941-e8192a023a3f?w=400&fit=crop" },
-    //        new { name = "Hedge Trimmer", description = "24-inch cordless hedge trimmer, battery included", price = 10.00m, category = "Garden", owner_name = "Emma L.", neighborhood = "Uptown", image_url = "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&fit=crop" },
-    //        new { name = "Tile Cutter", description = "Manual tile cutter for ceramic and porcelain up to 24 inches", price = 14.00m, category = "Hand Tools", owner_name = "Chen W.", neighborhood = "Downtown", image_url = "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&fit=crop" },
-    //        new { name = "Shop Vacuum", description = "6-gallon wet/dry shop vac with attachments", price = 9.00m, category = "Cleaning", owner_name = "James K.", neighborhood = "Southend", image_url = "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=400&fit=crop" },
-    //    };
-
-    //var client = _httpClientFactory.CreateClient();
-    //    var url = $"{_opt.Url}/rest/v1/Tools";
-
-    //    using var req = new HttpRequestMessage(HttpMethod.Post, url);
-    //    req.Headers.Add("apikey", _opt.ServiceRoleKey);
-    //    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
-    //    req.Headers.Add("Prefer", "return=representation");
-    //    req.Content = JsonContent.Create(seeds);
-
-    //    using var resp = await client.SendAsync(req);
-    //    resp.EnsureSuccessStatusCode();
-    //}
 }
-
 public class ProfileUserDto
 {
     public Guid Id { get; set; }

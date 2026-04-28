@@ -1,0 +1,538 @@
+@page "/rental/{InterestId:guid}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using System.Net
+@using ToolPool.Client.Models
+@using ToolPool.Client.Services
+@inject HttpClient Http
+@inject ToolService ToolService
+@inject NavigationManager Nav
+
+<div class="page-wrap">
+    <div class="rental-back-row">
+        <button class="ei-back-btn" @onclick='() => Nav.NavigateTo("/chat")'>← Back to Conversations</button>
+    </div>
+
+    <h2 class="pageTitle">Rental</h2>
+
+    @if (!authChecked)
+    {
+        <div class="rental-state">
+            <p>Checking login...</p>
+        </div>
+    }
+    else if (currentUser is null)
+    {
+        <div class="rental-state">
+            <p>Please log in to manage your rental.</p>
+            <button class="chat-send" @onclick='() => Nav.NavigateTo("/login")'>Log In</button>
+        </div>
+    }
+    else if (isLoading)
+    {
+        <div class="rental-state">
+            <p>Loading rental details...</p>
+        </div>
+    }
+    else if (loadError is not null)
+    {
+        <div class="rental-state">
+            <p style="color: #b04545;">@loadError</p>
+            <button class="chat-send" @onclick='() => Nav.NavigateTo("/chat")'>Back to Conversations</button>
+        </div>
+    }
+    else if (info is null)
+    {
+        <div class="rental-state">
+            <p>This rental could not be loaded.</p>
+        </div>
+    }
+    else if (string.Equals(info.Status, "completed", StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="rental-card rental-card--done">
+            <div class="rental-tool-name">@info.ToolName</div>
+            <div class="rental-status-pill">@GetBookingStatusText(info.Status)</div>
+            <p class="rental-done-text">This rental is complete. Thanks for using ToolPool.</p>
+
+            @if (info.CanRateOwner)
+            {
+                <div class="rental-rating-block">
+                    <div class="rental-rating-label">
+                        @(info.CurrentOwnerRating.HasValue ? "Your rating" : "Rate the owner")
+                    </div>
+                    <div class="rental-stars" role="radiogroup" aria-label="Rating">
+                        @for (var s = 1; s <= 5; s++)
+                        {
+                            var starValue = s;
+                            var filled = selectedScore.HasValue
+                                ? starValue <= selectedScore.Value
+                                : (info.CurrentOwnerRating ?? 0) >= starValue;
+                            <button type="button"
+                                    class="rental-star @(filled ? "rental-star--filled" : "")"
+                                    aria-label="@($"{starValue} star{(starValue == 1 ? "" : "s")}")"
+                                    disabled="@isRatingRunning"
+                                    @onclick="() => SelectScore(starValue)">★</button>
+                        }
+                    </div>
+                    <div class="rental-actions">
+                        <button class="chat-send"
+                                @onclick="SubmitRating"
+                                disabled="@(isRatingRunning || !selectedScore.HasValue || selectedScore == info.CurrentOwnerRating)">
+                            @(isRatingRunning
+                                ? "Submitting..."
+                                : info.CurrentOwnerRating.HasValue ? "Update Rating" : "Submit Rating")
+                        </button>
+                    </div>
+                    @if (ratingSavedAt is not null)
+                    {
+                        <div class="rental-rating-saved">Saved @ratingSavedAt</div>
+                    }
+                    @if (!string.IsNullOrEmpty(ratingError))
+                    {
+                        <div class="rental-error">@ratingError</div>
+                    }
+                </div>
+            }
+            else if (info.CurrentOwnerRating.HasValue)
+            {
+                <div class="rental-rating-block">
+                    <div class="rental-rating-label">Your rating</div>
+                    <div class="rental-stars">
+                        @for (var s = 1; s <= 5; s++)
+                        {
+                            var starValue = s;
+                            var filled = (info.CurrentOwnerRating ?? 0) >= starValue;
+                            <span class="rental-star @(filled ? "rental-star--filled" : "") rental-star--readonly">★</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="rental-actions">
+                <button class="chat-send" @onclick='() => Nav.NavigateTo("/chat")'>Back to Conversations</button>
+                @if (!string.IsNullOrWhiteSpace(ChannelUrl))
+                {
+                    <a class="rental-secondary-link" href="@BuildChatUrl()">Open chat</a>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="rental-card">
+            <div class="rental-tool-name">@info.ToolName</div>
+            <div class="rental-status-pill">@GetBookingStatusText(info.Status)</div>
+
+            <div class="rental-address-block">
+                <div class="rental-address-label">Pickup Address</div>
+                @if (info.CanView && !string.IsNullOrWhiteSpace(info.Address))
+                {
+                    <div class="rental-address-value">@info.Address</div>
+                }
+                else
+                {
+                    <div class="rental-address-hint">Reveal this only when you're ready for pickup.</div>
+                }
+            </div>
+
+            <div class="rental-actions">
+                @if (info.CanReveal)
+                {
+                    <button class="chat-send" @onclick="RevealAddress" disabled="@isActionRunning">
+                        @(isActionRunning ? "Revealing..." : "Reveal Exact Address")
+                    </button>
+                }
+                @if (info.CanStartHandoff)
+                {
+                    <button class="chat-send" @onclick="StartHandoff" disabled="@isActionRunning">
+                        @(isActionRunning ? "Updating..." : "Start Handoff")
+                    </button>
+                }
+                @if (info.CanConfirmPickup)
+                {
+                    <button class="chat-send" @onclick="ConfirmPickup" disabled="@isActionRunning">
+                        @(isActionRunning ? "Updating..." : "Confirm Pickup")
+                    </button>
+                }
+                @if (info.CanRequestReturn)
+                {
+                    <button class="chat-send" @onclick="RequestReturn" disabled="@isActionRunning">
+                        @(isActionRunning ? "Updating..." : "Return Tool")
+                    </button>
+                }
+                @if (info.CanConfirmReturn)
+                {
+                    <button class="chat-send" @onclick="ConfirmReturn" disabled="@isActionRunning">
+                        @(isActionRunning ? "Updating..." : "Confirm Return")
+                    </button>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ChannelUrl))
+            {
+                <div class="rental-secondary-row">
+                    <a class="rental-secondary-link" href="@BuildChatUrl()">Open chat with counterpart →</a>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(actionError))
+            {
+                <div class="rental-error">@actionError</div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .rental-back-row {
+        margin-bottom: 0.75rem;
+    }
+
+    .rental-state {
+        margin-top: 1rem;
+        padding: 1.25rem;
+        background: #f6f8f7;
+        border: 1px solid #d8e0dc;
+        border-radius: 14px;
+    }
+
+    .rental-card {
+        margin-top: 1rem;
+        padding: 1.25rem 1.25rem 1.5rem;
+        background: #f6f8f7;
+        border: 1px solid #d8e0dc;
+        border-radius: 14px;
+    }
+
+    .rental-card--done {
+        background: #eef5f0;
+    }
+
+    .rental-tool-name {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #1d2a22;
+    }
+
+    .rental-status-pill {
+        display: inline-block;
+        margin-top: 0.4rem;
+        padding: 0.2rem 0.7rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #3a7d5a;
+        background: rgba(58, 125, 90, 0.1);
+        border-radius: 999px;
+    }
+
+    .rental-address-block {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        background: #ffffff;
+        border: 1px solid #e3e9e5;
+        border-radius: 10px;
+    }
+
+    .rental-address-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #647067;
+    }
+
+    .rental-address-value {
+        margin-top: 0.35rem;
+        font-weight: 600;
+        color: #1d2a22;
+    }
+
+    .rental-address-hint {
+        margin-top: 0.35rem;
+        color: #55635a;
+        font-size: 0.92rem;
+    }
+
+    .rental-actions {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .rental-secondary-row {
+        margin-top: 1rem;
+    }
+
+    .rental-secondary-link {
+        font-size: 0.92rem;
+        color: #3a7d5a;
+        text-decoration: none;
+    }
+
+        .rental-secondary-link:hover {
+            text-decoration: underline;
+        }
+
+    .rental-error {
+        margin-top: 0.9rem;
+        padding: 0.6rem 0.8rem;
+        background: #fdecec;
+        border: 1px solid #f3c2c2;
+        color: #8a2f2f;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .rental-done-text {
+        margin-top: 0.75rem;
+        color: #2f4a3a;
+    }
+
+    .rental-rating-block {
+        margin-top: 1.25rem;
+        padding: 1rem 1.1rem;
+        background: #ffffff;
+        border: 1px solid #d8e5dd;
+        border-radius: 12px;
+    }
+
+    .rental-rating-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #647067;
+    }
+
+    .rental-stars {
+        margin-top: 0.4rem;
+        display: flex;
+        gap: 0.2rem;
+    }
+
+    .rental-star {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+        color: #c8d1cc;
+        transition: color 0.12s;
+    }
+
+        .rental-star:hover:not(:disabled) {
+            color: #d9b441;
+        }
+
+        .rental-star--filled {
+            color: #e0a93a;
+        }
+
+        .rental-star--readonly {
+            cursor: default;
+        }
+
+        .rental-star:disabled {
+            cursor: not-allowed;
+        }
+
+    .rental-rating-saved {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #3a7d5a;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid InterestId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "channelUrl")]
+    public string? ChannelUrl { get; set; }
+
+    private AccountInfo? currentUser;
+    private bool authChecked;
+    private bool isLoading = true;
+    private string? loadError;
+    private string? actionError;
+    private PickupAddressInfo? info;
+    private bool isActionRunning;
+    private Guid loadedFor = Guid.Empty;
+
+    private int? selectedScore;
+    private bool isRatingRunning;
+    private string? ratingError;
+    private string? ratingSavedAt;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFor == InterestId && authChecked)
+            return;
+
+        loadedFor = InterestId;
+        isLoading = true;
+        loadError = null;
+        actionError = null;
+        info = null;
+
+        var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
+        if (profileResponse.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            currentUser = null;
+            authChecked = true;
+            isLoading = false;
+            return;
+        }
+
+        if (!profileResponse.IsSuccessStatusCode)
+        {
+            loadError = $"Failed to load profile: {(int)profileResponse.StatusCode}";
+            authChecked = true;
+            isLoading = false;
+            return;
+        }
+
+        currentUser = await profileResponse.Content.ReadFromJsonAsync<AccountInfo>();
+        authChecked = true;
+
+        if (currentUser is null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            info = await ToolService.GetPickupAddressInfoAsync(InterestId);
+            selectedScore = info?.CurrentOwnerRating;
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Could not load this rental: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectScore(int score)
+    {
+        if (isRatingRunning) return;
+        selectedScore = score;
+        ratingError = null;
+        ratingSavedAt = null;
+    }
+
+    private async Task SubmitRating()
+    {
+        if (isRatingRunning || !selectedScore.HasValue) return;
+        var score = selectedScore.Value;
+        if (score < 1 || score > 5)
+        {
+            ratingError = "Please pick between 1 and 5 stars.";
+            return;
+        }
+
+        isRatingRunning = true;
+        ratingError = null;
+        ratingSavedAt = null;
+        try
+        {
+            var updated = await ToolService.SubmitOwnerRatingAsync(InterestId, score);
+            if (updated is not null)
+            {
+                info = updated;
+                selectedScore = updated.CurrentOwnerRating ?? score;
+                ratingSavedAt = DateTime.Now.ToString("h:mm tt");
+            }
+        }
+        catch (Exception ex)
+        {
+            ratingError = ex.Message;
+        }
+        finally
+        {
+            isRatingRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private string BuildChatUrl()
+    {
+        if (string.IsNullOrWhiteSpace(ChannelUrl))
+            return "/chat";
+        return $"/chat/{Uri.EscapeDataString(ChannelUrl)}?interestId={InterestId}";
+    }
+
+    private async Task RevealAddress() =>
+        await RunAction(() => ToolService.RevealPickupAddressAsync(InterestId));
+
+    private async Task StartHandoff() =>
+        await RunAction(() => ToolService.StartHandoffAsync(InterestId));
+
+    private async Task ConfirmPickup() =>
+        await RunAction(() => ToolService.ConfirmPickupAsync(InterestId));
+
+    private async Task RequestReturn() =>
+        await RunAction(() => ToolService.RequestReturnAsync(InterestId));
+
+    private async Task ConfirmReturn() =>
+        await RunAction(() => ToolService.ConfirmReturnAsync(InterestId));
+
+    private async Task RunAction(Func<Task<PickupAddressInfo?>> call)
+    {
+        if (isActionRunning) return;
+        isActionRunning = true;
+        actionError = null;
+        try
+        {
+            var updated = await call();
+            if (updated is not null)
+                info = updated;
+        }
+        catch (Exception ex)
+        {
+            actionError = $"Action failed: {ex.Message}";
+        }
+        finally
+        {
+            isActionRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetBookingStatusText(string? status) => status?.ToLowerInvariant() switch
+    {
+        "pending" => "Waiting for owner",
+        "confirmed" => "Confirmed",
+        "revealed" => "Address shared",
+        "handoff_requested" => "Waiting for pickup confirmation",
+        "handed_off" => "Tool checked out",
+        "return_requested" => "Waiting for return confirmation",
+        "completed" => "Completed",
+        _ => "Pending"
+    };
+
+    private sealed class AccountInfo
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
+        public DateTimeOffset? UpdatedAt { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_account_id")]
+        public string? StripeAccountId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sendbird_user_id")]
+        public string? SendbirdUserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("stripe_customer_id")]
+        public string? StripeCustomerId { get; set; }
+    }
+}

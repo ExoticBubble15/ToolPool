@@ -23,6 +23,16 @@
         } *@
     </div>
 
+    @if (InterestId.HasValue)
+    {
+        <div style="padding: 0.5rem 1rem 0.25rem; display: flex; justify-content: flex-end;">
+            <a href="@($"/rental/{InterestId.Value}?channelUrl={Uri.EscapeDataString(ChannelUrl ?? string.Empty)}")"
+               style="font-size: 0.85rem; color: #3a7d5a; text-decoration: none; font-weight: 500;">
+                Manage rental →
+            </a>
+        </div>
+    }
+
     @if (!authChecked)
     {
         <div class="chat-loading">

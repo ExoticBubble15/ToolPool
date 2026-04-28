@@ -126,4 +126,84 @@ namespace ToolPool.Models
         [JsonPropertyName("created_at")]
         public DateTimeOffset? CreatedAt { get; set; }
     }
+
+    public class ToolAddressLookup
+    {
+        public Guid Id { get; set; }
+
+        [JsonPropertyName("owner_id")]
+        public Guid? OwnerId { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public double AddressLat { get; set; }
+
+        public double AddressLng { get; set; }
+
+        public string Neighborhood { get; set; } = string.Empty;
+    }
+
+    public class PickupAddressResponse
+    {
+        [JsonPropertyName("interest_id")]
+        public Guid InterestId { get; set; }
+
+        [JsonPropertyName("tool_name")]
+        public string ToolName { get; set; } = string.Empty;
+
+        public string Status { get; set; } = "pending";
+
+        [JsonPropertyName("can_view")]
+        public bool CanView { get; set; }
+
+        [JsonPropertyName("can_reveal")]
+        public bool CanReveal { get; set; }
+
+        [JsonPropertyName("is_revealed")]
+        public bool IsRevealed { get; set; }
+
+        [JsonPropertyName("address")]
+        public string? Address { get; set; }
+
+        [JsonPropertyName("can_start_handoff")]
+        public bool CanStartHandoff { get; set; }
+
+        [JsonPropertyName("can_confirm_pickup")]
+        public bool CanConfirmPickup { get; set; }
+
+        [JsonPropertyName("can_request_return")]
+        public bool CanRequestReturn { get; set; }
+
+        [JsonPropertyName("can_confirm_return")]
+        public bool CanConfirmReturn { get; set; }
+
+        [JsonPropertyName("can_rate_owner")]
+        public bool CanRateOwner { get; set; }
+
+        [JsonPropertyName("current_owner_rating")]
+        public int? CurrentOwnerRating { get; set; }
+    }
+
+    public class Rating
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("interest_id")]
+        public Guid InterestId { get; set; }
+
+        [JsonPropertyName("rater_id")]
+        public Guid RaterId { get; set; }
+
+        [JsonPropertyName("rated_user_id")]
+        public Guid RatedUserId { get; set; }
+
+        [JsonPropertyName("score")]
+        public int Score { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTimeOffset? CreatedAt { get; set; }
+    }
 }

@@ -139,7 +139,8 @@
                     <article class="item-card">
                         <div class="item-top">
                             <h3>@listing.Name</h3>
-                            <span class="badge text-bg-light">@listing.Category</span>
+                            @* <span class="badge text-bg-light">@listing.Category</span> *@
+                            <span class="badge text-bg-secondary" style="color: black">@listing.Category</span>
                         </div>
                         <p class="item-text">@listing.Description</p>
                         <div class="item-bottom">
@@ -374,6 +375,10 @@
     {
         "pending" => "text-bg-warning",
         "confirmed" => "text-bg-success",
+        "revealed" => "text-bg-info",
+        "handoff_requested" => "text-bg-warning",
+        "handed_off" => "text-bg-primary",
+        "return_requested" => "text-bg-warning",
         "completed" => "text-bg-primary",
         "cancelled" => "text-bg-danger",
         _ => "text-bg-secondary"
@@ -396,6 +401,10 @@
     {
         "pending" => "Waiting for owner",
         "confirmed" => "Confirmed",
+        "revealed" => "Address revealed",
+        "handoff_requested" => "Waiting for pickup",
+        "handed_off" => "In use",
+        "return_requested" => "Waiting for return",
         "completed" => "Completed",
         "cancelled" => "Cancelled",
         _ => "Pending"
@@ -422,7 +431,7 @@
     {
         if (!string.IsNullOrWhiteSpace(activity.ChannelUrl))
         {
-            return $"/chat/{activity.ChannelUrl}?interestId={activity.Id}";
+            return $"/chat/{Uri.EscapeDataString(activity.ChannelUrl)}?interestId={activity.Id}";
         }
 
         if (activity.ToolId.HasValue && activity.ToolId.Value != Guid.Empty)

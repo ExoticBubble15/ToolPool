@@ -393,7 +393,7 @@ else
     {
         if (!string.IsNullOrEmpty(channelUrl))
         {
-            var url = $"/chat/{channelUrl}";
+            var url = $"/chat/{Uri.EscapeDataString(channelUrl)}";
             if (interestId.HasValue)
                 url += $"?interestId={interestId.Value}";
             Nav.NavigateTo(url);

@@ -228,6 +228,47 @@ public class ChatPaymentContext
     public string? Reason { get; set; }
 }
 
+public class PickupAddressInfo
+{
+    [JsonPropertyName("interest_id")]
+    public Guid InterestId { get; set; }
+
+    [JsonPropertyName("tool_name")]
+    public string ToolName { get; set; } = "";
+
+    public string Status { get; set; } = "pending";
+
+    [JsonPropertyName("can_view")]
+    public bool CanView { get; set; }
+
+    [JsonPropertyName("can_reveal")]
+    public bool CanReveal { get; set; }
+
+    [JsonPropertyName("is_revealed")]
+    public bool IsRevealed { get; set; }
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+
+    [JsonPropertyName("can_start_handoff")]
+    public bool CanStartHandoff { get; set; }
+
+    [JsonPropertyName("can_confirm_pickup")]
+    public bool CanConfirmPickup { get; set; }
+
+    [JsonPropertyName("can_request_return")]
+    public bool CanRequestReturn { get; set; }
+
+    [JsonPropertyName("can_confirm_return")]
+    public bool CanConfirmReturn { get; set; }
+
+    [JsonPropertyName("can_rate_owner")]
+    public bool CanRateOwner { get; set; }
+
+    [JsonPropertyName("current_owner_rating")]
+    public int? CurrentOwnerRating { get; set; }
+}
+
 public class AuthStatus
 {
     public bool authenticated { get; set; }

@@ -32,9 +32,21 @@
             return;
         }
 
-        var url = $"/chat/{result.ChannelUrl}";
+        string url;
         if (result.InterestId.HasValue)
-            url += $"?interestId={result.InterestId.Value}";
+        {
+            url = $"/rental/{result.InterestId.Value}";
+            if (!string.IsNullOrEmpty(result.ChannelUrl))
+                url += $"?channelUrl={Uri.EscapeDataString(result.ChannelUrl)}";
+        }
+        else if (!string.IsNullOrEmpty(result.ChannelUrl))
+        {
+            url = $"/chat/{Uri.EscapeDataString(result.ChannelUrl)}";
+        }
+        else
+        {
+            url = "/chat";
+        }
         Nav.NavigateTo(url, forceLoad: true);
     }
 
