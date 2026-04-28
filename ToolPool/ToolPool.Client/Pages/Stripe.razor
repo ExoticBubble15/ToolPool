@@ -51,52 +51,58 @@
         <TextInput @bind-Value="@toolSubmission.Description" Placeholder="Description" />
     </div>
 
-    <div class="browse-filter-group">
-        <span class="browse-filter-label">Category*</span>
-        <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories" Disabled="@(!categoriesLoaded)">
-            <span style="margin-right: 10px">@(toolSubmission.Category == string.Empty ? "Choose a category" : $"{toolSubmission.Category}")</span>
-            @if (categoriesExpanded)
-            {
-                <Icon Name="IconName.ChevronUp" />
-            }
-            else
-            {
-                <Icon Name="IconName.ChevronDown" />
-            }
-        </Button>
+    <div style="display: flex; align-items: flex-start; gap: 0.75rem">
+        <div class="browse-filter-group" style="flex: 1">
+            <span class="browse-filter-label">Category*</span>
+            <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories" Disabled="@(!categoriesLoaded)">
+                <span style="display: flex; justify-content: space-between">
+                    <span>@(toolSubmission.Category == string.Empty ? "Choose a category" : $"{toolSubmission.Category}")</span>
+                    @if (categoriesExpanded)
+                    {
+                        <Icon Name="IconName.ChevronUp" />
+                    }
+                    else
+                    {
+                        <Icon Name="IconName.ChevronDown" />
+                    }
+                </span>
+            </Button>
 
-    @if (categoriesLoaded)
-    {
-        <Collapse @ref="categoriesMenu">
-            <InputRadioGroup @bind-Value="toolSubmission.Category">
-                @foreach (var c in categoriesList)
-                {
-                    <label style="display: flex; align-items: center; padding: 5px 12px; cursor: pointer; margin: 0; gap: 5px" >
-                        <InputRadio id="@c" Value="@c"/>
-                        @c
-                    </label>
-                }
-            </InputRadioGroup>
-        </Collapse>
-    } else {
-        <div style="display: flex; flex-direction: column; align-items: center; margin-top: 0.75rem">
-            <Spinner />
-            <i>Fetching categories...</i>
+            @if (categoriesLoaded)
+            {
+                <Collapse @ref="categoriesMenu">
+                    <div style="max-height: 200px; overflow-y: auto">
+                        <InputRadioGroup @bind-Value="toolSubmission.Category">
+                            @foreach (var c in categoriesList)
+                            {
+                                <label style="display: flex; align-items: center; padding: 5px 12px; cursor: pointer; margin: 0; gap: 5px" >
+                                    <InputRadio id="@c" Value="@c"/>
+                                    @c
+                                </label>
+                            }
+                        </InputRadioGroup>
+                    </div>
+                </Collapse>
+            } else {
+                <div style="display: flex; flex-direction: column; align-items: center; margin-top: 0.75rem">
+                    <Spinner />
+                    <i>Fetching categories...</i>
+                </div>
+            }
         </div>
-    }
-    </div>
 
-    <div class="browse-search-group">
-        <span class="browse-filter-label">Location*</span>
-        <span class="location-search">
-            <AutoComplete @bind-Value="addressSearch"
-                          TItem="AddressPair"
-                          DataProvider="GetSuggestions"
-                          PropertyName="Address"
-                          StringComparison="StringComparison.OrdinalIgnoreCase"
-                          Placeholder=@locationPlaceholder
-                          OnChanged="AddressSelect" />
-        </span>
+        <div class="browse-search-group" style="flex: 1">
+            <span class="browse-filter-label">Location*</span>
+            <span class="location-search">
+                <AutoComplete @bind-Value="addressSearch"
+                              TItem="AddressPair"
+                              DataProvider="GetSuggestions"
+                              PropertyName="Address"
+                              StringComparison="StringComparison.OrdinalIgnoreCase"
+                              Placeholder=@locationPlaceholder
+                              OnChanged="AddressSelect" />
+            </span>
+        </div>
     </div>
 
     <div class="browse-search-group">
