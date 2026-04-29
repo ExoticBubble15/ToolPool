@@ -36,6 +36,7 @@ namespace ToolPool.Controllers
             client = _httpClientFactory.CreateClient();
         }
 
+        //simple test to make sure api is running
         [HttpGet]
         public string Test()
         {
@@ -43,14 +44,7 @@ namespace ToolPool.Controllers
             return "good";
         }
 
-        [HttpGet("markerDetails")]
-        public async Task<List<MarkerDetails>> markerDetails()
-        {
-            var res = await _supabase.GetMarkerDetails();
-            Console.WriteLine($"\"markerDetails\": {res.Count}");
-            return res;
-        }
-
+        //gets neighborhoods and their coordinates
         [HttpGet("neighborhoodTriples")]
         public async Task<List<NeighborhoodTriple>> neighborhoodTriples()
         {
@@ -59,22 +53,24 @@ namespace ToolPool.Controllers
             return res;
         }
         
+        //convert lat, lng to address
         [HttpGet("reverseGeocode/{lat}/{lng}")]
         public async Task<String> ReverseGeocode(string lat, string lng)
         {
+            //call helper method
             var address = await ReverseGeocodeExactAddressAsync(lat, lng);
 
             Console.WriteLine($"reverseGeocode/{lat}/{lng}: {address}");
             return address;
         }
 
+        //get suggestions for autocomplete
         [HttpGet("suggestLocations/{location}")]
         public async Task<List<Models.AddressPair>> GetLocation(string location)
         {
-            //var client = _httpClientFactory.CreateClient();
             List<Models.AddressPair> tuples = new List<Models.AddressPair>();
 
-            //'places:autocomplete' api: gets placeId and text suggestions from input
+            //wrapper for google maps places:autocomplete api: input -> (suggested address, placeId) list)
             var autocompleteUrl = $"https://places.googleapis.com/v1/places:autocomplete?input={location}";
 
             var autocompleteReq = new HttpRequestMessage(HttpMethod.Post, autocompleteUrl);
@@ -91,8 +87,6 @@ namespace ToolPool.Controllers
                 foreach (var p in autocompleteJson.RootElement.GetProperty("suggestions").EnumerateArray())
                 {
                     var placePrediction = p.GetProperty("placePrediction");
-                    //Console.WriteLine(placePrediction.GetProperty("text").GetProperty("text").GetString());
-                    //Console.WriteLine(placePrediction.GetProperty("placeId").GetString());
                     tuples.Add(new Models.AddressPair
                     {
                         Address = placePrediction.GetProperty("text").GetProperty("text").GetString(),
@@ -107,18 +101,18 @@ namespace ToolPool.Controllers
             return tuples;
         }
 
+        //get coordinates from google placeId
         [HttpGet("getCoordinates/{placeId}")]
         public async Task<Models.Location> GetCoordinates(string placeId)
         {
-            //var client = _httpClientFactory.CreateClient();
-
-            //places api: gets latitude, longitude from placeId
+            //wrapper google maps places api: placeId -> latitude, longitude
             var placesUrl = $"https://places.googleapis.com/v1/places/{placeId}";
 
             var placesReq = new HttpRequestMessage(HttpMethod.Get, placesUrl);
             placesReq.Headers.Add("X-Goog-Api-Key", _config["Google:Maps"]);
             placesReq.Headers.Add("X-Goog-FieldMask", "location");
 
+            //navigate tree
             var placesResp = await client.SendAsync(placesReq);
             var placesContent = await placesResp.Content.ReadAsStringAsync();
             var placesJson = JsonDocument.Parse(placesContent);
@@ -130,14 +124,17 @@ namespace ToolPool.Controllers
             };
         }
 
+        //access user secret by key
         [HttpGet("getSecret/{key}")]
         public string GetSecret(string key)
         {
+            //get associated value
             string? val = _config[key];
             Console.WriteLine(val != null ? $"success: \"getSecret/{key}\"" : $"failure: \"getSecret/{key}\"");
             return val ?? string.Empty;
         }
 
+        //get all categories
         [HttpGet("categories")]
         public async Task<List<String>> Categories()
         {
@@ -157,41 +154,7 @@ namespace ToolPool.Controllers
             return categories;
         }
 
-        [HttpGet("neighborhoods")]
-        public async Task<List<String>> Neighborhoods()
-        {
-            List<String> neighborhoods = new List<String>();
-            foreach (var c in (await _supabase.GetNeighborhoods()))
-            {
-                neighborhoods.Add(c.Neighborhood);
-            }
-            neighborhoods = neighborhoods.Distinct().ToList();
-            Console.WriteLine($"\"neighborhoods\": {neighborhoods.Count}");
-            return neighborhoods;
-        }
-
-        ////key = city, value = list of neighborhoods
-        //[HttpGet("cityNeighborhoods")]
-        //public async Task<Dictionary<String, List<String>>> CityNeighborhoods()
-        //{
-        //    Dictionary<String, List<String>> cityNeighborhoods = new Dictionary<String, List<String>>();
-        //    foreach(var t in (await _supabase.GetCityNeighborhoods()))
-        //    {
-        //        var c = t.city;
-        //        var n = t.neighborhood;
-        //        if(cityNeighborhoods.ContainsKey(c))
-        //        {
-        //            cityNeighborhoods[c].Add(n);
-        //        }
-        //        else
-        //        {
-        //            cityNeighborhoods[c] = new List<String>{n};
-        //        }
-        //    }
-        //    Console.WriteLine(cityNeighborhoods.Count > 0 ? "success: \"cityNeighborhoods\"" : "failure: \"cityNeighborhoods\"");
-        //    return cityNeighborhoods;
-        //}
-
+        //get all tools
         [HttpGet("Tools")]
         public async Task<ActionResult<List<Models.Tool>>> GetTools()
         {
@@ -199,12 +162,14 @@ namespace ToolPool.Controllers
             return Ok(items);
         }
 
+        //get tool by id
         [HttpGet("Tools/{id}")]
         public async Task<ActionResult<Models.Tool>> GetToolById(Guid id)
         {
             var tool = await _supabase.GetToolByIdAsync(id);
             if (tool is null) return NotFound();
 
+            //get ratings
             if (tool.OwnerId is Guid ownerId)
             {
                 try
@@ -225,6 +190,7 @@ namespace ToolPool.Controllers
             return Ok(tool);
         }
 
+        //post tool to db
         [HttpPost("Tools")]
         public async Task<ActionResult<Models.Tool>> InsertTool([FromBody] Models.Tool t)
         {
@@ -232,6 +198,7 @@ namespace ToolPool.Controllers
             return Ok(item);
         }
 
+        //delete tool from db
         [HttpDelete("Tools/{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -766,11 +733,13 @@ namespace ToolPool.Controllers
             };
         }
 
+        //convert latitude, longitude to address
         private async Task<string> ReverseGeocodeExactAddressAsync(string lat, string lng)
         {
             if (string.IsNullOrWhiteSpace(_config["Google:Maps"]))
                 throw new InvalidOperationException("Google Maps API key is not configured.");
 
+            //wrapper for google maps reverse geocoding api: latitude, longitude -> address
             var geocodeUrl = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={_config["Google:Maps"]}";
             using var geocodeReq = new HttpRequestMessage(HttpMethod.Get, geocodeUrl);
             using var geocodeResp = await client.SendAsync(geocodeReq);

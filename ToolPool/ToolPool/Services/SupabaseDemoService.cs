@@ -464,22 +464,7 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<MarkerDetails>> GetMarkerDetails()
-    {
-        var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
-        var url = $"{baseUrl}/rest/v1/Tools?select=id,name,description,owner_name,price,addressLat,addressLng";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("apikey", _opt.AnonKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
-
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
-
-        var triples = await resp.Content.ReadFromJsonAsync<List<MarkerDetails>>(_jsonOpts);
-        return triples ?? new List<MarkerDetails>();
-    }
-
+    //query neighborhood, latitude, longitude from db
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
     {
         var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
@@ -496,6 +481,7 @@ public class SupabaseDemoService
         return triples ?? new List<NeighborhoodTriple>();
     }
 
+    //query all categories, regardless if any tools associated with them
     public async Task<List<ToolCategory>> GetCategories()
     {
         var url = $"{_opt.Url}/rest/v1/Categories";
@@ -509,21 +495,6 @@ public class SupabaseDemoService
 
         var items = await resp.Content.ReadFromJsonAsync<List<ToolCategory>>(_jsonOpts);
         return items ?? new List<ToolCategory>();
-    }
-
-    public async Task<List<ToolNeighborhood>> GetNeighborhoods()
-    {
-        var url = $"{_opt.Url}/rest/v1/Tools?select=neighborhood";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("apikey", _opt.AnonKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
-
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
-
-        var items = await resp.Content.ReadFromJsonAsync<List<ToolNeighborhood>>(_jsonOpts);
-        return items ?? new List<ToolNeighborhood>();
     }
 
     public async Task<Models.AppUser?> GetUserByIdAsync(Guid id)
@@ -673,7 +644,7 @@ public class SupabaseDemoService
     }
 
     // ── Tool queries ──
-
+    //query all tools
     public async Task<List<Models.Tool>> GetToolsAsync()
     {
         var url = $"{_opt.Url}/rest/v1/Tools?order=created_at.desc";
@@ -700,6 +671,7 @@ public class SupabaseDemoService
         return await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts) ?? new List<Models.Tool>();
     }
 
+    //query specific tool by id
     public async Task<Models.Tool?> GetToolByIdAsync(Guid id)
     {
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at";
@@ -730,6 +702,7 @@ public class SupabaseDemoService
         return items?.FirstOrDefault();
     }
 
+    //query rating for a user
     public async Task<Models.OwnerRating?> GetOwnerRatingAsync(Guid ownerId)
     {
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=avg_rating,total_ratings";
@@ -850,7 +823,7 @@ public class SupabaseDemoService
         return inserted?.FirstOrDefault() ?? interest;
     }
 
-
+    //insert tool to db
     public async Task<Models.Tool> InsertToolAsync(Models.Tool payload)
     {
         var url = $"{_opt.Url}/rest/v1/Tools";
@@ -862,19 +835,13 @@ public class SupabaseDemoService
         req.Content = JsonContent.Create(payload);
 
         using var resp = await client.SendAsync(req);
-        //if (!resp.IsSuccessStatusCode)
-        //{
-        //    var errorContent = await resp.Content.ReadAsStringAsync();
-        //    Console.WriteLine($"Status: {(int)resp.StatusCode} {resp.ReasonPhrase}");
-        //    Console.WriteLine($"Error: {errorContent}");
-        //}
         resp.EnsureSuccessStatusCode();
 
         var inserted = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
         return inserted?.FirstOrDefault() ?? new Models.Tool();
     }
 
-
+    //delete specific tool by id
     public async Task DeleteToolAsync(Guid id)
     {
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";

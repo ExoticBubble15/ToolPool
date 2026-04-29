@@ -7,7 +7,6 @@
 @using System.Net
 @using Microsoft.AspNetCore.Components.Forms
 @inject ToolService ItemService
-@inject CartService Cart
 @inject HttpClient Http
 @inject NavigationManager Nav
 @using System.Net.Http.Json 
@@ -35,23 +34,27 @@
 
 @* ADD TOOL FORM *@
 <div class="browse-location-card" style="width: 85%; margin: 0 auto">
-
+    @* tool title*@
     <div class="browse-filter-group">
         <span class="browse-filter-label">Title*</span>
         <TextInput @bind-Value="@toolSubmission.Name" Placeholder="Title" />
     </div>
 
+    @* price (can be $0/free) *@
     <div class="browse-filter-group">
         <span class="browse-filter-label">Price</span>
         <CurrencyInput @bind-Value="@toolSubmission.Price" TValue="decimal" />
     </div>
 
+    @* description *@
     <div class="browse-filter-group">
         <span class="browse-filter-label">Description*</span>
         <TextInput @bind-Value="@toolSubmission.Description" Placeholder="Description" />
     </div>
-
+    
+    @* category/location select *@
     <div style="display: flex; align-items: flex-start; gap: 0.75rem">
+        @* category *@
         <div class="browse-filter-group" style="flex: 1">
             <span class="browse-filter-label">Category*</span>
             <Button Class="text-start" Type="ButtonType.Button" Color="ButtonColor.Light" @onclick="ToggleCategories" Disabled="@(!categoriesLoaded)">
@@ -91,6 +94,7 @@
             }
         </div>
 
+        @* location *@
         <div class="browse-search-group" style="flex: 1">
             <span class="browse-filter-label">Location*</span>
             <span class="location-search">
@@ -105,8 +109,10 @@
         </div>
     </div>
 
+    @* image *@
     <div class="browse-search-group">
         <span class="browse-filter-label">Image</span>
+        @* upload from device *@
         <div class="image-drop-zone">
             <InputFile class="image-drop-input"
                        OnChange="HandleImageFileSelected"
@@ -117,13 +123,15 @@
             </div>
         </div>
 
+        @* use url *@
         <div class="image-url-row">
             <input class="image-url-input"
                    @bind="imageUrlInput"
                    placeholder="Or paste an image URL" />
-            <button type="button" class="btn-submit image-url-btn" @onclick="ApplyImageUrl">Use URL</button>
+            <button type="button" class="btn-submit image-url-btn" @onclick="ApplyImageUrl">Use URL</button> @* must click button to use *@
         </div>
 
+        @* image preview *@
         @if (!string.IsNullOrWhiteSpace(ImagePreviewUrl))
         {
             <div class="image-preview-wrap">
@@ -168,13 +176,10 @@
     {
         @foreach (var item in Items)
         {
-            var inCart = Cart.IsInCart(item.Id);
-
-            <div class="item-card @(inCart ? "in-cart" : "")">
+            <div class="item-card">
                 <div class="item-info">
                     <div style="display: flex; align-items: center; justify-content: space-between">
                         <h3>@item.Name</h3>
-                        @* <b style="font-size: 0.75rem; border: solid 1px black; border-radius: 8px; padding: 0.25rem">@item.Category</b> *@
                         <span class="badge text-bg-secondary" style="color: black">@item.Category</span>
                     </div>
                     <p>@item.Description</p>
@@ -184,11 +189,6 @@
 
                 <div class="item-footer">
                     <span class="item-price">$@item.Price.ToString("F2")</span>
-
-                    @* <button class="@(inCart ? "btn-remove" : "btn-add")"
-                            @onclick="() => Toggle(item)">
-                        @(inCart ? "Added" : "+ Add")
-                    </button> *@
 
                     <button class="btn-delete" disabled="@deleting"
                             @onclick="() => DeleteItem(item)">
@@ -200,16 +200,10 @@
     }
 </div>
 
-@if (Cart.Count > 0)
-{
-    <div class="sticky-bar">
-        <span>@Cart.Count item(s) · $@Cart.Total.ToString("F2")</span>
-        <a href="/cart" class="btn-checkout-sticky">View Cart →</a>
-    </div>
-}
-
 @code {
     private Tool toolSubmission = new Tool();
+
+    //category vars
     Collapse categoriesMenu = default!;
     private List<String> categoriesList;
     private bool categoriesLoaded = false;
@@ -223,6 +217,7 @@
     private string locationPlaceholder = "Search for a location";
     private string addressSearch;
 
+    //get autocomplete location suggestions
     private async Task<AutoCompleteDataProviderResult<AddressPair>> GetSuggestions(AutoCompleteDataProviderRequest<AddressPair> ap)
     {
         var results = await Http.GetFromJsonAsync<List<AddressPair>>($"api/suggestLocations/{ap.Filter.Value}");
@@ -233,15 +228,19 @@
         };
     }
 
-    private async Task AddressSelect(AddressPair ap)
+    //called after user selects address from autocomplete, apply lat/long to toolSubmission and update placeholder
+    private async Task AddressSelect(AddressPair? ap)
     {
-        var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
-        locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
-        toolSubmission.AddressLat = coords.Latitude;
-        toolSubmission.AddressLng = coords.Longitude;
+        if (ap != null)
+        {
+            var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
+            locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
+            toolSubmission.AddressLat = coords.Latitude;
+            toolSubmission.AddressLng = coords.Longitude;
+        }
     }
 
-
+    //users items
     private List<Tool> Items = new();
     private Dictionary<Guid, string> itemAddresses = new();
 
@@ -252,6 +251,7 @@
     private Guid? deletingItemId = null;
 
     private bool HasStripeOnboarded = false;
+
     private string imageUrlInput = "";
     private string? uploadedImagePreview;
     private const long MaxImageSize = 5 * 1024 * 1024;
@@ -260,10 +260,9 @@
     private string OwnerName = "";
     private string? StripeAccountId;
 
+    //get user, check if stripe onboarded, get tools, categories
     protected override async Task OnInitializedAsync()
     {
-        Cart.OnChange += StateHasChanged;
-
         var hasUser = await LoadCurrentUserAsync();
         if (!hasUser)
         {
@@ -281,6 +280,7 @@
         categoriesLoaded = true;
     }
 
+    //get tools and addresses
     private async Task LoadUserToolsAsync()
     {
         var allTools = await ItemService.GetToolsAsync();
@@ -295,6 +295,7 @@
         }
     }
 
+    //get user info
     private async Task<bool> LoadCurrentUserAsync()
     {
         var response = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
@@ -319,11 +320,13 @@
         OwnerName = me.Username ?? "";
         StripeAccountId = me.StripeAccountId;
 
+        //apply to toolSubmission
         toolSubmission.OwnerId = OwnerId;
         toolSubmission.OwnerName = OwnerName;
         return true;
     }
 
+    //redirect user to stripe onboarding
     private async Task GoToStripeOnboarding()
     {
         try
@@ -356,6 +359,7 @@
         }
     }
 
+    //check if user is onboarded with stripe
     private async Task<bool> CheckStripeAsync()
     {
         if (string.IsNullOrWhiteSpace(StripeAccountId))
@@ -366,7 +370,7 @@
         );
     }
 
-    //field validation
+    //submission field validation
     private bool MissingFields()
     {
         return toolSubmission.Name == String.Empty ||
@@ -377,6 +381,7 @@
                 toolSubmission.AddressLng == 0;
     }
 
+    //submit tool to db
     private async Task SubmitTool()
     {
         SubmitMessage = "";
@@ -389,7 +394,6 @@
             return;
         }
 
-        //set neighborhood as closest to address coords
         if (!HasStripeOnboarded)
         {
             SubmitMessage = "Complete Stripe onboarding first.";
@@ -410,15 +414,17 @@
 
             toolSubmission.CreatedAt = DateTime.UtcNow;
 
+            //log tool values and insert to db
             foreach (var prop in toolSubmission.GetType().GetProperties())
             {
                 Console.WriteLine($"{prop.Name}: {prop.GetValue(toolSubmission)}");
             }
-            // NEED TO FIX SUBMITTING TOOL TO DB - RN ALL THE FORM DATA IS STORED IN A TOOL OBJECT, SO MAYBE JUST PASS IT TO THE APIS AND CONTROLLERS?
             await ItemService.InsertToolAsync(toolSubmission);
 
+            //get updated tool list
             await LoadUserToolsAsync();
 
+            //reset vars
             SubmitOk = true;
             SubmitMessage = "Tool added successfully!";
             toolSubmission = new Tool();
@@ -449,25 +455,11 @@
         }
     }
 
-    private async Task Toggle(Tool item)
-    {
-        if (Cart.IsInCart(item.Id))
-        {
-            var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
-            await Cart.RemoveAsync(cartItem.Id);
-        }
-        else
-        {
-            await Cart.AddAsync(item);
-        }
-
-        Cart.NotifyChanged();
-    }
-
+    //delete item from db
     private async Task DeleteItem(Tool item)
     {
+        //alert to make sure user wants to delete
         bool confirmDelete = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you would like to delete the following tool? \nName: \"{item.Name}\" \nDescription: \"{item.Description}\" \nCategory: \"{item.Category}\" \nPickup Location: \"{itemAddresses[item.Id]}\" \nPrice: ${item.Price}");
-        Console.WriteLine(confirmDelete);
         if (confirmDelete)
         {
             deleting = true;
@@ -475,13 +467,6 @@
             deletingItemId = item.Id;
             StateHasChanged();
             
-            if (Cart.IsInCart(item.Id))
-            {
-                var cartItem = Cart.Items.First(i => i.DemoItemId == item.Id);
-                await Cart.RemoveAsync(cartItem.Id);
-                Cart.NotifyChanged();
-            }
-
             await ItemService.DeleteToolAsync(item.Id);
             await LoadUserToolsAsync();
             deleting = false;
@@ -490,11 +475,7 @@
         }
     }
 
-    public void Dispose()
-    {
-        Cart.OnChange -= StateHasChanged;
-    }
-
+    //image handling
     private string? ImagePreviewUrl =>
         !string.IsNullOrWhiteSpace(uploadedImagePreview)
             ? uploadedImagePreview
