@@ -228,6 +228,7 @@ else
     private bool HasValidDates => startDate is not null && endDate is not null && endDate >= startDate;
     private bool IsOwnTool => tool is not null && currentUser is not null && tool.OwnerId == currentUser.Id;
 
+    // calculate total amount based on price per day  * num days
     private decimal CalculateTotal()
     {
         if (tool is null || startDate is null || endDate is null)
@@ -236,8 +237,10 @@ else
         return tool.Price * Math.Max(1, days);
     }
 
+    // Actions that happen on initialization
     protected override async Task OnInitializedAsync()
     {
+        // get the logged in profile or redirect if not logged in
         var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
         if (profileResponse.StatusCode == HttpStatusCode.Unauthorized)
         {
@@ -258,6 +261,7 @@ else
 
         if (currentUser is null || ToolId is null) { isLoading = false; return; }
 
+        // get the tool that we are expressing interest for
         try
         {
             tool = await ToolService.GetToolByIdAsync(ToolId.Value);
@@ -270,10 +274,13 @@ else
         isLoading = false;
     }
 
+    // For expressing interest and creating a chat without payment
+    // Not currently used in application
     private async Task ExpressInterestOnly()
     {
         errorMsg = null;
 
+        // check if tool is available
         if (tool is null || currentUser is null)
             return;
 
@@ -293,6 +300,7 @@ else
 
         try
         {
+            // make a new interest
             var request = new InterestRequest
             {
                 ToolId = tool.Id,
@@ -325,11 +333,13 @@ else
         }
     }
 
+    // method to handle payment
     private async Task PayAndExpressInterest()
     {
 
         errorMsg = null;
 
+        // check if tool is actually rentable by the user 
         if (tool is null || currentUser is null)
             return;
 
@@ -354,6 +364,7 @@ else
             Console.WriteLine("CurrentUser Id: " + currentUser?.Id);
             Console.WriteLine("Is Empty: " + (currentUser?.Id == Guid.Empty));
 
+            // create request to the API for payment
             var request = new StripeRentalRequest
             {
                 ToolId = tool.Id,
@@ -389,6 +400,8 @@ else
         }
     }
 
+    // button to go to chat if interest is expressed without paying
+    // Not currently used in UI-workflow
     private void GoToChat()
     {
         if (!string.IsNullOrEmpty(channelUrl))
@@ -400,6 +413,7 @@ else
         }
     }
 
+    // Checks if date is available for rent
     private async Task CheckAvailability()
     {
         hasConflict = false;
@@ -413,6 +427,7 @@ else
 
         try
         {
+            // call the API to check supabase for any conflicting dates
             var request = new
             {
                 ToolId = tool.Id,

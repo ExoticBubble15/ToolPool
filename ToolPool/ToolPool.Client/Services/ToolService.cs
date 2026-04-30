@@ -95,6 +95,15 @@ public class ToolService
     }
     // ── Chat Payment ──
 
+    /// <summary>
+    /// Retrieves the payment context for a chat session associated with the specified interest identifier. 
+    /// </summary>
+    /// <remarks>
+    /// This method isn't currently used in the UI workflow
+    /// </remarks>
+    /// <param name="interestId">The unique identifier of the interest for which to retrieve the chat payment context.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the chat payment context if found;
+    /// otherwise, null.</returns>
     public async Task<ChatPaymentContext?> GetChatPaymentContextAsync(Guid interestId)
     {
         try
@@ -106,6 +115,14 @@ public class ToolService
         catch { return null; }
     }
 
+    /// <summary>
+    /// Create a checkout session from the chat associated with the specified interest identifier.
+    /// </summary>
+    /// <remarks>
+    /// This is not used in our current UI workflow
+    /// </remarks>
+    /// <param name="interestId">The unique identifier of the interest for which to retrieve the chat payment context.</param>
+    /// <returns>A task that represents the string for the payment session url</returns>
     public async Task<string?> CheckoutFromChatAsync(Guid interestId)
     {
         var resp = await _http.PostAsync($"/api/stripe/checkout-from-chat/{interestId}", null);

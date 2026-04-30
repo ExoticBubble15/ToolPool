@@ -10,6 +10,12 @@ using ToolPool.Client.Models;
 using ToolPool.Models;
 namespace ToolPool.Services;
 
+/// <summary>
+/// Provides methods for integrating with Stripe to manage customers, connected accounts, checkout sessions, and
+/// transfers for payment processing.
+/// </summary>
+/// <remarks>This service encapsulates common Stripe payment operations such as creating customers, onboarding
+/// connected accounts, initiating checkout sessions for rentals, and transferring payouts to owners.</remarks>
 public class StripePaymentService
 {
     private readonly AccountService _accountService = new();
@@ -28,6 +34,12 @@ public class StripePaymentService
         _supabaseService = supabaseService;
     }
 
+    /// <summary>
+    /// Creates a new customer with the specified email address asynchronously.
+    /// </summary>
+    /// <param name="email">The email address to associate with the new customer. Cannot be null or empty.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the unique identifier of the created
+    /// customer.</returns>
     public async Task<string> CreateCustomerAsync(string email)
     {
         var service = new CustomerService();
@@ -40,6 +52,11 @@ public class StripePaymentService
         return customer.Id;
     }
 
+    /// <summary>
+    /// Creates a new connected account using the specified email address and returns the account identifier.
+    /// </summary>
+    /// <param name="email">The email address to associate with the new connected account. Cannot be null or empty.</param>
+    /// <returns>A string containing the unique identifier of the newly created connected account.</returns>
     public async Task<string> CreateConnectedAccountAsync(string email)
     {
         var service = new AccountService();
@@ -52,6 +69,17 @@ public class StripePaymentService
 
         return account.Id;
     }
+
+    /// <summary>
+    /// Determines whether the user associated with the specified Stripe account has completed all onboarding
+    /// requirements and is fully enabled for payments and payouts.
+    /// </summary>
+    /// <remarks>A user is considered fully onboarded if all required account details have been submitted,
+    /// there are no pending requirements, and the account is not disabled for any reason. This method is typically used
+    /// to verify eligibility before allowing payment or payout operations.</remarks>
+    /// <param name="stripeAccountId">The unique identifier of the Stripe account to check. Cannot be null or empty.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the user
+    /// is fully onboarded and the account is enabled for charges and payouts; otherwise, <see langword="false"/>.</returns>
     public async Task<bool> IsUserFullyOnboardedAsync(string stripeAccountId)
     {
         var account = await _accountService.GetAsync(stripeAccountId);
@@ -83,6 +111,7 @@ public class StripePaymentService
 
         var total = request.PricePerDay * days;
 
+        // options for the session including metadata to pass through for creating an interest item after payment success
         var options = new SessionCreateOptions
         {
             Mode = "payment",
@@ -131,6 +160,14 @@ public class StripePaymentService
         return session.Url;
     }
 
+    /// <summary>
+    /// Transfers the specified amount to the owner's Stripe account as a payout.
+    /// </summary>
+    /// <remarks>The amount is converted from dollars to cents before initiating the transfer. The transfer is
+    /// processed in USD currency.</remarks>
+    /// <param name="ownerStripeAccountId">The Stripe account ID of the owner to receive the payout. Cannot be null or empty.</param>
+    /// <param name="amount">The amount, in US dollars, to transfer to the owner's account. Must be greater than zero.</param>
+    /// <returns>A task that represents the asynchronous transfer operation.</returns>
     public async Task TransferToOwnerAsync(string ownerStripeAccountId, decimal amount)
     {
         var transferService = new TransferService();

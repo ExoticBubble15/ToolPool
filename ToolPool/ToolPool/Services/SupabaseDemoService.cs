@@ -230,42 +230,62 @@ public class SupabaseDemoService
         return users?.FirstOrDefault();
     }
 
+    /// <summary>
+    /// Asynchronously retrieves the Stripe destination account identifier associated with the owner of the specified
+    /// tool.
+    /// </summary>
+    /// <remarks>This method queries the backend service to determine the owner of the specified tool and then
+    /// retrieves the Stripe account identifier for that owner. </remarks>
+    /// <param name="toolId">The unique identifier of the tool for which to retrieve the owner's Stripe destination account. Must be a valid,
+    /// existing tool ID.</param>
+    /// <returns>A string containing the Stripe account identifier if found; otherwise, null if the tool or its owner does not
+    /// exist or does not have a Stripe account associated.</returns>
     public async Task<string?> GetStripeDestinationForToolAsync(Guid toolId)
     {
+        // api request
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{toolId}&select=owner_id&limit=1";
 
+        // make api request
         using var toolReq = new HttpRequestMessage(HttpMethod.Get, url);
         toolReq.Headers.Add("apikey", _opt.ServiceRoleKey);
         toolReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
 
+        // get response
         using var toolResp = await client.SendAsync(toolReq);
         toolResp.EnsureSuccessStatusCode();
 
+        // get the tools from response 
         var tools = await toolResp.Content.ReadFromJsonAsync<List<ToolOwnerLookupDto>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
+        // get the owner from the tool
         var ownerId = tools?.FirstOrDefault()?.OwnerId;
         if (ownerId is null)
         {
             return null;
         }
 
+        // api request to get the strip account for the owner
         var ownerUrl = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=stripe_account_id&limit=1";
 
+        // make request
         using var ownerReq = new HttpRequestMessage(HttpMethod.Get, ownerUrl);
         ownerReq.Headers.Add("apikey", _opt.ServiceRoleKey);
         ownerReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
 
+        // get response
         using var ownerResp = await client.SendAsync(ownerReq);
         ownerResp.EnsureSuccessStatusCode();
 
+        // get the owner 
         var owners = await ownerResp.Content.ReadFromJsonAsync<List<StripeAccountLookupDto>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
+        // return stripe id
         return owners?.FirstOrDefault()?.StripeAccountId;
     }
 
@@ -854,8 +874,19 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// Determines whether the specified time range for a tool overlaps with any existing bookings.
+    /// </summary>
+    /// <remarks>The method checks for any overlap between the specified time range and existing bookings for
+    /// the given tool. Both start and end times are inclusive.</remarks>
+    /// <param name="toolId">The unique identifier of the tool to check for booking conflicts.</param>
+    /// <param name="start">The start date and time of the proposed booking period.</param>
+    /// <param name="end">The end date and time of the proposed booking period.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if there is a
+    /// booking conflict for the specified tool and time range; otherwise, <see langword="false"/>.</returns>
     public async Task<bool> HasBookingConflictAsync(Guid toolId, DateTime start, DateTime end)
     {
+        // build request URL to retrieve all booking date ranges associated with the specified tool
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?" +
                   $"tool_id=eq.{toolId}" +
                   $"&select=start_date,end_date";
