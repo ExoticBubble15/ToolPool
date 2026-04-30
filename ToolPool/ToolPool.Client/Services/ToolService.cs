@@ -117,6 +117,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> GetPickupAddressInfoAsync(Guid interestId)
     {
+        // RentalStatus uses this to load the current address visibility and action buttons.
         var resp = await _http.GetAsync($"/api/interests/{interestId}/pickup-address");
         if (!resp.IsSuccessStatusCode)
         {
@@ -128,6 +129,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> RevealPickupAddressAsync(Guid interestId)
     {
+        // Owner action: move the rental to address revealed, if the server allows it.
         var resp = await _http.PostAsync($"/api/interests/{interestId}/reveal-address", null);
         if (!resp.IsSuccessStatusCode)
         {
@@ -139,6 +141,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> StartHandoffAsync(Guid interestId)
     {
+        // Owner action: starts the pickup handoff after the address is visible.
         var resp = await _http.PostAsync($"/api/interests/{interestId}/start-handoff", null);
         if (!resp.IsSuccessStatusCode)
         {
@@ -150,6 +153,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> ConfirmPickupAsync(Guid interestId)
     {
+        // Renter action: confirms they received the tool.
         var resp = await _http.PostAsync($"/api/interests/{interestId}/confirm-pickup", null);
         if (!resp.IsSuccessStatusCode)
         {
@@ -161,6 +165,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> RequestReturnAsync(Guid interestId)
     {
+        // Renter action: tells the owner the tool is ready to return.
         var resp = await _http.PostAsync($"/api/interests/{interestId}/request-return", null);
         if (!resp.IsSuccessStatusCode)
         {
@@ -172,6 +177,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> ConfirmReturnAsync(Guid interestId)
     {
+        // Owner action: finishes the rental after the tool is back.
         var resp = await _http.PostAsync($"/api/interests/{interestId}/confirm-return", null);
         if (!resp.IsSuccessStatusCode)
         {
@@ -183,6 +189,7 @@ public class ToolService
 
     public async Task<PickupAddressInfo?> SubmitOwnerRatingAsync(Guid interestId, int score)
     {
+        // Renter action after completion: rate the owner for this rental.
         var resp = await _http.PostAsJsonAsync($"/api/interests/{interestId}/rating", new { score });
         if (!resp.IsSuccessStatusCode)
         {

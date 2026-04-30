@@ -213,6 +213,8 @@ public class SupabaseDemoService
 
     public async Task<ProfileUserDto?> GetProfileUserAsync(Guid userId)
     {
+        // ProfileController uses this for /api/profile/me.
+        // Keep this select small because many pages only need basic account info.
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{userId}&select=id,email,username,created_at,updated_at,stripe_account_id,stripe_customer_id,sendbird_user_id&limit=1";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -271,6 +273,7 @@ public class SupabaseDemoService
 
     public async Task<List<ProfileListingDto>> GetListingsByOwnerAsync(Guid ownerId)
     {
+        // Profile.razor uses this for the My Listings section.
         var url = $"{_opt.Url}/rest/v1/Tools?owner_id=eq.{ownerId}&select=id,name,description,price,category,neighborhood,image_url,owner_id,owner_name,created_at&order=created_at.desc";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -290,6 +293,8 @@ public class SupabaseDemoService
 
     public async Task<List<ProfileActivityDto>> GetActivitiesByUserAsync(Guid userId)
     {
+        // Profile activity includes rows where the user is owner or renter.
+        // Supabase needs the OR filter encoded for the REST query string.
         var filter = Uri.EscapeDataString($"(owner_id.eq.{userId},renter_id.eq.{userId})");
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?or={filter}&select=id,tool_id,tool_name,renter_id,owner_id,message,start_date,end_date,channel_url,status,created_at&order=created_at.desc";
 
@@ -317,10 +322,12 @@ public class SupabaseDemoService
             .Distinct()
             .ToList();
 
+        // Some older interest rows do not store tool_name, so fill it from Tools.
         var toolNameLookup = missingToolNameIds.Count == 0
             ? new Dictionary<Guid, string>()
             : await GetToolNamesByIdsAsync(missingToolNameIds);
 
+        // Cache users inside this request so repeated counterpart names do not call Supabase many times.
         var userCache = new Dictionary<Guid, Models.AppUser?>();
 
         foreach (var item in results)
@@ -338,6 +345,7 @@ public class SupabaseDemoService
 
             if (item.OwnerId == userId)
             {
+                // Current user owns the tool. Counterpart is the renter.
                 item.Role = "owner";
                 if (Guid.TryParse(item.RenterId, out var renterGuid))
                 {
@@ -356,6 +364,7 @@ public class SupabaseDemoService
             }
             else
             {
+                // Current user rented the tool. Counterpart is the owner.
                 item.Role = "renter";
                 if (item.OwnerId.HasValue)
                 {

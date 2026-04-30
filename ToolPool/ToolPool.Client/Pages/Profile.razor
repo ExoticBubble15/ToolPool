@@ -220,6 +220,8 @@
     {
         try
         {
+            // Load the profile page data together, so the page does not wait for each API one by one.
+            // These APIs go to ProfileController, then ProfileController reads from SupabaseDemoService.
             var meTask = Http.GetFromJsonAsync<AccountInfo>(Navigation.ToAbsoluteUri("/api/profile/me"));
             var listingsTask = Http.GetFromJsonAsync<List<ListingItem>>(Navigation.ToAbsoluteUri("/api/profile/my-listings"));
             var activitiesTask = Http.GetFromJsonAsync<List<ActivityItem>>(Navigation.ToAbsoluteUri("/api/profile/my-activities"));
@@ -233,6 +235,9 @@
             Account = me ?? new AccountInfo();
             MyListings = listings ?? new List<ListingItem>();
             MyActivities = activities ?? new List<ActivityItem>();
+
+            // Stripe status needs a second API call because the user table only stores the account id.
+            // The real onboarding status comes from Stripe.
             await RefreshStripeStatusAsync();
         }
         catch (Exception ex)
@@ -260,6 +265,7 @@
 
     private void OnLogoutClicked()
     {
+        // This is a full page load because logout is handled by the server auth endpoint.
         Navigation.NavigateTo("/api/auth/logout", forceLoad: true);
     }
 
@@ -270,6 +276,7 @@
 
         if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
         {
+            // No Stripe account id means this user never started owner onboarding.
             return;
         }
 
@@ -284,6 +291,7 @@
         }
         catch
         {
+            // If Stripe cannot be checked, keep the UI in the not connected state.
             StripeOnboardingComplete = false;
         }
         finally
@@ -296,6 +304,7 @@
     {
         if (string.IsNullOrWhiteSpace(Account.StripeAccountId))
         {
+            // The server needs a Stripe account id before it can create an onboarding link.
             return;
         }
 
@@ -313,6 +322,7 @@
             }
 
             var onboardingUrl = await response.Content.ReadAsStringAsync();
+            // Stripe sends back an external URL, so forceLoad opens the Stripe hosted page.
             Navigation.NavigateTo(onboardingUrl.Trim('"'), forceLoad: true);
         }
         catch
@@ -325,6 +335,8 @@
     {
         DeleteError = null;
         IsDeleting = true;
+
+        // These messages are only UI progress. The real delete work happens in DELETE /api/profile/me.
         DeleteProgressMessage = "Deleting ratings...";
         DeleteProgressPercent = 20;
 
@@ -342,6 +354,7 @@
             DeleteProgressMessage = "Deleting user account...";
             DeleteProgressPercent = 90;
 
+            // ProfileController calls UserService, and UserService deletes ratings, interests, tools, and user records.
             var response = await Http.DeleteAsync(Navigation.ToAbsoluteUri("/api/profile/me"));
             if (!response.IsSuccessStatusCode)
             {
@@ -356,6 +369,7 @@
             DeleteProgressMessage = "Account deleted.";
             DeleteProgressPercent = 100;
             await Task.Delay(300);
+            // Reload the app after delete so old auth state is cleared.
             Navigation.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
@@ -389,6 +403,7 @@
 
     private static string FormatActivityWindow(string? startDate, string? endDate)
     {
+        // Dates come from Supabase as strings, so keep a safe fallback for old or bad rows.
         if (!DateTime.TryParse(startDate, out var start) || !DateTime.TryParse(endDate, out var end))
         {
             return "Date TBD";
@@ -429,11 +444,13 @@
 
     private string? GetActivityTarget(ActivityItem activity)
     {
+        // If a chat channel exists, send the user back to the chat/rental flow.
         if (!string.IsNullOrWhiteSpace(activity.ChannelUrl))
         {
             return $"/chat/{Uri.EscapeDataString(activity.ChannelUrl)}?interestId={activity.Id}";
         }
 
+        // If there is no chat yet, fall back to the original interest page.
         if (activity.ToolId.HasValue && activity.ToolId.Value != Guid.Empty)
         {
             return $"/express_interest/{activity.ToolId.Value}";
@@ -444,6 +461,7 @@
 
     private void OpenActivity(ActivityItem activity)
     {
+        // This keeps the Profile activity list connected to the chat and handoff flow.
         var target = GetActivityTarget(activity);
         if (!string.IsNullOrWhiteSpace(target))
         {
