@@ -565,6 +565,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/reveal-address")]
         public async Task<ActionResult<PickupAddressResponse>> RevealPickupAddress(Guid interestId)
         {
+            // First pickup step. Only the owner can reveal the exact pickup address.
             var userId = GetAuthenticatedUserId();
             if (userId is null)
                 return Unauthorized(new { error = "Not authenticated" });
@@ -584,6 +585,7 @@ namespace ToolPool.Controllers
 
             if (!IsAddressRevealedStatus(normalizedStatus))
             {
+                // After this status, the renter can see the address too.
                 await _supabase.UpdateInterestStatusAsync(interestId, "revealed");
                 interest.Status = "revealed";
             }
@@ -610,6 +612,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/start-handoff")]
         public async Task<ActionResult<PickupAddressResponse>> StartHandoff(Guid interestId)
         {
+            // Owner starts handoff. This unlocks Confirm Pickup for the renter.
             return await TransitionInterestAsync(
                 interestId,
                 allowedActor: "owner",
@@ -630,6 +633,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/confirm-pickup")]
         public async Task<ActionResult<PickupAddressResponse>> ConfirmPickup(Guid interestId)
         {
+            // Renter confirms pickup. After this, the tool is treated as checked out.
             return await TransitionInterestAsync(
                 interestId,
                 allowedActor: "renter",
@@ -648,6 +652,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/request-return")]
         public async Task<ActionResult<PickupAddressResponse>> RequestReturn(Guid interestId)
         {
+            // Renter requests return when they are ready to give the tool back.
             return await TransitionInterestAsync(
                 interestId,
                 allowedActor: "renter",
@@ -667,6 +672,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/confirm-return")]
         public async Task<ActionResult<PickupAddressResponse>> ConfirmReturn(Guid interestId)
         {
+            // Owner confirms return. This closes the rental.
             return await TransitionInterestAsync(
                 interestId,
                 allowedActor: "owner",
@@ -697,6 +703,7 @@ namespace ToolPool.Controllers
         [HttpPost("interests/{interestId:guid}/rating")]
         public async Task<ActionResult<PickupAddressResponse>> SubmitOwnerRating(Guid interestId, [FromBody] OwnerRatingRequest body)
         {
+            // Rating is only allowed after the rental is completed, and only renter can do it.
             var userId = GetAuthenticatedUserId();
             if (userId is null)
                 return Unauthorized(new { error = "Not authenticated" });
@@ -738,6 +745,7 @@ namespace ToolPool.Controllers
         /// the user is not authenticated or the identifier is not present.</returns>
         private Guid? GetAuthenticatedUserId()
         {
+            // API calls depend on the auth cookie created during login.
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
                 return null;
@@ -763,6 +771,7 @@ namespace ToolPool.Controllers
         /// evaluation.</remarks>
         /// <param name="status">The status string to evaluate. May be null.</param>
         /// <returns>true if the status indicates the address is revealed or in a related state; otherwise, false.</returns>
+        // Once address is revealed, later rental states should still keep it visible.
         private static bool IsAddressRevealedStatus(string? status) =>
             NormalizeInterestStatus(status) is "revealed" or "handoff_requested" or "handed_off" or "return_requested" or "completed";
 
@@ -771,6 +780,7 @@ namespace ToolPool.Controllers
         /// </summary>
         /// <param name="status">The interest status to evaluate. May be null.</param>
         /// <returns>true if the address can be revealed for the given status; otherwise, false.</returns>
+        // Address can be revealed only before the physical pickup flow starts.
         private static bool CanRevealAddress(string? status) =>
             NormalizeInterestStatus(status) is "pending" or "confirmed";
 
@@ -795,6 +805,8 @@ namespace ToolPool.Controllers
             string nextStatus,
             string invalidStatusMessage)
         {
+            // Shared helper for handoff and return buttons.
+            // It checks actor, current status, then saves the next status.
             var userId = GetAuthenticatedUserId();
             if (userId is null)
                 return Unauthorized(new { error = "Not authenticated" });
@@ -808,6 +820,7 @@ namespace ToolPool.Controllers
             if ((allowedActor == "owner" && !isOwner) || (allowedActor == "renter" && !isRenter))
                 return Forbid();
 
+            // Stop users from skipping steps, like confirming pickup before owner starts handoff.
             if (NormalizeInterestStatus(interest.Status) != requiredStatus)
                 return BadRequest(new { error = invalidStatusMessage });
 
@@ -840,6 +853,8 @@ namespace ToolPool.Controllers
         /// <exception cref="InvalidOperationException">Thrown if the tool address details associated with the interest could not be found.</exception>
         private async Task<PickupAddressResponse> BuildPickupAddressResponseAsync(InterestSubmission interest, Guid viewerId)
         {
+            // This builds the model used by RentalStatus.razor.
+            // It includes the address, status, and which buttons the viewer can use.
             var toolAddress = await _supabase.GetToolAddressByIdAsync(interest.ToolId);
             if (toolAddress is null)
                 throw new InvalidOperationException("Tool address details were not found.");
@@ -858,6 +873,7 @@ namespace ToolPool.Controllers
             string? address = null;
             if (canView)
             {
+                // Only return the exact address after the viewer is allowed to see it.
                 address = await ReverseGeocodeExactAddressAsync(
                     toolAddress.AddressLat.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     toolAddress.AddressLng.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -867,6 +883,8 @@ namespace ToolPool.Controllers
             int? currentOwnerRating = null;
             if (isRenter && normalizedStatus == "completed" && interest.OwnerId is Guid ownerIdForRating)
             {
+                // The renter can rate the owner after completion.
+                // Existing rating is returned so the UI can show update mode.
                 canRateOwner = true;
                 var existing = await _supabase.GetRatingAsync(interest.Id, viewerId, ownerIdForRating);
                 if (existing is not null)

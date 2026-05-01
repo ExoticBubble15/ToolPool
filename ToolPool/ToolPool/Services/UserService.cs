@@ -136,12 +136,14 @@ public class UserService
 
     public async Task DeleteAccountAsync(Guid userId)
     {
+        // ProfileController calls this after user confirms delete on Profile.razor.
         var user = await _db.GetProfileUserAsync(userId);
         if (user == null)
         {
             throw new InvalidOperationException("User record not found.");
         }
 
+        // Delete dependent records first, then delete the public user row and auth user.
         await _db.DeleteRatingsByUserAsync(userId);
         await _db.DeleteInterestSubmissionsByUserAsync(userId);
         await _db.DeleteToolsByOwnerAsync(userId);

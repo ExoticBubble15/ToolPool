@@ -369,12 +369,16 @@
         if (loadedFor == InterestId && authChecked)
             return;
 
+        // This page can be opened from chat or profile activity.
+        // Reset state when the route has a new interest id.
         loadedFor = InterestId;
         isLoading = true;
         loadError = null;
         actionError = null;
         info = null;
 
+        // First check the current user from ProfileController.
+        // The rental actions need to know if the visitor is logged in.
         var profileResponse = await Http.GetAsync(Nav.ToAbsoluteUri("/api/profile/me"));
         if (profileResponse.StatusCode == HttpStatusCode.Unauthorized)
         {
@@ -403,6 +407,7 @@
 
         try
         {
+            // This calls ToolService, then SupabaseController builds the address and action permissions.
             info = await ToolService.GetPickupAddressInfoAsync(InterestId);
             selectedScore = info?.CurrentOwnerRating;
         }
@@ -419,6 +424,8 @@
     private void SelectScore(int score)
     {
         if (isRatingRunning) return;
+
+        // Only change local UI state here. SubmitRating sends it to the server.
         selectedScore = score;
         ratingError = null;
         ratingSavedAt = null;
@@ -439,6 +446,8 @@
         ratingSavedAt = null;
         try
         {
+            // The server stores or updates one rating for this rental.
+            // It returns the same rental info model so the page can refresh itself.
             var updated = await ToolService.SubmitOwnerRatingAsync(InterestId, score);
             if (updated is not null)
             {
@@ -460,29 +469,39 @@
 
     private string BuildChatUrl()
     {
+        // Chat is the main place where users discuss pickup and return.
+        // Keep the interest id in the query so the chat can show the right rental panel.
         if (string.IsNullOrWhiteSpace(ChannelUrl))
             return "/chat";
         return $"/chat/{Uri.EscapeDataString(ChannelUrl)}?interestId={InterestId}";
     }
 
+    // Owner reveals the exact address before pickup.
     private async Task RevealAddress() =>
         await RunAction(() => ToolService.RevealPickupAddressAsync(InterestId));
 
+    // Owner starts handoff after the address is revealed.
     private async Task StartHandoff() =>
         await RunAction(() => ToolService.StartHandoffAsync(InterestId));
 
+    // Renter confirms they picked up the tool.
     private async Task ConfirmPickup() =>
         await RunAction(() => ToolService.ConfirmPickupAsync(InterestId));
 
+    // Renter starts the return step after using the tool.
     private async Task RequestReturn() =>
         await RunAction(() => ToolService.RequestReturnAsync(InterestId));
 
+    // Owner confirms the tool was returned.
     private async Task ConfirmReturn() =>
         await RunAction(() => ToolService.ConfirmReturnAsync(InterestId));
 
     private async Task RunAction(Func<Task<PickupAddressInfo?>> call)
     {
         if (isActionRunning) return;
+
+        // All rental step buttons use this same wrapper.
+        // The API returns fresh permissions, so the next correct button appears.
         isActionRunning = true;
         actionError = null;
         try

@@ -22,6 +22,7 @@ public class ProfileController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> GetMe()
     {
+        // Profile.razor and RentalStatus.razor both use this to know the logged in user.
         var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
@@ -40,6 +41,7 @@ public class ProfileController : ControllerBase
     [HttpGet("my-listings")]
     public async Task<IActionResult> GetMyListings()
     {
+        // This feeds the My Listings section on Profile.razor.
         var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
@@ -53,6 +55,8 @@ public class ProfileController : ControllerBase
     [HttpGet("my-activities")]
     public async Task<IActionResult> GetMyActivities()
     {
+        // This feeds the My Activities section on Profile.razor.
+        // Each activity can link back to chat/rental status.
         var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
@@ -66,6 +70,7 @@ public class ProfileController : ControllerBase
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteMe()
     {
+        // Profile.razor calls this after the user confirms delete.
         var userId = await TryGetCurrentUserIdAsync();
         if (userId is null)
         {
@@ -74,6 +79,7 @@ public class ProfileController : ControllerBase
 
         try
         {
+            // UserService handles the real delete order across ratings, interests, tools, and auth user.
             await _userService.DeleteAccountAsync(userId.Value);
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Ok(new { success = true, message = "Account deleted successfully." });
@@ -86,6 +92,7 @@ public class ProfileController : ControllerBase
 
     private async Task<Guid?> TryGetCurrentUserIdAsync()
     {
+        // Normal path: the cookie has the user id claim.
         var idClaim =
             User.FindFirstValue(ClaimTypes.NameIdentifier) ??
             User.FindFirstValue("user_id");
@@ -95,6 +102,7 @@ public class ProfileController : ControllerBase
             return parsedFromClaim;
         }
 
+        // Fallback path: some old sessions may only have email, so look up the user in Supabase.
         var email =
             User.FindFirstValue(ClaimTypes.Email) ??
             User.Identity?.Name;
