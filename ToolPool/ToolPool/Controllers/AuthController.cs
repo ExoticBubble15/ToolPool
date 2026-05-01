@@ -29,18 +29,7 @@ namespace ToolPool.Controllers
             _supabaseService = supabaseService;
             _users = users;
         }
-
-        [HttpGet("google")]
-        public IActionResult GoogleLogin()
-        {
-            var ops = new AuthenticationProperties
-            {
-                RedirectUri = "/"
-            };
-
-            return Challenge(ops, GoogleDefaults.AuthenticationScheme);
-        }
-
+        
         [HttpGet("logout")]
         public async Task<IActionResult> Logout()
         {
@@ -80,7 +69,7 @@ namespace ToolPool.Controllers
                 return Unauthorized(new { authenticated = false });
             }
         }
-
+        
         [HttpPost("signin")]
         public async Task<IActionResult> TrySignIn([FromBody] Client.Models.LoginRequest request)
         {
@@ -110,6 +99,10 @@ namespace ToolPool.Controllers
             return Ok(loginStatus);
         }
 
+        /// <summary>
+        /// API POST call to refresh the user session using session data stored in the user profile stored in Supabase.
+        /// </summary>
+        /// <returns></returns>
         [HttpPost("restoreSession")]
         public async Task<IActionResult> RestoreSession()
         {
