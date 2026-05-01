@@ -6,6 +6,13 @@ using ToolPool.Services;
 
 namespace ToolPool.Controllers;
 
+/// <summary>
+/// API controller for handling payment success callbacks and related operations.
+/// </summary>
+/// <remarks>This controller exposes an endpoint for processing successful payment events, ensuring that users and
+/// tools exist, and coordinating chat provisioning through Sendbird. It integrates with external APIs for user and
+/// tool management, and logs errors. All endpoints return appropriate HTTP responses based
+/// on validation and provisioning outcomes.</remarks>  
 [ApiController]
 [Route("api/payment")]
 public class PaymentController : ControllerBase
@@ -24,6 +31,18 @@ public class PaymentController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Handles the Stripe payment success callback, verifies the session, and creates or updates the interest and chat
+    /// channel between the renter and tool owner.
+    /// </summary>
+    /// <remarks>This endpoint is called after a successful Stripe payment. It ensures that both the
+    /// renter and owner exist, provisions chat users and channels as needed, and deduplicates interests to prevent
+    /// duplicate conversations. Returns error responses for missing or invalid session data, users, or chat
+    /// provisioning failures.</remarks>
+    /// <param name="session_id">The unique identifier of the Stripe checkout session to verify. This value is required and must correspond to a
+    /// valid session.</param>
+    /// <returns>An IActionResult indicating the result of the operation. Returns 200 OK with interest and channel details if
+    /// successful; otherwise, returns an error response if validation or provisioning fails.</returns>
     [HttpGet("success")]
     public async Task<IActionResult> Success([FromQuery] string session_id)
     {
@@ -158,7 +177,7 @@ public class PaymentController : ControllerBase
             }
 
             // -----------------------------
-            // 7. No existing interest — create fresh per-interest channel + row
+            // 7. No existing interest - create new per-interest channel + row
             // -----------------------------
             string channelUrl;
             try
@@ -207,6 +226,15 @@ public class PaymentController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Ensures that the specified application user has a corresponding Sendbird user account and returns the Sendbird
+    /// user ID.
+    /// </summary>
+    /// <remarks>If the user does not already have a Sendbird user ID, a new Sendbird user account is created
+    /// and the user's Sendbird user ID is updated accordingly.</remarks>
+    /// <param name="user">The application user to ensure a Sendbird user account for. Cannot be null. The user's Sendbird user ID
+    /// will be updated if necessary.</param>
+    /// <returns>A string containing the Sendbird user ID associated with the specified application user.</returns>
     private async Task<string> EnsureSendbirdUserAsync(Models.AppUser user)
     {
         var desired = string.IsNullOrEmpty(user.SendbirdUserId) ? user.Id.ToString() : user.SendbirdUserId;

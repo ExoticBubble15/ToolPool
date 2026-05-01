@@ -232,42 +232,62 @@ public class SupabaseDemoService
         return users?.FirstOrDefault();
     }
 
+    /// <summary>
+    /// Asynchronously retrieves the Stripe destination account identifier associated with the owner of the specified
+    /// tool.
+    /// </summary>
+    /// <remarks>This method queries the backend service to determine the owner of the specified tool and then
+    /// retrieves the Stripe account identifier for that owner. </remarks>
+    /// <param name="toolId">The unique identifier of the tool for which to retrieve the owner's Stripe destination account. Must be a valid,
+    /// existing tool ID.</param>
+    /// <returns>A string containing the Stripe account identifier if found; otherwise, null if the tool or its owner does not
+    /// exist or does not have a Stripe account associated.</returns>
     public async Task<string?> GetStripeDestinationForToolAsync(Guid toolId)
     {
+        // api request
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{toolId}&select=owner_id&limit=1";
 
+        // make api request
         using var toolReq = new HttpRequestMessage(HttpMethod.Get, url);
         toolReq.Headers.Add("apikey", _opt.ServiceRoleKey);
         toolReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
 
+        // get response
         using var toolResp = await client.SendAsync(toolReq);
         toolResp.EnsureSuccessStatusCode();
 
+        // get the tools from response 
         var tools = await toolResp.Content.ReadFromJsonAsync<List<ToolOwnerLookupDto>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
+        // get the owner from the tool
         var ownerId = tools?.FirstOrDefault()?.OwnerId;
         if (ownerId is null)
         {
             return null;
         }
 
+        // api request to get the strip account for the owner
         var ownerUrl = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=stripe_account_id&limit=1";
 
+        // make request
         using var ownerReq = new HttpRequestMessage(HttpMethod.Get, ownerUrl);
         ownerReq.Headers.Add("apikey", _opt.ServiceRoleKey);
         ownerReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.ServiceRoleKey);
 
+        // get response
         using var ownerResp = await client.SendAsync(ownerReq);
         ownerResp.EnsureSuccessStatusCode();
 
+        // get the owner 
         var owners = await ownerResp.Content.ReadFromJsonAsync<List<StripeAccountLookupDto>>(new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
+        // return stripe id
         return owners?.FirstOrDefault()?.StripeAccountId;
     }
 
@@ -473,22 +493,7 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<MarkerDetails>> GetMarkerDetails()
-    {
-        var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
-        var url = $"{baseUrl}/rest/v1/Tools?select=id,name,description,owner_name,price,addressLat,addressLng";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("apikey", _opt.AnonKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
-
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
-
-        var triples = await resp.Content.ReadFromJsonAsync<List<MarkerDetails>>(_jsonOpts);
-        return triples ?? new List<MarkerDetails>();
-    }
-
+    //query neighborhood, latitude, longitude from db
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
     {
         var baseUrl = (_opt.Url ?? string.Empty).TrimEnd('/');
@@ -505,6 +510,7 @@ public class SupabaseDemoService
         return triples ?? new List<NeighborhoodTriple>();
     }
 
+    //query all categories, regardless if any tools associated with them
     public async Task<List<ToolCategory>> GetCategories()
     {
         var url = $"{_opt.Url}/rest/v1/Categories";
@@ -518,21 +524,6 @@ public class SupabaseDemoService
 
         var items = await resp.Content.ReadFromJsonAsync<List<ToolCategory>>(_jsonOpts);
         return items ?? new List<ToolCategory>();
-    }
-
-    public async Task<List<ToolNeighborhood>> GetNeighborhoods()
-    {
-        var url = $"{_opt.Url}/rest/v1/Tools?select=neighborhood";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("apikey", _opt.AnonKey);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _opt.AnonKey);
-
-        using var resp = await client.SendAsync(req);
-        resp.EnsureSuccessStatusCode();
-
-        var items = await resp.Content.ReadFromJsonAsync<List<ToolNeighborhood>>(_jsonOpts);
-        return items ?? new List<ToolNeighborhood>();
     }
 
     public async Task<Models.AppUser?> GetUserByIdAsync(Guid id)
@@ -682,7 +673,7 @@ public class SupabaseDemoService
     }
 
     // ── Tool queries ──
-
+    //query all tools
     public async Task<List<Models.Tool>> GetToolsAsync()
     {
         var url = $"{_opt.Url}/rest/v1/Tools?order=created_at.desc";
@@ -709,6 +700,7 @@ public class SupabaseDemoService
         return await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts) ?? new List<Models.Tool>();
     }
 
+    //query specific tool by id
     public async Task<Models.Tool?> GetToolByIdAsync(Guid id)
     {
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}&select=id,name,description,price,category,owner_id,owner_name,neighborhood,image_url,created_at";
@@ -739,6 +731,7 @@ public class SupabaseDemoService
         return items?.FirstOrDefault();
     }
 
+    //query rating for a user
     public async Task<Models.OwnerRating?> GetOwnerRatingAsync(Guid ownerId)
     {
         var url = $"{_opt.Url}/rest/v1/Users?id=eq.{ownerId}&select=avg_rating,total_ratings";
@@ -859,7 +852,7 @@ public class SupabaseDemoService
         return inserted?.FirstOrDefault() ?? interest;
     }
 
-
+    //insert tool to db
     public async Task<Models.Tool> InsertToolAsync(Models.Tool payload)
     {
         var url = $"{_opt.Url}/rest/v1/Tools";
@@ -871,19 +864,13 @@ public class SupabaseDemoService
         req.Content = JsonContent.Create(payload);
 
         using var resp = await client.SendAsync(req);
-        //if (!resp.IsSuccessStatusCode)
-        //{
-        //    var errorContent = await resp.Content.ReadAsStringAsync();
-        //    Console.WriteLine($"Status: {(int)resp.StatusCode} {resp.ReasonPhrase}");
-        //    Console.WriteLine($"Error: {errorContent}");
-        //}
         resp.EnsureSuccessStatusCode();
 
         var inserted = await resp.Content.ReadFromJsonAsync<List<Models.Tool>>(_jsonOpts);
         return inserted?.FirstOrDefault() ?? new Models.Tool();
     }
 
-
+    //delete specific tool by id
     public async Task DeleteToolAsync(Guid id)
     {
         var url = $"{_opt.Url}/rest/v1/Tools?id=eq.{id}";
@@ -896,8 +883,19 @@ public class SupabaseDemoService
         resp.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// Determines whether the specified time range for a tool overlaps with any existing bookings.
+    /// </summary>
+    /// <remarks>The method checks for any overlap between the specified time range and existing bookings for
+    /// the given tool. Both start and end times are inclusive.</remarks>
+    /// <param name="toolId">The unique identifier of the tool to check for booking conflicts.</param>
+    /// <param name="start">The start date and time of the proposed booking period.</param>
+    /// <param name="end">The end date and time of the proposed booking period.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if there is a
+    /// booking conflict for the specified tool and time range; otherwise, <see langword="false"/>.</returns>
     public async Task<bool> HasBookingConflictAsync(Guid toolId, DateTime start, DateTime end)
     {
+        // build request URL to retrieve all booking date ranges associated with the specified tool
         var url = $"{_opt.Url}/rest/v1/Interest_Submissions?" +
                   $"tool_id=eq.{toolId}" +
                   $"&select=start_date,end_date";

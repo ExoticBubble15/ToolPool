@@ -27,7 +27,7 @@ public class UserService
         // user alr exists try catch
         try
         {
-            // TODO: error handling for all these below
+            // create supabase auth account and sign into it
             var response = await _supabase.Auth.SignUp(request.Email, request.Password);
             var csession = await _supabase.Auth.SignIn(request.Email, request.Password);
 
@@ -80,7 +80,6 @@ public class UserService
         }
         catch (Supabase.Gotrue.Exceptions.GotrueException ex)
         {
-            // should delete all created records here
             Console.WriteLine("=== GOTRUE ERROR ===");
             Console.WriteLine("Message:");
             Console.WriteLine(ex.Message);
@@ -119,6 +118,7 @@ public class UserService
                 };
 
                 user.Session = response;
+                // fetch user's session data and refresh it
                 user.access_token = response?.AccessToken;
                 user.refresh_token = response?.RefreshToken;
                 await _db.UpdateUserSessionAsync(request.Email, response);

@@ -6,7 +6,13 @@ using ToolPool.Services;
 using Stripe;
 
 namespace ToolPool.Controllers;
-
+/// <summary>
+/// Provides API endpoints for handling Stripe payment operations.  
+/// </summary>
+/// <remarks>This controller exposes endpoints for integrating Stripe payments within the application. It supports
+/// creating checkout sessions for rentals, validating payment eligibility, and managing Stripe account onboarding. All
+/// endpoints require the user to be authenticated. The controller relies on injected services for Stripe payment
+/// processing and Supabase data access.</remarks>
 [ApiController]
 [Route("api/stripe")]
 public class StripeController : ControllerBase
@@ -14,24 +20,35 @@ public class StripeController : ControllerBase
     private readonly StripePaymentService _stripe;
     private readonly SupabaseDemoService _supabase;
 
+    /// <summary>
+    /// Initializes a new instance of the StripeController class with the specified payment and Supabase services.
+    /// </summary>
+    /// <param name="stripe">The StripePaymentService instance used to process Stripe payments. Cannot be null.</param>
+    /// <param name="supabase">The SupabaseDemoService instance used to interact with Supabase features. Cannot be null.</param>
     public StripeController(StripePaymentService stripe, SupabaseDemoService supabase)
     {
         _stripe = stripe;
         _supabase = supabase;
     }
 
-    /**
-     * Route for checkout.
-     * Gets cart from request.
-     * Returns url for stripe session
-     */
+    /// <summary>
+    /// Creates a Stripe checkout session for renting a tool based on the provided rental request.
+    /// </summary>
+    /// <remarks>The caller must be an authenticated user. The method validates that the tool exists, has an
+    /// owner, and that the user is not attempting to rent their own tool.</remarks>
+    /// <param name="request">The rental request containing tool information, rental period, price, and user details. Must not be null.</param>
+    /// <returns>An IActionResult containing the URL for the Stripe checkout session if the request is valid; otherwise, a
+    /// BadRequest or Unauthorized result describing the error.</returns>
     [HttpPost("checkout-rental")]
     public async Task<IActionResult> CheckoutRental([FromBody] ToolPool.Models.StripeRentalRequest request)
     {
+        // get userid
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var currentUserId))
             return Unauthorized(new { error = "Not authenticated" });
 
+        // get the tool to be bought
         var tool = await _supabase.GetToolByIdAsync(request.ToolId);
         if (tool is null)
             return BadRequest(new { error = "Tool not found" });
@@ -39,13 +56,16 @@ public class StripeController : ControllerBase
         if (!tool.OwnerId.HasValue)
             return BadRequest(new { error = "Tool owner is missing." });
 
+        // get owner
         var ownerId = tool.OwnerId.Value;
 
         if (ownerId == currentUserId)
             return BadRequest(new { error = "You cannot pay for your own listing." });
 
+        // get email for renter 
         var email = User.FindFirst(ClaimTypes.Email)?.Value;
 
+        // create checkout session
         var serverRequest = new ToolPool.Models.StripeRentalRequest
         {
             ToolId = request.ToolId,
@@ -63,6 +83,14 @@ public class StripeController : ControllerBase
         return Ok(new { url });
     }
 
+    /// <summary>
+    /// Gets the payment context for a rental interest from a chat.
+    /// </summary>
+    /// <remarks>
+    /// This is not currently used in the client.
+    /// </remarks>
+    /// <param name="interestId">Unique identifier for the interest that the payment context belongs to</param>
+    /// <returns>IActionResult containing information about the status of the payment and information about the payment.</returns>
     [HttpGet("chat-payment-context/{interestId:guid}")]
     public async Task<IActionResult> GetChatPaymentContext(Guid interestId)
     {
@@ -109,6 +137,17 @@ public class StripeController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Initiates the checkout process for a rental interest from a chat context and returns a Stripe checkout session
+    /// URL if successful.
+    /// </summary>
+    /// <remarks>The current user must be authenticated and must be the renter associated with the specified
+    /// interest. The method validates that the interest and associated tool exist, that rental dates are specified, and
+    /// that the user is not attempting to pay for their own listing.</remarks>
+    /// <param name="interestId">The unique identifier of the rental interest to check out. Must correspond to an existing interest where the
+    /// current user is the renter.</param>
+    /// <returns>An IActionResult containing the Stripe checkout session URL if the operation is successful; otherwise, an error
+    /// response indicating the reason for failure.</returns>
     [HttpPost("checkout-from-chat/{interestId:guid}")]
     public async Task<IActionResult> CheckoutFromChat(Guid interestId)
     {
@@ -157,9 +196,14 @@ public class StripeController : ControllerBase
         return Ok(new { url });
     }
 
-    // =========================
-    // STRIPE ONBOARDING STATUS
-    // =========================
+    /// <summary>
+    /// Retrieves the onboarding status for the specified Stripe account.
+    /// </summary>
+    /// <remarks>A Stripe account is considered onboarded if all required details are submitted, charges and
+    /// payouts are enabled, there are no pending requirements, and the account is not disabled.</remarks>
+    /// <param name="accountId">The unique identifier of the Stripe account to check. Cannot be null, empty, or whitespace.</param>
+    /// <returns>An HTTP 200 response containing a boolean value indicating whether the account is fully onboarded. Returns HTTP
+    /// 400 if the account ID is missing or invalid, or HTTP 500 if an error occurs while retrieving the account status.</returns>
     [HttpGet("onboarding-status/{accountId}")]
     public async Task<IActionResult> GetOnboardingStatus(string accountId)
     {
@@ -194,6 +238,14 @@ public class StripeController : ControllerBase
         }
     }
 
+
+    /// <summary>
+    /// Creates a Stripe onboarding link for the specified account and returns the URL to the client.
+    /// </summary>
+    /// <remarks>Use this endpoint to initiate the Stripe onboarding flow for a connected account. The
+    /// returned URL should be presented to the user to complete onboarding. The link is available for a time determined by Stripe.</remarks>
+    /// <param name="accountId">The unique identifier of the Stripe account for which to create the onboarding link. Cannot be null or empty.</param>
+    /// <returns>An HTTP 200 response containing the URL for the Stripe onboarding process.</returns>
     [HttpPost("create-onboarding-link/{accountId}")]
     public IActionResult CreateOnboardingLink(string accountId)
     {

@@ -15,10 +15,11 @@
 <span class="pageSubtitle">Browse available tools in your neighborhood. Exact locations are revealed after booking.</span>
 
 <div style="display: flex; flex-direction: row">
+    @* filters sidebar *@
     <div style="display: flex; flex-direction: column; gap: 1.25rem; width: 25%; border-right: 1px solid var(--divide); margin: 1.25rem; margin-right: 0; padding-right: 1.25rem">
         <h5 style="margin: 0; padding-left: 0.25rem">Filters</h5>
 
-        @* category filter *@
+        @* category *@
         <div class="browse-filters">
             <div class="browse-filter-group">
                 <span class="browse-filter-label">Tool Types</span>
@@ -61,7 +62,7 @@
             }
         </div>
 
-        @* neighborhood filter *@
+        @* neighborhood *@
         <div class="browse-filters">
             <div class="browse-filter-group">
                 <span class="browse-filter-label">Locations</span>
@@ -105,8 +106,9 @@
         </div>
     </div>
 
+    @* tool map/grid section *@
     <div style="display: flex; flex-direction: column; gap: 1.25rem; width: 75%; margin: 1.25rem">
-        @* tool name search *@
+        @* tool name/desc search bar *@
         <div class="browse-filters" style="border: 0; padding-bottom: 0">
             <div class="browse-search-group">
                 <span class="browse-filter-label">Search</span>
@@ -136,6 +138,7 @@
                 <div style="display: flex; flex-direction: row; align-items: center; gap: 10px">
                     <h5 style="margin: 0">Choose a location:</h5>
                     <div class="location-search">
+                        @* address search  *@
                         <AutoComplete @bind-Value="addressSearch"
                                       TItem="AddressPair"
                                       DataProvider="GetSuggestions"
@@ -159,6 +162,7 @@
                         {
                             @foreach (var m in FilteredTools)
                             {
+                                //approxiate location by truncating to 2 decimal points
                                 <MarkerComponent @key="m.Id.ToString()"
                                                     Lat="@Math.Round(m.AddressLat, 2, MidpointRounding.ToZero)"
                                                     Lng="@Math.Round(m.AddressLng, 2, MidpointRounding.ToZero)"
@@ -235,22 +239,13 @@
     </div>
 </div>
 
-@* <div class="browse-info-section">
-    <h4>How Progressive Location Works</h4>
-    <ul>
-        <li>✔ During browsing: You see neighborhood and distance band only</li>
-        <li>✔ After booking: Exact pickup address is revealed to both parties</li>
-        <li>✔ Your privacy: Your exact home address is never shared until you confirm</li>
-    </ul>
-</div> *@
-
 @code {
     private string locationPlaceholder;
     private string addressSearch;
     public IEnumerable<AddressPair>? locations;
     private AccountInfo? currentUser;
 
-    //autocomplete location suggestions
+    //get autocomplete location suggestions
     private async Task<AutoCompleteDataProviderResult<AddressPair>> GetSuggestions(AutoCompleteDataProviderRequest<AddressPair> ap)
     {
         var results = await Http.GetFromJsonAsync<List<AddressPair>>($"api/suggestLocations/{ap.Filter.Value}");
@@ -261,12 +256,14 @@
         };
     }
 
-    //user selects address from autocomplete, recenter map and update placeholder
-    private async Task AddressSelect(AddressPair ap)
+    //called after user selects address from autocomplete, recenter map and update placeholder
+    private async Task AddressSelect(AddressPair? ap)
     {
-        var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
-        locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
-        await map.InteropObject.SetCenter(new LatLngLiteral(coords.Latitude, coords.Longitude));
+        if(ap.PlaceId != null) {
+            var coords = await Http.GetFromJsonAsync<Location>($"api/getCoordinates/{ap.PlaceId}");
+            locationPlaceholder = await ToolService.ReverseGeocode(coords.Latitude.ToString(), coords.Longitude.ToString());
+            await map.InteropObject.SetCenter(new LatLngLiteral(coords.Latitude, coords.Longitude));
+        }
     }
 
     private List<Tool> allTools = new();
@@ -274,6 +271,7 @@
     private string? errorMessage;
     private string searchQuery = "";
 
+    //category filter vars
     private List<String> selectedCategories = new();
     Collapse categories = default!;
     private List<String> categoriesList = new();
@@ -284,6 +282,7 @@
         categoriesExpanded = !categoriesExpanded;
     }
 
+    //neighborhood filter vars
     private List<String> selectedNeighborhoods = new();
     Collapse neighborhoods = default!;
     private List<String> neighborhoodsList = new();
@@ -294,6 +293,7 @@
         neighborhoodsExpanded = !neighborhoodsExpanded;
     }
 
+    //map variables
     private static LatLngLiteral startingCenter = new LatLngLiteral(42.3604, -71.0580); //city hall
     private bool mapLoaded = false;
     private AdvancedGoogleMap map;
@@ -314,12 +314,12 @@
         mapVisible = !mapVisible;
     }
 
+    //view tool details
     private void NavigateToTool(Guid id) => Nav.NavigateTo($"/express_interest/{id}");
 
     // called once the map renders
     private async Task mapRenderDone()
     {
-        //disable loading icon
         mapLoaded = true;
 
         //request browser location and center map
@@ -335,7 +335,7 @@
         }
     }
 
-    //request browser location, get tools and associated categories, locations
+    //get tools, categories, neighborhoods
     protected override async Task OnInitializedAsync()
     {
         try
@@ -448,6 +448,7 @@
         {
             var result = allTools.AsEnumerable();
 
+            //filter based on tool name or description
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var q = searchQuery.Trim();
@@ -456,6 +457,7 @@
                     t.Description.Contains(q, StringComparison.OrdinalIgnoreCase));
             }
 
+            //apply category/neighborhood filters
             if (selectedCategories.Any())
             {
                 result = result.Where(t => selectedCategories.Contains(t.Category));

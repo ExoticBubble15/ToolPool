@@ -11,6 +11,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // verify payment success with callback and get post payment context
         var callbackUrl = Nav.ToAbsoluteUri($"/api/payment/success?session_id={Uri.EscapeDataString(session_id)}");
         var response = await Http.GetAsync(callbackUrl);
 
@@ -32,7 +33,12 @@
             return;
         }
 
+        // url for redirecting 
         string url;
+
+        // 1. If an interest record exists go to rental page with chat channel
+        // 2. If only a channel URL exists go to chat page for that channel
+        // 3. Fallback go to chat lists page
         if (result.InterestId.HasValue)
         {
             url = $"/rental/{result.InterestId.Value}";
@@ -59,3 +65,5 @@
         public Guid? InterestId { get; set; }
     }
 }
+
+

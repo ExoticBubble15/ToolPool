@@ -14,26 +14,23 @@ public class ToolService
         _http = http;
     }
 
-    public async Task<List<MarkerDetails>> GetMarkerDetails()
-        => await _http.GetFromJsonAsync<List<MarkerDetails>>("/api/markerDetails") ?? new();
+    //call endpoint to get neighborhoods and coordinates
     public async Task<List<NeighborhoodTriple>> GetNeighborhoodTriples()
         => await _http.GetFromJsonAsync<List<NeighborhoodTriple>>("/api/neighborhoodTriples") ?? new();
 
+    //call endpoint to get address from coordinates
     public async Task<String> ReverseGeocode(string latitude, string longitude)
         => await _http.GetStringAsync($"/api/reverseGeocode/{latitude}/{longitude}");
 
+    //call endpoint to get all categories
     public async Task<List<String>> GetCategoriesAsync()
         => await _http.GetFromJsonAsync<List<String>>("/api/categories") ?? new();
 
-    public async Task<List<String>> GetNeighborhodsAsync()
-        => await _http.GetFromJsonAsync<List<String>>("/api/neighborhoods") ?? new();
-
-    //public async Task<Dictionary<String, List<String>>> GetCityNeighborhoodsAsync()
-    //    => await _http.GetFromJsonAsync<Dictionary<String, List<String>>>("/api/cityNeighborhoods") ?? new();
-
+    //call endpoint to get all tools
     public async Task<List<Tool>> GetToolsAsync()
         => await _http.GetFromJsonAsync<List<Tool>>("/api/Tools") ?? new();
 
+    //call endpoint to get tool by id
     public async Task<Tool?> GetToolByIdAsync(Guid id)
     {
         var resp = await _http.GetAsync($"/api/Tools/{id}");
@@ -48,6 +45,7 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<InterestResponse>() ?? new InterestResponse();
     }
 
+    //call endpoint to insert tool to db
     public async Task<Tool> InsertToolAsync(Tool t)
     {
         var resp = await _http.PostAsJsonAsync("/api/Tools", t);
@@ -55,6 +53,7 @@ public class ToolService
         return await resp.Content.ReadFromJsonAsync<Tool>() ?? new Tool();
     }
 
+    //call delete tool endpoint
     public async Task DeleteToolAsync(Guid id)
     {
         var resp = await _http.DeleteAsync($"api/Tools/{id}");
@@ -96,6 +95,15 @@ public class ToolService
     }
     // ── Chat Payment ──
 
+    /// <summary>
+    /// Retrieves the payment context for a chat session associated with the specified interest identifier. 
+    /// </summary>
+    /// <remarks>
+    /// This method isn't currently used in the UI workflow
+    /// </remarks>
+    /// <param name="interestId">The unique identifier of the interest for which to retrieve the chat payment context.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the chat payment context if found;
+    /// otherwise, null.</returns>
     public async Task<ChatPaymentContext?> GetChatPaymentContextAsync(Guid interestId)
     {
         try
@@ -107,6 +115,14 @@ public class ToolService
         catch { return null; }
     }
 
+    /// <summary>
+    /// Create a checkout session from the chat associated with the specified interest identifier.
+    /// </summary>
+    /// <remarks>
+    /// This is not used in our current UI workflow
+    /// </remarks>
+    /// <param name="interestId">The unique identifier of the interest for which to retrieve the chat payment context.</param>
+    /// <returns>A task that represents the string for the payment session url</returns>
     public async Task<string?> CheckoutFromChatAsync(Guid interestId)
     {
         var resp = await _http.PostAsync($"/api/stripe/checkout-from-chat/{interestId}", null);
