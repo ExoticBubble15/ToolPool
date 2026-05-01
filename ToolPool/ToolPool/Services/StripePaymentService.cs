@@ -154,6 +154,7 @@ public class StripePaymentService
             CancelUrl = $"{baseUrl}/express_interest/{request.ToolId}"
         };
 
+        // create the session and return the url for the client to redirect to
         var service = new SessionService();
         var session = await service.CreateAsync(options);
 

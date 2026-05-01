@@ -42,10 +42,13 @@ public class StripeController : ControllerBase
     [HttpPost("checkout-rental")]
     public async Task<IActionResult> CheckoutRental([FromBody] ToolPool.Models.StripeRentalRequest request)
     {
+        // get userid
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var currentUserId))
             return Unauthorized(new { error = "Not authenticated" });
 
+        // get the tool to be bought
         var tool = await _supabase.GetToolByIdAsync(request.ToolId);
         if (tool is null)
             return BadRequest(new { error = "Tool not found" });
@@ -53,13 +56,16 @@ public class StripeController : ControllerBase
         if (!tool.OwnerId.HasValue)
             return BadRequest(new { error = "Tool owner is missing." });
 
+        // get owner
         var ownerId = tool.OwnerId.Value;
 
         if (ownerId == currentUserId)
             return BadRequest(new { error = "You cannot pay for your own listing." });
 
+        // get email for renter 
         var email = User.FindFirst(ClaimTypes.Email)?.Value;
 
+        // create checkout session
         var serverRequest = new ToolPool.Models.StripeRentalRequest
         {
             ToolId = request.ToolId,
@@ -77,6 +83,14 @@ public class StripeController : ControllerBase
         return Ok(new { url });
     }
 
+    /// <summary>
+    /// Gets the payment context for a rental interest from a chat.
+    /// </summary>
+    /// <remarks>
+    /// This is not currently used in the client.
+    /// </remarks>
+    /// <param name="interestId">Unique identifier for the interest that the payment context belongs to</param>
+    /// <returns>IActionResult containing information about the status of the payment and information about the payment.</returns>
     [HttpGet("chat-payment-context/{interestId:guid}")]
     public async Task<IActionResult> GetChatPaymentContext(Guid interestId)
     {
